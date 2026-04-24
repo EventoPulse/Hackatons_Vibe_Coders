@@ -1,0 +1,36 @@
+@model EventsApp.ViewModels.Events.EventCardViewModel
+
+<div class="card h-100 shadow-sm">
+    @if (!string.IsNullOrWhiteSpace(Model.ImageUrl))
+    {
+        <img src="@Model.ImageUrl" class="card-img-top card-img-top-fixed" alt="@Model.Title" />
+    }
+    else
+    {
+        <div class="card-img-top-fixed d-flex align-items-center justify-content-center text-muted">
+            <i class="bi bi-calendar-event" style="font-size: 2rem;"></i>
+        </div>
+    }
+    <div class="card-body d-flex flex-column">
+        <div class="mb-2">
+            <span class="badge bg-secondary event-genre-badge">@Model.Genre</span>
+            @if (!Model.IsApproved)
+            {
+                <span class="badge bg-warning text-dark event-genre-badge">Pending</span>
+            }
+        </div>
+        <h5 class="card-title">@Model.Title</h5>
+        <p class="card-text text-muted mb-1">
+            <i class="bi bi-geo-alt"></i> @Model.VenueName, @Model.VenueCity
+        </p>
+        <p class="card-text text-muted small mb-2">
+            <i class="bi bi-clock"></i> @Model.StartTime.ToString("yyyy-MM-dd HH:mm")
+        </p>
+        <div class="small text-muted mb-3">
+            <span><i class="bi bi-heart"></i> @Model.LikesCount</span>
+            &middot;
+            <span><i class="bi bi-chat"></i> @Model.CommentsCount</span>
+        </div>
+        <a asp-controller="Events" asp-action="Details" asp-route-id="@Model.Id" class="btn btn-outline-primary mt-auto">Details</a>
+    </div>
+</div>

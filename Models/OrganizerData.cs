@@ -32,6 +32,9 @@ namespace EventsApp.Models
         [MaxLength(GlobalConstants.Organizer.WebsiteMaxLength)]
         public string? Website { get; set; }
 
+        [MaxLength(GlobalConstants.Organizer.CompanyNumberMaxLength)]
+        public string? CompanyNumber { get; set; }
+
         [Required]
         public bool Approved { get; set; }
 

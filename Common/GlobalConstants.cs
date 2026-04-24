@@ -24,6 +24,7 @@ namespace EventsApp.Common
             public const int DescriptionMaxLength = 1000;
             public const int PhoneNumberMaxLength = 30;
             public const int WebsiteMaxLength = 200;
+            public const int CompanyNumberMaxLength = 50;
         }
 
         public static class Venue

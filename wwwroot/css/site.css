@@ -12,6 +12,7 @@ html {
 
 body {
     margin-bottom: 60px;
+    background-color: #f7f7f9;
 }
 
 .footer {
@@ -19,5 +20,43 @@ body {
     bottom: 0;
     width: 100%;
     white-space: nowrap;
-    line-height: 60px;
+    line-height: 40px;
+}
+
+.card-img-top-fixed {
+    height: 180px;
+    object-fit: cover;
+    background: #e9ecef;
+}
+
+.event-genre-badge {
+    font-size: 0.75rem;
+}
+
+.hero {
+    background: linear-gradient(135deg, #1e2a38 0%, #2d4059 100%);
+    color: #fff;
+    padding: 4rem 1rem;
+    border-radius: 0.5rem;
+    margin-bottom: 2rem;
+}
+
+.hero h1 {
+    font-weight: 700;
+}
+
+.empty-state {
+    padding: 3rem 1rem;
+    text-align: center;
+    color: #6c757d;
+}
+
+.comment {
+    border-left: 3px solid #dee2e6;
+    padding: 0.5rem 0.75rem;
+    margin-bottom: 0.5rem;
+}
+
+.post-card .post-body {
+    white-space: pre-wrap;
 }

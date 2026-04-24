@@ -20,8 +20,7 @@ namespace EventsApp.Models
 
         public ApplicationUser User { get; set; } = null!;
 
-        [MaxLength(GlobalConstants.Preferences.PreferredGenreMaxLength)]
-        public string? PreferredGenre { get; set; }
+        public EventGenre? PreferredGenre { get; set; }
 
         [MaxLength(GlobalConstants.Preferences.PreferredCityMaxLength)]
         public string? PreferredCity { get; set; }

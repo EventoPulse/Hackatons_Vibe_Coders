@@ -46,8 +46,8 @@ namespace EventsApp.Models
         [Required]
         public DateTime EndTime { get; set; }
 
-        [MaxLength(GlobalConstants.Event.GenreMaxLength)]
-        public string? Genre { get; set; }
+        [Required]
+        public EventGenre Genre { get; set; }
 
         [MaxLength(GlobalConstants.Event.ImageUrlMaxLength)]
         public string? ImageUrl { get; set; }
