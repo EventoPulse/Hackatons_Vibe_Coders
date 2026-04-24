@@ -1,0 +1,49 @@
+## Build / IDE
+bin/
+obj/
+out/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+*.userprefs
+*.userosscache
+*.sln.docstates
+
+## Test / coverage
+[Tt]est[Rr]esult*/
+[Bb]uild[Ll]og.*
+*.coverage
+*.coveragexml
+coverage*.json
+coverage*.xml
+coverage*.info
+
+## NuGet
+*.nupkg
+*.snupkg
+.nuget/
+packages/
+!packages/build/
+
+## ASP.NET
+wwwroot/lib/
+appsettings.*.Development.json
+appsettings.Local.json
+secrets.json
+*.pfx
+
+## OS
+.DS_Store
+Thumbs.db
+
+## Logs
+*.log
+logs/

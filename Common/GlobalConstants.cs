@@ -1,0 +1,69 @@
+namespace EventsApp.Common
+{
+    public static class GlobalConstants
+    {
+        public static class Roles
+        {
+            public const string Admin = "Admin";
+            public const string Organizer = "Organizer";
+            public const string User = "User";
+        }
+
+        public static class User
+        {
+            public const int UserNameMinLength = 3;
+            public const int UserNameMaxLength = 50;
+            public const int BioMaxLength = 500;
+            public const int ProfileImageUrlMaxLength = 500;
+        }
+
+        public static class Organizer
+        {
+            public const int OrganizationNameMinLength = 2;
+            public const int OrganizationNameMaxLength = 100;
+            public const int DescriptionMaxLength = 1000;
+            public const int PhoneNumberMaxLength = 30;
+            public const int WebsiteMaxLength = 200;
+        }
+
+        public static class Venue
+        {
+            public const int NameMinLength = 2;
+            public const int NameMaxLength = 100;
+            public const int DescriptionMaxLength = 1000;
+            public const int AddressMaxLength = 200;
+            public const int CityMaxLength = 80;
+            public const int ImageUrlMaxLength = 500;
+        }
+
+        public static class Event
+        {
+            public const int TitleMinLength = 3;
+            public const int TitleMaxLength = 150;
+            public const int DescriptionMaxLength = 2000;
+            public const int GenreMaxLength = 50;
+            public const int ImageUrlMaxLength = 500;
+        }
+
+        public static class Post
+        {
+            public const int ContentMinLength = 1;
+            public const int ContentMaxLength = 3000;
+            public const int ImageUrlMaxLength = 500;
+        }
+
+        public static class Comment
+        {
+            public const int ContentMinLength = 1;
+            public const int ContentMaxLength = 1000;
+        }
+
+        public static class Preferences
+        {
+            public const int PreferredGenreMaxLength = 50;
+            public const int PreferredCityMaxLength = 80;
+            public const int MinAgeLower = 0;
+            public const int MinAgeUpper = 120;
+        }
+    }
+}

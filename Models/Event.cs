@@ -1,0 +1,69 @@
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+using EventsApp.Common;
+
+namespace EventsApp.Models
+{
+    public class Event
+    {
+        public Event()
+        {
+            this.CreatedAt = DateTime.UtcNow;
+            this.IsApproved = false;
+
+            this.Posts = new HashSet<Post>();
+            this.Comments = new HashSet<EventComment>();
+            this.Likes = new HashSet<EventLike>();
+            this.Images = new HashSet<EventImage>();
+        }
+
+        [Key]
+        public int Id { get; set; }
+
+        [Required]
+        [ForeignKey(nameof(Venue))]
+        public int VenueId { get; set; }
+
+        public Venue Venue { get; set; } = null!;
+
+        [Required]
+        [ForeignKey(nameof(Organizer))]
+        public string OrganizerId { get; set; } = null!;
+
+        public ApplicationUser Organizer { get; set; } = null!;
+
+        [Required]
+        [MinLength(GlobalConstants.Event.TitleMinLength)]
+        [MaxLength(GlobalConstants.Event.TitleMaxLength)]
+        public string Title { get; set; } = null!;
+
+        [MaxLength(GlobalConstants.Event.DescriptionMaxLength)]
+        public string? Description { get; set; }
+
+        [Required]
+        public DateTime StartTime { get; set; }
+
+        [Required]
+        public DateTime EndTime { get; set; }
+
+        [MaxLength(GlobalConstants.Event.GenreMaxLength)]
+        public string? Genre { get; set; }
+
+        [MaxLength(GlobalConstants.Event.ImageUrlMaxLength)]
+        public string? ImageUrl { get; set; }
+
+        [Required]
+        public bool IsApproved { get; set; }
+
+        [Required]
+        public DateTime CreatedAt { get; set; }
+
+        public ICollection<Post> Posts { get; set; }
+
+        public ICollection<EventComment> Comments { get; set; }
+
+        public ICollection<EventLike> Likes { get; set; }
+
+        public ICollection<EventImage> Images { get; set; }
+    }
+}
