@@ -12,11 +12,23 @@
       "Read(//tmp/**)",
       "Bash(sqlcmd -S \"\\(localdb\\)\\\\MSSQLLocalDB\" -d EventsApp -Q \"SELECT Email, EmailConfirmed FROM AspNetUsers WHERE Email='test1@example.com';\" -W)",
       "PowerShell(Stop-Process -Force)",
-      "Bash(git *)",
-      "Bash(where sqlcmd *)",
-      "Bash(sqlcmd -S \"\\(localdb\\)\\\\MSSQLLocalDB\" -d EventsApp -Q \"SELECT UserName, Email, EmailConfirmed FROM AspNetUsers\" -W)",
-      "Bash(sqlcmd -S \"\\(localdb\\)\\\\MSSQLLocalDB\" -d EventsApp -Q \"SELECT u.UserName, r.Name AS Role FROM AspNetUsers u JOIN AspNetUserRoles ur ON u.Id = ur.UserId JOIN AspNetRoles r ON r.Id = ur.RoleId\" -W)",
-      "Bash(sqlcmd *)"
+      "PowerShell(Get-Process EventsApp -ErrorAction SilentlyContinue | Stop-Process -Force; Start-Sleep -Seconds 2; \\(Get-Process EventsApp -ErrorAction SilentlyContinue | Measure-Object\\).Count)",
+      "Bash(dotnet ef *)",
+      "Bash(dotnet run *)",
+      "Bash(curl -sk https://localhost:7180/ -o /tmp/h.html -w \"%{http_code}\\\\n\")",
+      "Bash(curl -sk \"https://localhost:7180/Search?q=test\" -o /tmp/s.html -w \"%{http_code}\\\\n\")",
+      "Bash(curl -sk -o /dev/null -w \"%{http_code}\\\\n\" -L --max-time 3 \"https://localhost:7180/Posts/Create\")",
+      "Bash(curl -sk -o /dev/null -w \"Login: %{http_code}\\\\n\" --max-time 3 \"https://localhost:7180/Identity/Account/Login\")",
+      "Bash(curl -sk -o /dev/null -w \"Events: %{http_code}\\\\n\" --max-time 3 \"https://localhost:7180/Events\")",
+      "Bash(curl -sk -o /dev/null -w \"Venues: %{http_code}\\\\n\" --max-time 3 \"https://localhost:7180/Venues\")",
+      "Bash(curl -sk -o /dev/null -w \"Posts: %{http_code}\\\\n\" --max-time 3 \"https://localhost:7180/Posts\")",
+      "Bash(curl -sk -o /dev/null -w \"Search empty: %{http_code}\\\\n\" --max-time 3 \"https://localhost:7180/Search\")",
+      "Bash(sqlcmd -S \"\\(localdb\\)\\\\MSSQLLocalDB\" -d EventsApp -Q \"SELECT UserName, Email, EmailConfirmed FROM AspNetUsers WHERE UserName='admin' OR Email LIKE '%admin%';\" -W)",
+      "Bash(rm -f /tmp/cj.txt)",
+      "Bash(curl -sk -c /tmp/cj.txt -b /tmp/cj.txt \"https://localhost:7180/Identity/Account/Login\" -o /tmp/login.html)"
+    ],
+    "additionalDirectories": [
+      "\\tmp"
     ]
   }
 }

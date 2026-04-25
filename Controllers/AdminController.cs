@@ -38,7 +38,8 @@ namespace EventsApp.Controllers
                     CreatedAt = p.CreatedAt,
                     EventId = p.EventId,
                     EventTitle = p.Event != null ? p.Event.Title : null,
-                    FirstImageUrl = p.Images.Select(i => i.ImageUrl).FirstOrDefault(),
+                    FirstMediaUrl = p.Images.Select(i => i.ImageUrl).FirstOrDefault(),
+                    FirstMediaType = p.Images.Select(i => i.MediaType).FirstOrDefault(),
                     LikesCount = p.Likes.Count,
                     CommentsCount = p.Comments.Count,
                 })
@@ -175,7 +176,8 @@ namespace EventsApp.Controllers
                     CreatedAt = p.CreatedAt,
                     EventId = p.EventId,
                     EventTitle = p.Event != null ? p.Event.Title : null,
-                    FirstImageUrl = p.Images.Select(i => i.ImageUrl).FirstOrDefault(),
+                    FirstMediaUrl = p.Images.Select(i => i.ImageUrl).FirstOrDefault(),
+                    FirstMediaType = p.Images.Select(i => i.MediaType).FirstOrDefault(),
                     LikesCount = p.Likes.Count,
                     CommentsCount = p.Comments.Count,
                 })

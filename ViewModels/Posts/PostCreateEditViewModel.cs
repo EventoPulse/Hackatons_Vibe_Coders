@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using EventsApp.Common;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace EventsApp.ViewModels.Posts
@@ -15,10 +16,14 @@ namespace EventsApp.ViewModels.Posts
         [Display(Name = "Event (optional)")]
         public int? EventId { get; set; }
 
-        [Url]
+        [Display(Name = "Photo or video")]
+        public IFormFile? MediaFile { get; set; }
+
+        [Display(Name = "Or image URL")]
         [StringLength(GlobalConstants.Post.ImageUrlMaxLength)]
-        [Display(Name = "Image URL")]
         public string? ImageUrl { get; set; }
+
+        public string? CurrentMediaUrl { get; set; }
 
         public IEnumerable<SelectListItem> Events { get; set; } = Array.Empty<SelectListItem>();
     }

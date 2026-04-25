@@ -18,5 +18,8 @@ namespace EventsApp.Models
         [Required]
         [MaxLength(GlobalConstants.Post.ImageUrlMaxLength)]
         public string ImageUrl { get; set; } = null!;
+
+        [Required]
+        public PostMediaType MediaType { get; set; }
     }
 }

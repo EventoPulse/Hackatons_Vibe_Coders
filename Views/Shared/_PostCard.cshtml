@@ -1,9 +1,21 @@
 @model EventsApp.ViewModels.Posts.PostCardViewModel
+@{
+    var returnUrl = Context.Request.Path + Context.Request.QueryString;
+}
 
 <div class="card h-100 shadow-sm post-card">
-    @if (!string.IsNullOrWhiteSpace(Model.FirstImageUrl))
+    @if (!string.IsNullOrWhiteSpace(Model.FirstMediaUrl))
     {
-        <img src="@Model.FirstImageUrl" class="card-img-top card-img-top-fixed" alt="post image" />
+        if (Model.FirstMediaType == EventsApp.Models.PostMediaType.Video)
+        {
+            <video class="card-img-top card-img-top-fixed bg-dark" controls preload="metadata" muted>
+                <source src="@Model.FirstMediaUrl" />
+            </video>
+        }
+        else
+        {
+            <img src="@Model.FirstMediaUrl" class="card-img-top card-img-top-fixed" alt="post image" />
+        }
     }
     <div class="card-body d-flex flex-column">
         <div class="d-flex justify-content-between align-items-start mb-2">
@@ -21,11 +33,28 @@
         <p class="card-text post-body flex-grow-1">
             @(Model.Content.Length > 200 ? Model.Content[..200] + "…" : Model.Content)
         </p>
-        <div class="small text-muted mb-2">
-            <span><i class="bi bi-heart"></i> @Model.LikesCount</span>
-            &middot;
-            <span><i class="bi bi-chat"></i> @Model.CommentsCount</span>
+        <div class="d-flex justify-content-between align-items-center mt-auto">
+            <div class="d-flex align-items-center gap-2">
+                @if (User.Identity?.IsAuthenticated == true)
+                {
+                    var likeAction = Model.CurrentUserLiked ? "Unlike" : "Like";
+                    var btnClass = Model.CurrentUserLiked ? "btn-danger" : "btn-outline-danger";
+                    var iconClass = Model.CurrentUserLiked ? "bi-heart-fill" : "bi-heart";
+                    <form asp-controller="Posts" asp-action="@likeAction" asp-route-id="@Model.Id"
+                          asp-route-returnUrl="@returnUrl" method="post" class="d-inline">
+                        @Html.AntiForgeryToken()
+                        <button class="btn btn-sm @btnClass" type="submit" title="@likeAction">
+                            <i class="bi @iconClass"></i> @Model.LikesCount
+                        </button>
+                    </form>
+                }
+                else
+                {
+                    <span class="small text-muted"><i class="bi bi-heart"></i> @Model.LikesCount</span>
+                }
+                <span class="small text-muted"><i class="bi bi-chat"></i> @Model.CommentsCount</span>
+            </div>
+            <a asp-controller="Posts" asp-action="Details" asp-route-id="@Model.Id" class="btn btn-sm btn-outline-primary">Open</a>
         </div>
-        <a asp-controller="Posts" asp-action="Details" asp-route-id="@Model.Id" class="btn btn-outline-primary btn-sm mt-auto">Open</a>
     </div>
 </div>

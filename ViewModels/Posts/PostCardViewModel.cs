@@ -1,3 +1,5 @@
+using EventsApp.Models;
+
 namespace EventsApp.ViewModels.Posts
 {
     public class PostCardViewModel
@@ -9,8 +11,10 @@ namespace EventsApp.ViewModels.Posts
         public DateTime CreatedAt { get; set; }
         public int? EventId { get; set; }
         public string? EventTitle { get; set; }
-        public string? FirstImageUrl { get; set; }
+        public string? FirstMediaUrl { get; set; }
+        public PostMediaType FirstMediaType { get; set; }
         public int LikesCount { get; set; }
         public int CommentsCount { get; set; }
+        public bool CurrentUserLiked { get; set; }
     }
 }

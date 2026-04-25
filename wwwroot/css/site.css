@@ -23,10 +23,25 @@ body {
     line-height: 40px;
 }
 
+.card {
+    border: 0;
+    transition: transform .15s ease-in-out, box-shadow .15s ease-in-out;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.08) !important;
+}
+
 .card-img-top-fixed {
-    height: 180px;
+    height: 200px;
+    width: 100%;
     object-fit: cover;
     background: #e9ecef;
+}
+
+video.card-img-top-fixed {
+    object-fit: cover;
 }
 
 .event-genre-badge {
@@ -34,21 +49,30 @@ body {
 }
 
 .hero {
-    background: linear-gradient(135deg, #1e2a38 0%, #2d4059 100%);
+    background: linear-gradient(135deg, #0f766e 0%, #134e4a 50%, #1e293b 100%);
     color: #fff;
     padding: 4rem 1rem;
-    border-radius: 0.5rem;
+    border-radius: 0.75rem;
     margin-bottom: 2rem;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.10);
 }
 
 .hero h1 {
-    font-weight: 700;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+}
+
+.hero .form-control {
+    border-color: rgba(255, 255, 255, 0.2);
 }
 
 .empty-state {
     padding: 3rem 1rem;
     text-align: center;
     color: #6c757d;
+    background: #fff;
+    border: 1px dashed #dee2e6;
+    border-radius: 0.5rem;
 }
 
 .comment {
@@ -59,4 +83,33 @@ body {
 
 .post-card .post-body {
     white-space: pre-wrap;
+}
+
+#events-map {
+    z-index: 0;
+}
+
+.leaflet-popup-content {
+    margin: 8px 12px;
+    min-width: 200px;
+}
+
+.btn-primary {
+    --bs-btn-bg: #0f766e;
+    --bs-btn-border-color: #0f766e;
+    --bs-btn-hover-bg: #115e59;
+    --bs-btn-hover-border-color: #115e59;
+    --bs-btn-active-bg: #134e4a;
+    --bs-btn-active-border-color: #134e4a;
+}
+
+.btn-outline-primary {
+    --bs-btn-color: #0f766e;
+    --bs-btn-border-color: #0f766e;
+    --bs-btn-hover-bg: #0f766e;
+    --bs-btn-hover-border-color: #0f766e;
+}
+
+.navbar-dark.bg-dark {
+    background: #0f1f23 !important;
 }

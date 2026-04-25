@@ -1,6 +1,8 @@
 using EventsApp.Data;
 using EventsApp.Infrastructure;
 using EventsApp.Models;
+using EventsApp.Services;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
@@ -25,6 +27,13 @@ builder.Services.AddDefaultIdentity<ApplicationUser>(options =>
     })
     .AddRoles<IdentityRole>()
     .AddEntityFrameworkStores<ApplicationDbContext>();
+
+builder.Services.AddSingleton<IMediaUploadService, MediaUploadService>();
+
+builder.Services.Configure<FormOptions>(options =>
+{
+    options.MultipartBodyLengthLimit = 100L * 1024 * 1024;
+});
 
 builder.Services.AddControllersWithViews();
 

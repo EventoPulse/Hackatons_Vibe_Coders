@@ -1,6 +1,7 @@
 using EventsApp.Common;
 using EventsApp.Data;
 using EventsApp.Models;
+using EventsApp.Services;
 using EventsApp.ViewModels.Posts;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -12,17 +13,26 @@ namespace EventsApp.Controllers
 {
     public class PostsController : Controller
     {
+        private const long UploadSizeLimit = 100L * 1024 * 1024;
+
         private readonly ApplicationDbContext _db;
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly IMediaUploadService _mediaUpload;
 
-        public PostsController(ApplicationDbContext db, UserManager<ApplicationUser> userManager)
+        public PostsController(
+            ApplicationDbContext db,
+            UserManager<ApplicationUser> userManager,
+            IMediaUploadService mediaUpload)
         {
             _db = db;
             _userManager = userManager;
+            _mediaUpload = mediaUpload;
         }
 
         public async Task<IActionResult> Index()
         {
+            var userId = _userManager.GetUserId(User);
+
             var posts = await _db.Posts
                 .AsNoTracking()
                 .OrderByDescending(p => p.CreatedAt)
@@ -35,9 +45,11 @@ namespace EventsApp.Controllers
                     CreatedAt = p.CreatedAt,
                     EventId = p.EventId,
                     EventTitle = p.Event != null ? p.Event.Title : null,
-                    FirstImageUrl = p.Images.Select(i => i.ImageUrl).FirstOrDefault(),
+                    FirstMediaUrl = p.Images.Select(i => i.ImageUrl).FirstOrDefault(),
+                    FirstMediaType = p.Images.Select(i => i.MediaType).FirstOrDefault(),
                     LikesCount = p.Likes.Count,
                     CommentsCount = p.Comments.Count,
+                    CurrentUserLiked = userId != null && p.Likes.Any(l => l.UserId == userId),
                 })
                 .ToListAsync();
 
@@ -71,7 +83,9 @@ namespace EventsApp.Controllers
                 UpdatedAt = post.UpdatedAt,
                 EventId = post.EventId,
                 EventTitle = post.Event?.Title,
-                ImageUrls = post.Images.Select(i => i.ImageUrl).ToList(),
+                Media = post.Images
+                    .Select(i => new PostMediaItemViewModel { Url = i.ImageUrl, MediaType = i.MediaType })
+                    .ToList(),
                 LikesCount = post.Likes.Count,
                 CurrentUserLiked = userId != null && post.Likes.Any(l => l.UserId == userId),
                 Comments = post.Comments
@@ -102,6 +116,7 @@ namespace EventsApp.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [RequestSizeLimit(UploadSizeLimit)]
         [Authorize(Roles = GlobalConstants.Roles.Admin + "," + GlobalConstants.Roles.Organizer)]
         public async Task<IActionResult> Create(PostCreateEditViewModel input)
         {
@@ -123,9 +138,15 @@ namespace EventsApp.Controllers
             _db.Posts.Add(post);
             await _db.SaveChangesAsync();
 
-            if (!string.IsNullOrWhiteSpace(input.ImageUrl))
+            var media = await ResolveMediaAsync(input);
+            if (media != null)
             {
-                _db.PostImages.Add(new PostImage { PostId = post.Id, ImageUrl = input.ImageUrl });
+                _db.PostImages.Add(new PostImage
+                {
+                    PostId = post.Id,
+                    ImageUrl = media.Url,
+                    MediaType = media.MediaType,
+                });
                 await _db.SaveChangesAsync();
             }
 
@@ -151,13 +172,14 @@ namespace EventsApp.Controllers
                 Id = post.Id,
                 Content = post.Content,
                 EventId = post.EventId,
-                ImageUrl = post.Images.Select(i => i.ImageUrl).FirstOrDefault(),
+                CurrentMediaUrl = post.Images.Select(i => i.ImageUrl).FirstOrDefault(),
                 Events = await GetEventOptionsAsync(),
             });
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [RequestSizeLimit(UploadSizeLimit)]
         [Authorize(Roles = GlobalConstants.Roles.Admin + "," + GlobalConstants.Roles.Organizer)]
         public async Task<IActionResult> Edit(int id, PostCreateEditViewModel input)
         {
@@ -174,6 +196,7 @@ namespace EventsApp.Controllers
             if (!ModelState.IsValid)
             {
                 input.Events = await GetEventOptionsAsync();
+                input.CurrentMediaUrl = post.Images.Select(i => i.ImageUrl).FirstOrDefault();
                 return View(input);
             }
 
@@ -181,13 +204,24 @@ namespace EventsApp.Controllers
             post.EventId = input.EventId;
             post.UpdatedAt = DateTime.UtcNow;
 
-            if (!string.IsNullOrWhiteSpace(input.ImageUrl))
+            var media = await ResolveMediaAsync(input);
+            if (media != null)
             {
                 var existing = post.Images.FirstOrDefault();
                 if (existing != null)
-                    existing.ImageUrl = input.ImageUrl;
+                {
+                    existing.ImageUrl = media.Url;
+                    existing.MediaType = media.MediaType;
+                }
                 else
-                    _db.PostImages.Add(new PostImage { PostId = post.Id, ImageUrl = input.ImageUrl });
+                {
+                    _db.PostImages.Add(new PostImage
+                    {
+                        PostId = post.Id,
+                        ImageUrl = media.Url,
+                        MediaType = media.MediaType,
+                    });
+                }
             }
 
             await _db.SaveChangesAsync();
@@ -229,7 +263,7 @@ namespace EventsApp.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize]
-        public async Task<IActionResult> Like(int id)
+        public async Task<IActionResult> Like(int id, string? returnUrl)
         {
             var userId = _userManager.GetUserId(User)!;
             var exists = await _db.PostLikes.AnyAsync(l => l.PostId == id && l.UserId == userId);
@@ -238,13 +272,13 @@ namespace EventsApp.Controllers
                 _db.PostLikes.Add(new PostLike { PostId = id, UserId = userId });
                 await _db.SaveChangesAsync();
             }
-            return RedirectToAction(nameof(Details), new { id });
+            return SafeRedirect(returnUrl) ?? RedirectToAction(nameof(Details), new { id });
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize]
-        public async Task<IActionResult> Unlike(int id)
+        public async Task<IActionResult> Unlike(int id, string? returnUrl)
         {
             var userId = _userManager.GetUserId(User)!;
             var like = await _db.PostLikes.FirstOrDefaultAsync(l => l.PostId == id && l.UserId == userId);
@@ -253,7 +287,7 @@ namespace EventsApp.Controllers
                 _db.PostLikes.Remove(like);
                 await _db.SaveChangesAsync();
             }
-            return RedirectToAction(nameof(Details), new { id });
+            return SafeRedirect(returnUrl) ?? RedirectToAction(nameof(Details), new { id });
         }
 
         [HttpPost]
@@ -301,6 +335,42 @@ namespace EventsApp.Controllers
             _db.PostComments.Remove(comment);
             await _db.SaveChangesAsync();
             return RedirectToAction(nameof(Details), new { id = postId });
+        }
+
+        private async Task<MediaUploadResult?> ResolveMediaAsync(PostCreateEditViewModel input)
+        {
+            if (input.MediaFile != null && input.MediaFile.Length > 0)
+            {
+                try
+                {
+                    return await _mediaUpload.SaveAsync(input.MediaFile, "posts");
+                }
+                catch (InvalidOperationException ex)
+                {
+                    ModelState.AddModelError(nameof(input.MediaFile), ex.Message);
+                    return null;
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(input.ImageUrl))
+            {
+                return new MediaUploadResult
+                {
+                    Url = input.ImageUrl,
+                    MediaType = PostMediaType.Image,
+                };
+            }
+
+            return null;
+        }
+
+        private IActionResult? SafeRedirect(string? returnUrl)
+        {
+            if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
+            {
+                return Redirect(returnUrl);
+            }
+            return null;
         }
 
         private async Task<IEnumerable<SelectListItem>> GetEventOptionsAsync()

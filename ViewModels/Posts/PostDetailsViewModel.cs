@@ -10,7 +10,7 @@ namespace EventsApp.ViewModels.Posts
         public DateTime? UpdatedAt { get; set; }
         public int? EventId { get; set; }
         public string? EventTitle { get; set; }
-        public IReadOnlyList<string> ImageUrls { get; set; } = Array.Empty<string>();
+        public IReadOnlyList<PostMediaItemViewModel> Media { get; set; } = Array.Empty<PostMediaItemViewModel>();
         public int LikesCount { get; set; }
         public bool CurrentUserLiked { get; set; }
         public IReadOnlyList<PostCommentViewModel> Comments { get; set; } = Array.Empty<PostCommentViewModel>();

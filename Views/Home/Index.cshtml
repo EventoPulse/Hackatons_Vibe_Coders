@@ -1,13 +1,67 @@
 @model HomeIndexViewModel
+@using System.Text.Json
 @{
     ViewData["Title"] = "Home";
+    var markersJson = JsonSerializer.Serialize(Model.MapMarkers);
 }
 
-<section class="hero text-center">
+@section Scripts {
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script>
+        (function () {
+            var markers = @Html.Raw(markersJson);
+            var mapEl = document.getElementById('events-map');
+            if (!mapEl || typeof L === 'undefined') return;
+
+            var defaultCenter = [42.7339, 25.4858]; // Bulgaria
+            var map = L.map('events-map').setView(defaultCenter, 7);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 18,
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+            }).addTo(map);
+
+            if (markers && markers.length) {
+                var bounds = [];
+                markers.forEach(function (m) {
+                    var latlng = [m.Lat, m.Lng];
+                    bounds.push(latlng);
+                    var thumb = m.ImageUrl ? '<img src="' + m.ImageUrl + '" style="width:100%;height:80px;object-fit:cover;border-radius:6px;margin-bottom:6px;" />' : '';
+                    var popup = thumb +
+                        '<strong>' + m.Title + '</strong><br>' +
+                        '<small>' + m.VenueName + ', ' + m.City + '</small><br>' +
+                        '<small>' + new Date(m.StartTime).toLocaleString() + '</small><br>' +
+                        '<a href="/Events/Details/' + m.EventId + '" class="btn btn-sm btn-primary mt-2">Details</a>';
+                    L.marker(latlng).addTo(map).bindPopup(popup);
+                });
+                if (bounds.length > 1) {
+                    map.fitBounds(bounds, { padding: [40, 40] });
+                } else {
+                    map.setView(bounds[0], 11);
+                }
+            }
+        })();
+    </script>
+}
+
+<section class="hero text-center mb-4">
     <h1 class="display-5"><i class="bi bi-music-note-beamed"></i> GrooveOn</h1>
     <p class="lead mb-4">Discover events, venues and organizers — follow the scene in your city.</p>
+
+    <form asp-controller="Search" asp-action="Index" method="get" class="row g-2 justify-content-center mb-3">
+        <div class="col-md-7">
+            <div class="input-group input-group-lg">
+                <span class="input-group-text bg-white"><i class="bi bi-stars text-primary"></i></span>
+                <input type="text" name="q" class="form-control" placeholder="Search events, venues, posts…" />
+                <button class="btn btn-primary" type="submit">Search</button>
+            </div>
+        </div>
+    </form>
+
     <div class="d-flex justify-content-center gap-2 flex-wrap">
-        <a asp-controller="Events" asp-action="Index" class="btn btn-primary btn-lg">Browse events</a>
+        <a asp-controller="Events" asp-action="Index" class="btn btn-light btn-lg">Browse events</a>
         <a asp-controller="Posts" asp-action="Index" class="btn btn-outline-light btn-lg">Open feed</a>
         @if (User.Identity?.IsAuthenticated == true)
         {
@@ -18,6 +72,33 @@
             <a asp-controller="Organizer" asp-action="Dashboard" class="btn btn-warning btn-lg">Organizer dashboard</a>
         }
     </div>
+</section>
+
+@if (Model.ShowPreferencesPrompt)
+{
+    <div class="alert alert-primary d-flex align-items-center justify-content-between flex-wrap gap-2 shadow-sm" role="alert">
+        <div>
+            <i class="bi bi-stars me-2"></i>
+            <strong>Welcome!</strong> Tell us what you like to get personalized event recommendations.
+        </div>
+        <a asp-controller="Preferences" asp-action="Edit" class="btn btn-primary">
+            <i class="bi bi-sliders"></i> Set preferences
+        </a>
+    </div>
+}
+
+<section class="mb-5">
+    <div class="d-flex justify-content-between align-items-end mb-3">
+        <h2 class="h4 mb-0"><i class="bi bi-map"></i> Events around Bulgaria</h2>
+        <span class="small text-muted">@Model.MapMarkers.Count on map &middot; OpenStreetMap</span>
+    </div>
+    <div id="events-map" style="height: 420px; border-radius: 0.5rem; box-shadow: 0 1px 6px rgba(0,0,0,.08);"></div>
+    @if (Model.MapMarkers.Count == 0)
+    {
+        <div class="small text-muted mt-2">
+            No mapped events yet. Add events in cities like Sofia, Plovdiv, Varna, Burgas, Ruse to see them here.
+        </div>
+    }
 </section>
 
 <section class="mb-5">

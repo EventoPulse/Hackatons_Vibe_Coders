@@ -16,5 +16,6 @@ namespace EventsApp.ViewModels.Events
         public string OrganizerName { get; set; } = null!;
         public int LikesCount { get; set; }
         public int CommentsCount { get; set; }
+        public bool CurrentUserLiked { get; set; }
     }
 }

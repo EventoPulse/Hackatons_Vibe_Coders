@@ -39,12 +39,21 @@
 
         <p class="lead" style="white-space:pre-wrap;">@Model.Content</p>
 
-        @if (Model.ImageUrls.Count > 0)
+        @if (Model.Media.Count > 0)
         {
             <div class="d-flex flex-wrap gap-2 mb-3">
-                @foreach (var url in Model.ImageUrls)
+                @foreach (var item in Model.Media)
                 {
-                    <img src="@url" class="rounded img-thumbnail" style="max-height:250px;max-width:100%;object-fit:cover;" alt="post image" />
+                    if (item.MediaType == EventsApp.Models.PostMediaType.Video)
+                    {
+                        <video controls class="rounded shadow-sm" style="max-height:360px;max-width:100%;">
+                            <source src="@item.Url" />
+                        </video>
+                    }
+                    else
+                    {
+                        <img src="@item.Url" class="rounded img-thumbnail" style="max-height:360px;max-width:100%;object-fit:cover;" alt="post media" />
+                    }
                 }
             </div>
         }

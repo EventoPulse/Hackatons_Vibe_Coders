@@ -7,7 +7,7 @@
     <div class="col-lg-7">
         <h1 class="h3 mb-4"><i class="bi bi-pencil-square"></i> New Post</h1>
 
-        <form asp-action="Create" method="post">
+        <form asp-action="Create" method="post" enctype="multipart/form-data">
             @Html.AntiForgeryToken()
             <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
 
@@ -25,8 +25,16 @@
             </div>
 
             <div class="mb-3">
+                <label asp-for="MediaFile" class="form-label"></label>
+                <input asp-for="MediaFile" class="form-control" type="file"
+                       accept="image/jpeg,image/png,image/gif,image/webp,video/mp4,video/webm,video/quicktime" />
+                <div class="form-text">Image up to 5 MB · Video up to 100 MB. Supported: jpg, png, gif, webp, mp4, webm, mov.</div>
+                <span asp-validation-for="MediaFile" class="text-danger small"></span>
+            </div>
+
+            <div class="mb-4">
                 <label asp-for="ImageUrl" class="form-label"></label>
-                <input asp-for="ImageUrl" class="form-control" placeholder="https://…" />
+                <input asp-for="ImageUrl" class="form-control" placeholder="https://… (used only if no file selected)" />
                 <span asp-validation-for="ImageUrl" class="text-danger small"></span>
             </div>
 

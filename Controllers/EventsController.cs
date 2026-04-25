@@ -356,7 +356,7 @@ namespace EventsApp.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize]
-        public async Task<IActionResult> Like(int id)
+        public async Task<IActionResult> Like(int id, string? returnUrl)
         {
             var userId = _userManager.GetUserId(User)!;
             var exists = await _db.EventLikes.AnyAsync(l => l.EventId == id && l.UserId == userId);
@@ -365,13 +365,17 @@ namespace EventsApp.Controllers
                 _db.EventLikes.Add(new EventLike { EventId = id, UserId = userId });
                 await _db.SaveChangesAsync();
             }
+            if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
+            {
+                return Redirect(returnUrl);
+            }
             return RedirectToAction(nameof(Details), new { id });
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize]
-        public async Task<IActionResult> Unlike(int id)
+        public async Task<IActionResult> Unlike(int id, string? returnUrl)
         {
             var userId = _userManager.GetUserId(User)!;
             var like = await _db.EventLikes.FirstOrDefaultAsync(l => l.EventId == id && l.UserId == userId);
@@ -379,6 +383,10 @@ namespace EventsApp.Controllers
             {
                 _db.EventLikes.Remove(like);
                 await _db.SaveChangesAsync();
+            }
+            if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
+            {
+                return Redirect(returnUrl);
             }
             return RedirectToAction(nameof(Details), new { id });
         }
