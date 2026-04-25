@@ -205,6 +205,8 @@ namespace EventsApp.Controllers
                 IsApproved = isAdmin && input.IsApproved,
             };
 
+            
+
             if (!ev.Latitude.HasValue || !ev.Longitude.HasValue)
             {
                 var geo = await _geocoder.GeocodeAsync(ev.Address, ev.City);
