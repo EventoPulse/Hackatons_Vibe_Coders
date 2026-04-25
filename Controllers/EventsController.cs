@@ -8,6 +8,7 @@ using EventsApp.Services.Geocoding;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
 
 namespace EventsApp.Controllers
@@ -67,6 +68,8 @@ namespace EventsApp.Controllers
 
             return Json(new { ok = true, description });
         }
+
+        
 
         public IActionResult Index(string? search, string? city, EventGenre? genre, DateTime? dateFrom)
         {

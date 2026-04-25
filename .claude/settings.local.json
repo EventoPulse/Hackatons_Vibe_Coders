@@ -57,7 +57,11 @@
       "Bash(curl -s -H 'X-API-Key: 4ObuHAHmWf81NUNnx6QdQBRANZiATNBYK6Z7qLSzAcTiAMQuvflNxbmb6YXSn3Crzp9Sx0Hzloyo33wWA66LxIG0fZVz7StPngmpPzalrOKKkNDisxBdG9awndZyWMhL' https://stage.sirma.ai/client/api/v1/agents)",
       "Bash(git checkout *)",
       "Bash(git rm *)",
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "Bash(git fetch *)",
+      "Bash(git remote *)",
+      "Bash(git ls-tree *)",
+      "Bash(git stash *)"
     ],
     "additionalDirectories": [
       "\\tmp"

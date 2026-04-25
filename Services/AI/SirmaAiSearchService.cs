@@ -216,6 +216,8 @@ Output ONLY the description text in Bulgarian, no preamble, no quotes, no Englis
             }
         }
 
+        // Image generation via Sirma removed — use text-only AI features.
+
         private async Task<string?> EnsureAgentAsync(CancellationToken ct)
         {
             if (!string.IsNullOrEmpty(_agentId)) return _agentId;

@@ -36,15 +36,15 @@ namespace EventsApp.Areas.Identity.Pages.Account
         public class InputModel
         {
             [Required]
-            [Display(Name = "Email or username")]
+            [Display(Name = "Имейл или потребителско име")]
             public string EmailOrUserName { get; set; } = null!;
 
             [Required]
             [DataType(DataType.Password)]
-            [Display(Name = "Password")]
+            [Display(Name = "Парола")]
             public string Password { get; set; } = null!;
 
-            [Display(Name = "Remember me")]
+            [Display(Name = "Запомни ме")]
             public bool RememberMe { get; set; }
         }
 
@@ -78,7 +78,7 @@ namespace EventsApp.Areas.Identity.Pages.Account
 
             if (user == null || string.IsNullOrWhiteSpace(user.UserName))
             {
-                ModelState.AddModelError(string.Empty, "Invalid login attempt.");
+                ModelState.AddModelError(string.Empty, "Невалиден опит за вход.");
                 return Page();
             }
 
@@ -97,11 +97,11 @@ namespace EventsApp.Areas.Identity.Pages.Account
             if (result.IsLockedOut)
             {
                 _logger.LogWarning("User account locked out.");
-                ModelState.AddModelError(string.Empty, "This account is locked out.");
+                ModelState.AddModelError(string.Empty, "Този акаунт е заключен.");
                 return Page();
             }
 
-            ModelState.AddModelError(string.Empty, "Invalid login attempt.");
+            ModelState.AddModelError(string.Empty, "Невалиден опит за вход.");
             return Page();
         }
     }

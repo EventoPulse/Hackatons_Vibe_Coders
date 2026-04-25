@@ -1,60 +1,71 @@
 @model AdminTransactionsViewModel
 @{
-    ViewData["Title"] = "Transactions";
+    ViewData["Title"] = "Транзакции";
 }
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h1 class="h3"><i class="bi bi-receipt"></i> Transactions</h1>
-    <a asp-action="Index" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i> Admin</a>
-</div>
-
-<div class="alert alert-info">
-    <strong>Total revenue (paid, demo):</strong> @Model.TotalRevenue.ToString("0.00")
-</div>
-
-@if (Model.Transactions.Count == 0)
-{
-    <p class="text-muted">No transactions yet.</p>
-}
-else
-{
-    <div class="table-responsive">
-        <table class="table table-sm align-middle">
-            <thead>
-                <tr>
-                    <th>User</th>
-                    <th>Email</th>
-                    <th>Amount</th>
-                    <th>Tickets</th>
-                    <th>Status</th>
-                    <th>Date</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var t in Model.Transactions)
-                {
-                    <tr>
-                        <td>@t.UserName</td>
-                        <td class="small text-muted">@t.Email</td>
-                        <td>@t.TotalAmount.ToString("0.00")</td>
-                        <td>@t.TicketCount</td>
-                        <td>
-                            @{
-                                var badgeClass = t.Status switch
-                                {
-                                    "Paid" => "bg-success",
-                                    "Pending" => "bg-warning text-dark",
-                                    "Failed" => "bg-danger",
-                                    "Refunded" => "bg-info text-dark",
-                                    _ => "bg-secondary",
-                                };
-                            }
-                            <span class="badge @badgeClass">@t.Status</span>
-                        </td>
-                        <td class="small text-muted">@t.CreatedAt.ToString("yyyy-MM-dd HH:mm")</td>
-                    </tr>
-                }
-            </tbody>
-        </table>
+<section class="groove-app-page">
+    <div class="groove-page-hero">
+        <div class="groove-page-hero__copy">
+            <span class="groove-stamp groove-stamp-yellow">Финанси</span>
+            <h1>Платежни <span>транзакции</span>.</h1>
+            <p>Преглед на извършените демонстрационни плащания и общия приход от платените поръчки.</p>
+        </div>
+        <div class="groove-page-actions">
+            <a asp-action="Index" class="groove-button groove-button-paper">
+                <i class="bi bi-arrow-left"></i> Към админ
+            </a>
+        </div>
     </div>
-}
+
+    <div class="groove-alert groove-alert-info mb-4">
+        <strong>Общ приход:</strong> @Model.TotalRevenue.ToString("0.00") лв.
+    </div>
+
+    @if (Model.Transactions.Count == 0)
+    {
+        <div class="groove-empty-card">
+            <i class="bi bi-receipt"></i>
+            <h2 class="groove-panel-title">Няма <span>транзакции</span>.</h2>
+        </div>
+    }
+    else
+    {
+        <div class="groove-table-card">
+            <div class="groove-table-wrap">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Потребител</th>
+                            <th>Имейл</th>
+                            <th>Сума</th>
+                            <th>Билети</th>
+                            <th>Статус</th>
+                            <th>Дата</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var t in Model.Transactions)
+                        {
+                            var badgeClass = t.Status switch
+                            {
+                                GlobalConstants.TransactionStatuses.Paid => "groove-status-badge-success",
+                                GlobalConstants.TransactionStatuses.Pending => "groove-status-badge-warning",
+                                GlobalConstants.TransactionStatuses.Failed => "groove-status-badge-danger",
+                                _ => "groove-status-badge-muted",
+                            };
+
+                            <tr>
+                                <td><strong>@t.UserName</strong></td>
+                                <td>@t.Email</td>
+                                <td>@t.TotalAmount.ToString("0.00") лв.</td>
+                                <td>@t.TicketCount</td>
+                                <td><span class="groove-status-badge @badgeClass">@t.Status.ToTransactionStatusDisplay()</span></td>
+                                <td>@t.CreatedAt.ToString("dd.MM.yyyy HH:mm")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+</section>

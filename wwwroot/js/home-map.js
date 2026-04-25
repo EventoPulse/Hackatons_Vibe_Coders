@@ -234,6 +234,10 @@
             form.addEventListener('submit', function (e) {
                 e.preventDefault();
                 doSmartSearch(input ? input.value : '');
+                var mapSection = document.getElementById('event-map');
+                if (mapSection) {
+                    mapSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
             });
         }
         if (clearBtn) {

@@ -12,6 +12,7 @@ namespace EventsApp.Services
     public interface IMediaUploadService
     {
         Task<MediaUploadResult?> SaveAsync(IFormFile file, string subfolder, CancellationToken cancellationToken = default);
+        Task<MediaUploadResult?> SaveBytesAsync(byte[] data, string fileName, string subfolder, CancellationToken cancellationToken = default);
     }
 
     public class MediaUploadService : IMediaUploadService
@@ -87,6 +88,51 @@ namespace EventsApp.Services
             var url = $"/uploads/{subfolder}/{fileName}";
             _logger.LogInformation("Stored upload {Url} ({Bytes} bytes, {Type})", url, file.Length, mediaType);
 
+            return new MediaUploadResult { Url = url, MediaType = mediaType };
+        }
+
+        public async Task<MediaUploadResult?> SaveBytesAsync(byte[] data, string fileName, string subfolder, CancellationToken cancellationToken = default)
+        {
+            if (data == null || data.Length == 0) return null;
+
+            var ext = Path.GetExtension(fileName).ToLowerInvariant();
+            PostMediaType mediaType;
+
+            if (ImageExtensions.Contains(ext))
+            {
+                mediaType = PostMediaType.Image;
+                if (data.Length > MaxImageBytes) throw new InvalidOperationException($"File too large. Max for image is {MaxImageBytes / (1024 * 1024)} MB.");
+            }
+            else if (VideoExtensions.Contains(ext))
+            {
+                mediaType = PostMediaType.Video;
+                if (data.Length > MaxVideoBytes) throw new InvalidOperationException($"File too large. Max for video is {MaxVideoBytes / (1024 * 1024)} MB.");
+            }
+            else
+            {
+                // default to image if unknown
+                mediaType = PostMediaType.Image;
+            }
+
+            var webRoot = _env.WebRootPath;
+            if (string.IsNullOrEmpty(webRoot))
+            {
+                webRoot = Path.Combine(_env.ContentRootPath, "wwwroot");
+            }
+
+            var dir = Path.Combine(webRoot, "uploads", subfolder);
+            Directory.CreateDirectory(dir);
+
+            var safeExt = ext;
+            if (string.IsNullOrWhiteSpace(safeExt)) safeExt = ".png";
+            var fileBase = Path.GetFileNameWithoutExtension(fileName);
+            var fileNameFinal = $"{Guid.NewGuid():N}{safeExt}";
+            var fullPath = Path.Combine(dir, fileNameFinal);
+
+            await File.WriteAllBytesAsync(fullPath, data, cancellationToken);
+
+            var url = $"/uploads/{subfolder}/{fileNameFinal}";
+            _logger.LogInformation("Stored upload (bytes) {Url} ({Bytes} bytes, {Type})", url, data.Length, mediaType);
             return new MediaUploadResult { Url = url, MediaType = mediaType };
         }
     }

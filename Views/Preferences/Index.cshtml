@@ -1,50 +1,63 @@
 @model PreferencesViewModel?
 @{
-    ViewData["Title"] = "My Preferences";
+    ViewData["Title"] = "Предпочитания";
 }
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h1 class="h3 mb-0"><i class="bi bi-sliders"></i> My Preferences</h1>
-    <div class="d-flex gap-2">
-        <a asp-action="Edit" class="btn btn-primary"><i class="bi bi-pencil"></i> Edit</a>
-        <a asp-controller="Events" asp-action="Recommended" class="btn btn-outline-secondary">
-            <i class="bi bi-stars"></i> Recommended events
-        </a>
-    </div>
-</div>
-
-@if (Model == null)
-{
-    <div class="text-center py-5 text-muted">
-        <i class="bi bi-sliders" style="font-size:2.5rem;"></i>
-        <p class="mt-3 lead">You haven't set preferences yet.</p>
-        <a asp-action="Edit" class="btn btn-primary mt-2"><i class="bi bi-plus-lg"></i> Set preferences</a>
-    </div>
-}
-else
-{
-    <div class="card" style="max-width:480px;">
-        <div class="card-body">
-            <dl class="row mb-0">
-                <dt class="col-sm-5">Preferred genre</dt>
-                <dd class="col-sm-7">@(Model.PreferredGenre.HasValue ? Model.PreferredGenre.ToString() : "—")</dd>
-
-                <dt class="col-sm-5">Preferred city</dt>
-                <dd class="col-sm-7">@(string.IsNullOrWhiteSpace(Model.PreferredCity) ? "—" : Model.PreferredCity)</dd>
-
-                <dt class="col-sm-5">Minimum age</dt>
-                <dd class="col-sm-7">@(Model.MinAge.HasValue ? Model.MinAge.ToString() : "—")</dd>
-
-                <dt class="col-sm-5">Max distance (km)</dt>
-                <dd class="col-sm-7">@(Model.MaxDistanceKm.HasValue ? Model.MaxDistanceKm.ToString() + " km" : "—")</dd>
-            </dl>
+<section class="groove-app-page groove-form-shell groove-form-shell-narrow">
+    <div class="groove-page-hero">
+        <div class="groove-page-hero__copy">
+            <span class="groove-stamp groove-stamp-teal">Настройки</span>
+            <h1>Лични <span>предпочитания</span>.</h1>
+            <p>
+                Използваме ги, за да подреждаме по-добре препоръчаните събития според твоя вкус.
+            </p>
+        </div>
+        <div class="groove-page-actions">
+            <a asp-action="Edit" class="groove-button groove-button-dark">
+                <i class="bi bi-pencil"></i> Редактирай
+            </a>
+            <a asp-controller="Events" asp-action="Recommended" class="groove-button groove-button-paper">
+                <i class="bi bi-stars"></i> Препоръчани
+            </a>
         </div>
     </div>
 
-    <form asp-action="Delete" method="post" class="mt-3">
-        @Html.AntiForgeryToken()
-        <button class="btn btn-sm btn-outline-danger" onclick="return confirm('Clear all preferences?')">
-            <i class="bi bi-x-circle"></i> Clear preferences
-        </button>
-    </form>
-}
+    @if (Model == null)
+    {
+        <div class="groove-empty-card">
+            <i class="bi bi-sliders"></i>
+            <h2 class="groove-panel-title">Още няма <span>запазени настройки</span>.</h2>
+            <p class="groove-panel-intro">Добави любим жанр, град или разстояние, за да получаваш по-точни предложения.</p>
+            <div class="groove-form-actions justify-content-center">
+                <a asp-action="Edit" class="groove-button groove-button-dark">
+                    <i class="bi bi-plus-lg"></i> Задай предпочитания
+                </a>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="groove-info-card">
+            <dl class="groove-data-list">
+                <dt>Предпочитан жанр</dt>
+                <dd>@(Model.PreferredGenre.HasValue ? Model.PreferredGenre.Value.GetDisplayName() : "Няма зададен")</dd>
+
+                <dt>Предпочитан град</dt>
+                <dd>@(string.IsNullOrWhiteSpace(Model.PreferredCity) ? "Няма зададен" : Model.PreferredCity)</dd>
+
+                <dt>Минимална възраст</dt>
+                <dd>@(Model.MinAge.HasValue ? Model.MinAge.Value.ToString() : "Без ограничение")</dd>
+
+                <dt>Максимално разстояние</dt>
+                <dd>@(Model.MaxDistanceKm.HasValue ? $"{Model.MaxDistanceKm.Value} км" : "Без ограничение")</dd>
+            </dl>
+        </div>
+
+        <form asp-action="Delete" method="post" class="mt-3">
+            @Html.AntiForgeryToken()
+            <button class="groove-button groove-button-paper" onclick="return confirm('Да изчистя ли всички предпочитания?')">
+                <i class="bi bi-x-circle"></i> Изчисти предпочитанията
+            </button>
+        </form>
+    }
+</section>

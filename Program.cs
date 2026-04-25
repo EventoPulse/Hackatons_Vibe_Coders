@@ -43,6 +43,7 @@ builder.Services.Configure<SirmaAiOptions>(builder.Configuration.GetSection(Sirm
 builder.Services.Configure<GoogleMapsOptions>(builder.Configuration.GetSection(GoogleMapsOptions.SectionName));
 builder.Services.AddHttpClient<IAiSearchService, SirmaAiSearchService>();
 builder.Services.AddHttpClient<IGeocodingService, NominatimGeocodingService>();
+// Image generation removed — no additional HttpClient or image service registered.
 
 builder.Services.Configure<FormOptions>(options =>
 {

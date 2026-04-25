@@ -1,25 +1,40 @@
 @model EventsApp.Models.Ticket
 @{
-    ViewData["Title"] = "Disable ticket type";
+    ViewData["Title"] = "Изключване на билет";
     var sold = (int)(ViewBag.SoldCount ?? 0);
 }
 
-<h1 class="h3 mb-3 text-danger"><i class="bi bi-slash-circle"></i> Disable ticket type</h1>
+<section class="groove-app-page groove-form-shell groove-form-shell-narrow">
+    <div class="groove-empty-card">
+        <i class="bi bi-slash-circle"></i>
+        <h1 class="groove-panel-title">Изключи този <span>тип билет</span>?</h1>
+        <p class="groove-panel-intro">
+            <strong>@Model.Name</strong> за <strong>@Model.Event?.Title</strong> ще спре да се продава,
+            но вече купените билети ще останат валидни.
+        </p>
 
-<div class="card border-danger col-lg-7">
-    <div class="card-body">
-        <p>Are you sure you want to disable <strong>@Model.Name</strong> for <strong>@Model.Event?.Title</strong>?</p>
-        <ul class="text-muted small">
-            <li>Price: @Model.Price.ToString("0.00")</li>
-            <li>Total: @Model.QuantityTotal — Remaining: @Model.QuantityRemaining</li>
-            <li>Already sold: @sold</li>
-        </ul>
-        <p class="text-muted">This is a soft-disable: existing buyers keep their purchased tickets, but new purchases will not be possible.</p>
+        <dl class="groove-data-list text-start mt-4">
+            <dt>Цена</dt>
+            <dd>@Model.Price.ToString("0.00") лв.</dd>
 
-        <form asp-action="Delete" asp-route-id="@Model.Id" method="post" class="d-inline">
-            @Html.AntiForgeryToken()
-            <button type="submit" class="btn btn-danger"><i class="bi bi-slash-circle"></i> Disable</button>
-            <a asp-action="Manage" asp-route-id="@Model.EventId" class="btn btn-outline-secondary">Cancel</a>
-        </form>
+            <dt>Общо</dt>
+            <dd>@Model.QuantityTotal</dd>
+
+            <dt>Остават</dt>
+            <dd>@Model.QuantityRemaining</dd>
+
+            <dt>Продадени</dt>
+            <dd>@sold</dd>
+        </dl>
+
+        <div class="groove-form-actions justify-content-center mt-4">
+            <form asp-action="Delete" asp-route-id="@Model.Id" method="post">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="groove-button groove-button-dark">
+                    <i class="bi bi-slash-circle"></i> Изключи
+                </button>
+            </form>
+            <a asp-action="Manage" asp-route-id="@Model.EventId" class="groove-button groove-button-paper">Отказ</a>
+        </div>
     </div>
-</div>
+</section>

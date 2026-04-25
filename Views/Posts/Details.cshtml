@@ -1,47 +1,54 @@
 @model PostDetailsViewModel
 @{
-    ViewData["Title"] = "Post";
+    ViewData["Title"] = "Публикация";
 }
 
-<div class="mb-3">
-    <a asp-action="Index" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back</a>
-    @if (Model.CanEdit)
-    {
-        <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-sm btn-outline-primary ms-1"><i class="bi bi-pencil"></i> Edit</a>
-    }
-    @if (Model.CanDelete)
-    {
-        <a asp-action="Delete" asp-route-id="@Model.Id" class="btn btn-sm btn-outline-danger ms-1"><i class="bi bi-trash"></i> Delete</a>
-    }
-</div>
-
-<div class="row">
-    <div class="col-lg-8">
-        <div class="d-flex justify-content-between align-items-start mb-2">
-            <div>
-                <strong class="fs-5">@Model.OrganizerName</strong>
-                <span class="text-muted ms-2 small">@Model.CreatedAt.ToString("yyyy-MM-dd HH:mm")</span>
-                @if (Model.UpdatedAt.HasValue)
-                {
-                    <span class="text-muted small"> (edited @Model.UpdatedAt.Value.ToString("yyyy-MM-dd HH:mm"))</span>
-                }
-            </div>
-        </div>
-
-        @if (Model.EventId.HasValue)
+<section class="groove-app-page">
+    <div class="groove-page-actions mb-4">
+        <a asp-action="Index" class="groove-button groove-button-paper">
+            <i class="bi bi-arrow-left"></i> Назад
+        </a>
+        @if (Model.CanEdit)
         {
-            <div class="mb-3">
-                <a asp-controller="Events" asp-action="Details" asp-route-id="@Model.EventId" class="badge bg-secondary text-decoration-none">
+            <a asp-action="Edit" asp-route-id="@Model.Id" class="groove-button groove-button-paper">
+                <i class="bi bi-pencil"></i> Редакция
+            </a>
+        }
+        @if (Model.CanDelete)
+        {
+            <a asp-action="Delete" asp-route-id="@Model.Id" class="groove-button groove-button-paper">
+                <i class="bi bi-trash"></i> Изтрий
+            </a>
+        }
+    </div>
+
+    <div class="groove-paper-card">
+        <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
+            <div>
+                <span class="groove-kicker">@Model.OrganizerName</span>
+                <h1 class="groove-panel-title">Записка от <span>потока</span>.</h1>
+                <p class="groove-list-meta mt-2">
+                    @Model.CreatedAt.ToString("dd.MM.yyyy HH:mm")
+                    @if (Model.UpdatedAt.HasValue)
+                    {
+                        <text> · редактирано @Model.UpdatedAt.Value.ToString("dd.MM.yyyy HH:mm")</text>
+                    }
+                </p>
+            </div>
+
+            @if (Model.EventId.HasValue)
+            {
+                <a asp-controller="Events" asp-action="Details" asp-route-id="@Model.EventId" class="groove-link">
                     <i class="bi bi-link-45deg"></i> @Model.EventTitle
                 </a>
-            </div>
-        }
+            }
+        </div>
 
-        <p class="lead" style="white-space:pre-wrap;">@Model.Content</p>
+        <p class="groove-panel-intro mt-4" style="white-space:pre-wrap;">@Model.Content</p>
 
         @if (Model.Media.Count > 0)
         {
-            <div class="d-flex flex-wrap gap-2 mb-3">
+            <div class="d-flex flex-wrap gap-2 mt-4 mb-3">
                 @foreach (var item in Model.Media)
                 {
                     if (item.MediaType == EventsApp.Models.PostMediaType.Video)
@@ -52,73 +59,88 @@
                     }
                     else
                     {
-                        <img src="@item.Url" class="rounded img-thumbnail" style="max-height:360px;max-width:100%;object-fit:cover;" alt="post media" />
+                        <img src="@item.Url" class="rounded img-thumbnail" style="max-height:360px;max-width:100%;object-fit:cover;" alt="Медия към публикацията" />
                     }
                 }
             </div>
         }
 
-        <div class="d-flex align-items-center gap-3 mb-3">
-            <span class="text-muted"><i class="bi bi-heart-fill text-danger"></i> @Model.LikesCount likes</span>
-            <span class="text-muted"><i class="bi bi-chat"></i> @Model.Comments.Count comments</span>
+        <div class="groove-inline-actions mt-4">
+            <span class="groove-badge"><i class="bi bi-heart-fill groove-inline-icon"></i> @Model.LikesCount харесвания</span>
+            <span class="groove-badge"><i class="bi bi-chat"></i> @Model.Comments.Count коментара</span>
         </div>
 
         @if (User.Identity?.IsAuthenticated == true)
         {
-            @if (Model.CurrentUserLiked)
-            {
-                <form asp-action="Unlike" asp-route-id="@Model.Id" method="post" class="d-inline">
-                    @Html.AntiForgeryToken()
-                    <button class="btn btn-danger btn-sm"><i class="bi bi-heart-fill"></i> Unlike</button>
-                </form>
-            }
-            else
-            {
-                <form asp-action="Like" asp-route-id="@Model.Id" method="post" class="d-inline">
-                    @Html.AntiForgeryToken()
-                    <button class="btn btn-outline-danger btn-sm"><i class="bi bi-heart"></i> Like</button>
-                </form>
-            }
+            <div class="mt-3">
+                @if (Model.CurrentUserLiked)
+                {
+                    <form asp-action="Unlike" asp-route-id="@Model.Id" method="post" class="d-inline">
+                        @Html.AntiForgeryToken()
+                        <button class="groove-button groove-button-dark"><i class="bi bi-heart-fill"></i> Премахни харесването</button>
+                    </form>
+                }
+                else
+                {
+                    <form asp-action="Like" asp-route-id="@Model.Id" method="post" class="d-inline">
+                        @Html.AntiForgeryToken()
+                        <button class="groove-button groove-button-paper"><i class="bi bi-heart"></i> Харесай</button>
+                    </form>
+                }
+            </div>
         }
+    </div>
 
-        <hr class="my-4" />
-        <h3 class="h5"><i class="bi bi-chat-square-text"></i> Comments (@Model.Comments.Count)</h3>
+    <section class="groove-page-section">
+        <div class="groove-section-bar">
+            <div>
+                <span class="groove-kicker">Коментари</span>
+                <h2 id="comments">Разговорът <span>(@Model.Comments.Count)</span>.</h2>
+            </div>
+        </div>
 
         @if (User.Identity?.IsAuthenticated == true)
         {
             <form asp-action="AddComment" asp-route-id="@Model.Id" method="post" class="mb-4">
                 @Html.AntiForgeryToken()
                 <div class="input-group">
-                    <input type="text" name="content" class="form-control" placeholder="Write a comment…" maxlength="1000" required />
-                    <button class="btn btn-primary" type="submit"><i class="bi bi-send"></i> Post</button>
+                    <input type="text" name="content" class="form-control" placeholder="Напиши коментар..." maxlength="1000" required />
+                    <button class="btn btn-primary" type="submit"><i class="bi bi-send"></i> Изпрати</button>
                 </div>
             </form>
         }
 
         @if (Model.Comments.Count == 0)
         {
-            <p class="text-muted">No comments yet.</p>
+            <div class="groove-empty-card">
+                <i class="bi bi-chat-square-text"></i>
+                <h2 class="groove-panel-title">Още няма <span>коментари</span>.</h2>
+            </div>
         }
         else
         {
-            @foreach (var c in Model.Comments)
-            {
-                <div class="d-flex justify-content-between align-items-start mb-3 border-bottom pb-2">
-                    <div>
-                        <strong>@c.UserName</strong>
-                        <span class="text-muted small ms-2">@c.CreatedAt.ToString("yyyy-MM-dd HH:mm")</span>
-                        <p class="mb-0 mt-1">@c.Content</p>
-                    </div>
-                    @if (c.CanDelete)
+            <div class="groove-info-card">
+                <div class="groove-list-stack">
+                    @foreach (var c in Model.Comments)
                     {
-                        <form asp-action="DeleteComment" method="post" class="ms-2">
-                            @Html.AntiForgeryToken()
-                            <input type="hidden" name="commentId" value="@c.Id" />
-                            <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
-                        </form>
+                        <article class="groove-list-item">
+                            <div>
+                                <strong>@c.UserName</strong>
+                                <p class="groove-list-meta mt-1">@c.CreatedAt.ToString("dd.MM.yyyy HH:mm")</p>
+                                <p>@c.Content</p>
+                            </div>
+                            @if (c.CanDelete)
+                            {
+                                <form asp-action="DeleteComment" method="post" class="ms-2">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="commentId" value="@c.Id" />
+                                    <button class="groove-button groove-button-paper"><i class="bi bi-trash"></i> Изтрий</button>
+                                </form>
+                            }
+                        </article>
                     }
                 </div>
-            }
+            </div>
         }
-    </div>
-</div>
+    </section>
+</section>

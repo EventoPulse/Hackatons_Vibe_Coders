@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<html lang="en">
+<html lang="bg">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -9,14 +9,14 @@
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
 </head>
 <body>
-    <header>
-        <nav class="navbar navbar-expand-md navbar-dark bg-dark border-bottom shadow-sm mb-3">
+    <header class="site-header">
+        <nav class="navbar navbar-expand-md navbar-dark bg-dark border-bottom shadow-sm">
             <div class="container-fluid">
                 <a class="navbar-brand fw-bold" asp-area="" asp-controller="Home" asp-action="Index">
                     <i class="bi bi-music-note-beamed"></i> GrooveOn
                 </a>
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav"
-                        aria-controls="mainNav" aria-expanded="false" aria-label="Toggle navigation">
+                        aria-controls="mainNav" aria-expanded="false" aria-label="Навигация">
                     <span class="navbar-toggler-icon"></span>
                 </button>
                 <div class="collapse navbar-collapse" id="mainNav">
@@ -28,27 +28,27 @@
                     }
                     <ul class="navbar-nav me-auto mb-2 mb-md-0">
                         <li class="nav-item">
-                            <a class="nav-link" asp-controller="Home" asp-action="Index">Home</a>
+                            <a class="nav-link" asp-controller="Home" asp-action="Index">Начало</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" asp-controller="Posts" asp-action="Index">Feed</a>
+                            <a class="nav-link" asp-controller="Posts" asp-action="Index">Поток</a>
                         </li>
                         @if (isStaff)
                         {
                             <li class="nav-item">
-                                <a class="nav-link" asp-controller="Events" asp-action="Index">Events</a>
+                                <a class="nav-link" asp-controller="Events" asp-action="Index">Събития</a>
                             </li>
                         }
                         @if (isAuthed)
                         {
                             <li class="nav-item">
                                 <a class="nav-link" asp-controller="Events" asp-action="Recommended">
-                                    <i class="bi bi-stars"></i> Recommended
+                                    <i class="bi bi-stars"></i> Препоръчани
                                 </a>
                             </li>
                             <li class="nav-item">
                                 <a class="nav-link" asp-controller="Tickets" asp-action="MyTickets">
-                                    <i class="bi bi-ticket-perforated"></i> My Tickets
+                                    <i class="bi bi-ticket-perforated"></i> Моите билети
                                 </a>
                             </li>
                         }
@@ -56,12 +56,12 @@
                         {
                             <li class="nav-item">
                                 <a class="nav-link" asp-controller="Tickets" asp-action="Validate">
-                                    <i class="bi bi-qr-code-scan"></i> Validate
+                                    <i class="bi bi-qr-code-scan"></i> Валидиране
                                 </a>
                             </li>
                             <li class="nav-item">
                                 <a class="nav-link" asp-controller="Organizer" asp-action="Dashboard">
-                                    <i class="bi bi-person-badge"></i> Organizer
+                                    <i class="bi bi-person-badge"></i> Организатор
                                 </a>
                             </li>
                         }
@@ -69,7 +69,7 @@
                         {
                             <li class="nav-item">
                                 <a class="nav-link text-warning" asp-controller="Admin" asp-action="Index">
-                                    <i class="bi bi-shield-check"></i> Admin
+                                    <i class="bi bi-shield-check"></i> Админ
                                 </a>
                             </li>
                         }
@@ -79,12 +79,12 @@
             </div>
         </nav>
     </header>
-    <div class="container pb-5">
+    <div class="container site-content pb-5">
         @if (TempData["StatusMessage"] is string statusMessage && !string.IsNullOrEmpty(statusMessage))
         {
             <div class="alert alert-info alert-dismissible fade show" role="alert">
                 @statusMessage
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Затвори"></button>
             </div>
         }
         <main role="main" class="pb-3">

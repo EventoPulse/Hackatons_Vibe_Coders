@@ -1,95 +1,100 @@
 @model AdminTicketsViewModel
 @{
-    ViewData["Title"] = "Tickets overview";
+    ViewData["Title"] = "Билети";
 }
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h1 class="h3"><i class="bi bi-ticket-perforated"></i> Tickets overview</h1>
-    <a asp-action="Index" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i> Admin</a>
-</div>
+<section class="groove-app-page">
+    <div class="groove-page-hero">
+        <div class="groove-page-hero__copy">
+            <span class="groove-stamp groove-stamp-teal">Продажби</span>
+            <h1>Обзор на <span>билетите</span>.</h1>
+            <p>Следи активните типове билети, продажбите, използваните входове и демонстрационния приход.</p>
+        </div>
+        <div class="groove-page-actions">
+            <a asp-action="Index" class="groove-button groove-button-paper">
+                <i class="bi bi-arrow-left"></i> Към админ
+            </a>
+        </div>
+    </div>
 
-<div class="row g-3 mb-4">
-    <div class="col-sm-6 col-lg-3">
-        <div class="card border-0 bg-light text-center">
-            <div class="card-body">
-                <div class="display-6 fw-bold text-success">@Model.TicketTypesCount</div>
-                <div class="text-muted">Ticket types</div>
-            </div>
-        </div>
+    <div class="groove-stat-grid">
+        <article class="groove-stat-card">
+            <span>Типове билети</span>
+            <strong>@Model.TicketTypesCount</strong>
+        </article>
+        <article class="groove-stat-card">
+            <span>Продадени</span>
+            <strong>@Model.TicketsSoldCount</strong>
+        </article>
+        <article class="groove-stat-card">
+            <span>Използвани</span>
+            <strong>@Model.UsedTicketsCount</strong>
+        </article>
+        <article class="groove-stat-card">
+            <span>Оставащи</span>
+            <strong>@Model.UnusedTicketsCount</strong>
+        </article>
+        <article class="groove-stat-card">
+            <span>Приход</span>
+            <strong>@Model.TotalRevenue.ToString("0.00")</strong>
+        </article>
     </div>
-    <div class="col-sm-6 col-lg-3">
-        <div class="card border-0 bg-light text-center">
-            <div class="card-body">
-                <div class="display-6 fw-bold text-success">@Model.TicketsSoldCount</div>
-                <div class="text-muted">Tickets sold</div>
-            </div>
-        </div>
-    </div>
-    <div class="col-sm-6 col-lg-3">
-        <div class="card border-0 bg-light text-center">
-            <div class="card-body">
-                <div class="display-6 fw-bold text-secondary">@Model.UsedTicketsCount</div>
-                <div class="text-muted">Used</div>
-            </div>
-        </div>
-    </div>
-    <div class="col-sm-6 col-lg-3">
-        <div class="card border-0 bg-light text-center">
-            <div class="card-body">
-                <div class="display-6 fw-bold text-primary">@Model.TotalRevenue.ToString("0.00")</div>
-                <div class="text-muted">Revenue (demo)</div>
-            </div>
-        </div>
-    </div>
-</div>
 
-<h2 class="h5 mb-3">Recent purchased tickets</h2>
-@if (Model.Recent.Count == 0)
-{
-    <p class="text-muted">No tickets purchased yet.</p>
-}
-else
-{
-    <div class="table-responsive">
-        <table class="table table-sm align-middle">
-            <thead>
-                <tr>
-                    <th>Event</th>
-                    <th>Ticket</th>
-                    <th>Holder</th>
-                    <th>Price</th>
-                    <th>Bought</th>
-                    <th>Status</th>
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var t in Model.Recent)
-                {
-                    <tr>
-                        <td><a asp-controller="Events" asp-action="Details" asp-route-id="@t.EventId">@t.EventTitle</a></td>
-                        <td>@t.TicketName</td>
-                        <td>@t.OwnerUserName</td>
-                        <td>@t.Price.ToString("0.00")</td>
-                        <td class="small text-muted">@t.CreatedAt.ToString("yyyy-MM-dd HH:mm")</td>
-                        <td>
-                            @if (t.IsUsed)
+    <section class="groove-page-section">
+        <div class="groove-section-bar">
+            <div>
+                <span class="groove-kicker">Последни покупки</span>
+                <h2>Скорошно <span>движение</span>.</h2>
+            </div>
+        </div>
+
+        @if (Model.Recent.Count == 0)
+        {
+            <div class="groove-empty-card">
+                <i class="bi bi-ticket-perforated"></i>
+                <h2 class="groove-panel-title">Все още няма <span>покупки</span>.</h2>
+            </div>
+        }
+        else
+        {
+            <div class="groove-table-card">
+                <div class="groove-table-wrap">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Събитие</th>
+                                <th>Билет</th>
+                                <th>Притежател</th>
+                                <th>Цена</th>
+                                <th>Купен</th>
+                                <th>Статус</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var t in Model.Recent)
                             {
-                                <span class="badge bg-secondary">Used</span>
+                                var statusClass = t.IsUsed ? "groove-status-badge-muted" : "groove-status-badge-success";
+                                var statusText = t.IsUsed ? "Използван" : "Валиден";
+
+                                <tr>
+                                    <td><strong>@t.EventTitle</strong></td>
+                                    <td>@t.TicketName</td>
+                                    <td>@t.OwnerUserName</td>
+                                    <td>@t.Price.ToString("0.00") лв.</td>
+                                    <td>@t.CreatedAt.ToString("dd.MM.yyyy HH:mm")</td>
+                                    <td><span class="groove-status-badge @statusClass">@statusText</span></td>
+                                    <td>
+                                        <a asp-controller="Tickets" asp-action="Details" asp-route-id="@t.Id" class="groove-button groove-button-paper">
+                                            <i class="bi bi-eye"></i> Детайли
+                                        </a>
+                                    </td>
+                                </tr>
                             }
-                            else
-                            {
-                                <span class="badge bg-success">Valid</span>
-                            }
-                        </td>
-                        <td class="text-end">
-                            <a asp-controller="Tickets" asp-action="Details" asp-route-id="@t.Id" class="btn btn-sm btn-outline-primary">
-                                <i class="bi bi-eye"></i>
-                            </a>
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-    </div>
-}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        }
+    </section>
+</section>

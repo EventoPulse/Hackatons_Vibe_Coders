@@ -1,339 +1,205 @@
 @using EventsApp.ViewModels.Account
 @model AccountOverviewViewModel
 @{
-    ViewData["Title"] = "My Account";
-
-    var displayName = !string.IsNullOrWhiteSpace(Model.UserName)
-        ? Model.UserName
-        : (!string.IsNullOrWhiteSpace(Model.Email) ? Model.Email : "Account");
-    var avatarInitial = !string.IsNullOrWhiteSpace(displayName)
-        ? displayName[0].ToString().ToUpperInvariant()
-        : "?";
-    var createdAtText = Model.CreatedAt.ToString("yyyy-MM-dd HH:mm");
-    var roleBadge = Model.Role switch
-    {
-        GlobalConstants.Roles.Admin => "bg-danger",
-        GlobalConstants.Roles.Organizer => "bg-primary",
-        _ => "bg-secondary",
-    };
-    var roleIcon = Model.Role switch
-    {
-        GlobalConstants.Roles.Admin => "bi-shield-fill",
-        GlobalConstants.Roles.Organizer => "bi-person-badge-fill",
-        _ => "bi-person-fill",
-    };
+    ViewData["Title"] = "Моят профил";
+    var isAdmin = Model.Role == GlobalConstants.Roles.Admin;
+    var isOrganizer = Model.Role == GlobalConstants.Roles.Organizer;
+    var initial = string.IsNullOrWhiteSpace(Model.UserName) ? "?" : Model.UserName[..1].ToUpperInvariant();
+    var roleClass = isAdmin ? "groove-status-badge-danger"
+        : isOrganizer ? "groove-status-badge-success"
+        : "groove-status-badge-muted";
 }
 
-<div class="row g-4">
-    <div class="col-xl-4 d-flex flex-column gap-3">
-        <div class="card shadow-sm">
-            <div class="card-header bg-transparent border-0 pb-0">
-                <h5 class="mb-0"><i class="bi bi-person-vcard"></i> Profile information</h5>
+<section class="groove-app-page">
+    <div class="groove-page-grid groove-page-grid-2">
+        <article class="groove-paper-card">
+            <div class="groove-profile-hero">
+                <div class="groove-avatar">@initial</div>
+                <div>
+                    <span class="groove-stamp groove-stamp-red">Профил</span>
+                    <h1 class="groove-panel-title">@Model.UserName</h1>
+                    <p class="groove-panel-intro">@Model.Email</p>
+                    <div class="groove-inline-actions mt-3">
+                        <span class="groove-status-badge @roleClass">@Model.Role.ToRoleDisplay()</span>
+                        <span class="groove-badge"><i class="bi bi-calendar-check"></i> От @Model.CreatedAt.ToString("MMMM yyyy")</span>
+                    </div>
+                </div>
             </div>
-            <div class="card-body">
-                <div class="d-flex align-items-center gap-3 mb-4">
-                    @if (!string.IsNullOrWhiteSpace(Model.ProfileImageUrl))
+
+            <div class="groove-cta-row">
+                <a asp-action="EditProfile" class="groove-button groove-button-dark">
+                    <i class="bi bi-person-gear"></i> Редактирай профила
+                </a>
+                <a asp-controller="Tickets" asp-action="MyTickets" class="groove-button groove-button-paper">
+                    <i class="bi bi-ticket-perforated"></i> Моите билети
+                </a>
+                <a asp-controller="Preferences" asp-action="Index" class="groove-button groove-button-paper">
+                    <i class="bi bi-sliders"></i> Предпочитания
+                </a>
+            </div>
+        </article>
+
+        @if (isAdmin)
+        {
+            <article class="groove-highlight-card">
+                <span class="groove-kicker">Роля</span>
+                <h2 class="groove-panel-title">Админ <span>достъп</span>.</h2>
+                <p class="groove-panel-intro">Имаш пълен контрол над платформата, ролите и съдържанието.</p>
+                <div class="groove-cta-row">
+                    <a asp-controller="Admin" asp-action="Index" class="groove-button groove-button-dark">
+                        <i class="bi bi-shield-check"></i> Админ панел
+                    </a>
+                    <a asp-controller="Admin" asp-action="Users" class="groove-button groove-button-paper">
+                        <i class="bi bi-people"></i> Потребители
+                    </a>
+                    <a asp-controller="Admin" asp-action="Organizers" class="groove-button groove-button-paper">
+                        <i class="bi bi-person-badge"></i> Организатори
+                    </a>
+                </div>
+            </article>
+        }
+        else if (isOrganizer)
+        {
+            <article class="groove-highlight-card">
+                <span class="groove-kicker">Роля</span>
+                <h2 class="groove-panel-title">Организаторски <span>панел</span>.</h2>
+                <p class="groove-panel-intro">
+                    @if (!string.IsNullOrWhiteSpace(Model.OrganizationName))
                     {
-                        <img src="@Model.ProfileImageUrl"
-                             class="rounded-circle object-fit-cover flex-shrink-0"
-                             style="width:96px;height:96px;"
-                             alt="Profile image for @displayName" />
+                        <text>@Model.OrganizationName</text>
                     }
                     else
                     {
-                        <div class="rounded-circle bg-secondary text-white d-inline-flex align-items-center justify-content-center flex-shrink-0 fw-semibold fs-2"
-                             style="width:96px;height:96px;">
-                            @avatarInitial
-                        </div>
+                        <text>Тук управляваш своите събития, публикации и билети.</text>
                     }
-
-                    <div>
-                        <h4 class="mb-1">@displayName</h4>
-                        <div class="text-muted small mb-2">Manage your public account details.</div>
-                        <span class="badge @roleBadge px-3 py-2">
-                            <i class="bi @roleIcon me-1"></i> @Model.Role
-                        </span>
-                    </div>
+                </p>
+                <div class="groove-stat-grid mb-0">
+                    <article class="groove-stat-card">
+                        <span>Събития</span>
+                        <strong>@Model.EventsCount</strong>
+                    </article>
+                    <article class="groove-stat-card">
+                        <span>Публикации</span>
+                        <strong>@Model.PostsCount</strong>
+                    </article>
                 </div>
-
-                <dl class="row mb-4">
-                    <dt class="col-sm-4">User name</dt>
-                    <dd class="col-sm-8">@(string.IsNullOrWhiteSpace(Model.UserName) ? "Not set" : Model.UserName)</dd>
-
-                    <dt class="col-sm-4">Email</dt>
-                    <dd class="col-sm-8 text-break">@(string.IsNullOrWhiteSpace(Model.Email) ? "Not set" : Model.Email)</dd>
-
-                    <dt class="col-sm-4">Phone</dt>
-                    <dd class="col-sm-8">@(string.IsNullOrWhiteSpace(Model.PhoneNumber) ? "Not set" : Model.PhoneNumber)</dd>
-
-                    <dt class="col-sm-4">Bio</dt>
-                    <dd class="col-sm-8" style="white-space:pre-wrap;">@(string.IsNullOrWhiteSpace(Model.Bio) ? "No bio yet." : Model.Bio)</dd>
-
-                    <dt class="col-sm-4">Profile image</dt>
-                    <dd class="col-sm-8 text-break">@(string.IsNullOrWhiteSpace(Model.ProfileImageUrl) ? "Default avatar" : Model.ProfileImageUrl)</dd>
-
-                    <dt class="col-sm-4">Created at</dt>
-                    <dd class="col-sm-8">@createdAtText</dd>
-                </dl>
-
-                <a asp-action="EditProfile" class="btn btn-primary">
-                    <i class="bi bi-pencil-square"></i> Edit Profile
-                </a>
-            </div>
-        </div>
-
-        @if (Model.Role == GlobalConstants.Roles.Admin)
+                <div class="groove-cta-row">
+                    <a asp-controller="Organizer" asp-action="Dashboard" class="groove-button groove-button-dark">
+                        <i class="bi bi-speedometer2"></i> Организатор
+                    </a>
+                    <a asp-controller="Organizer" asp-action="Profile" class="groove-button groove-button-paper">
+                        <i class="bi bi-pencil"></i> Организаторски профил
+                    </a>
+                </div>
+            </article>
+        }
+        else if (!Model.HasApplied)
         {
-            <div class="card border-danger shadow-sm">
-                <div class="card-header bg-danger text-white">
-                    <i class="bi bi-shield-check"></i> Admin Panel
+            <article class="groove-highlight-card">
+                <span class="groove-kicker">Следваща стъпка</span>
+                <h2 class="groove-panel-title">Стани <span>организатор</span>.</h2>
+                <p class="groove-panel-intro">
+                    Кандидатствай, за да публикуваш събития и да продаваш билети през GrooveOn.
+                </p>
+                <div class="groove-cta-row">
+                    <a asp-action="Apply" class="groove-button groove-button-dark">
+                        <i class="bi bi-send"></i> Кандидатствай
+                    </a>
                 </div>
-                <div class="card-body">
-                    <p class="mb-3 text-muted">You have full administrative access to GrooveOn.</p>
-                    <div class="d-flex flex-wrap gap-2">
-                        <a asp-controller="Admin" asp-action="Index" class="btn btn-danger">
-                            <i class="bi bi-speedometer2"></i> Admin Dashboard
-                        </a>
-                        <a asp-controller="Admin" asp-action="Users" class="btn btn-outline-danger">
-                            <i class="bi bi-people"></i> Manage users
-                        </a>
-                        <a asp-controller="Admin" asp-action="Organizers" class="btn btn-outline-danger">
-                            <i class="bi bi-person-badge"></i> Organizer applications
-                        </a>
-                        <a asp-controller="Admin" asp-action="Events" class="btn btn-outline-danger">
-                            <i class="bi bi-calendar2-event"></i> Manage events
-                        </a>
-                        <a asp-controller="Admin" asp-action="Posts" class="btn btn-outline-danger">
-                            <i class="bi bi-chat-square-text"></i> Manage posts
-                        </a>
-                    </div>
+            </article>
+        }
+        else
+        {
+            <article class="groove-highlight-card">
+                <span class="groove-kicker">Кандидатура</span>
+                <h2 class="groove-panel-title">Статус: <span>в изчакване</span>.</h2>
+                <p class="groove-panel-intro">
+                    Организация: @Model.OrganizationName
+                    @if (Model.ApplicationDate.HasValue)
+                    {
+                        <text> · подадена на @Model.ApplicationDate.Value.ToString("dd.MM.yyyy HH:mm")</text>
+                    }
+                </p>
+                <div class="groove-cta-row">
+                    <a asp-action="EditApplication" class="groove-button groove-button-paper">
+                        <i class="bi bi-pencil"></i> Редактирай кандидатурата
+                    </a>
                 </div>
-            </div>
+            </article>
         }
     </div>
 
-    <div class="col-xl-8 d-flex flex-column gap-3">
-        @if (Model.Role == GlobalConstants.Roles.Organizer)
-        {
-            <div class="card border-primary shadow-sm">
-                <div class="card-header bg-primary text-white">
-                    <i class="bi bi-person-badge-fill"></i> Organizer Panel - @(Model.OrganizationName ?? "Organizer")
-                    <span class="badge bg-success ms-2"><i class="bi bi-check-circle-fill"></i> Approved</span>
-                </div>
-                <div class="card-body">
-                    <div class="row g-3 mb-3 text-center">
-                        <div class="col-6">
-                            <div class="fs-3 fw-bold text-primary">@Model.EventsCount</div>
-                            <div class="text-muted small">Events</div>
-                        </div>
-                        <div class="col-6">
-                            <div class="fs-3 fw-bold text-primary">@Model.PostsCount</div>
-                            <div class="text-muted small">Posts</div>
-                        </div>
-                    </div>
-                    <div class="d-flex flex-wrap gap-2">
-                        <a asp-controller="Organizer" asp-action="Dashboard" class="btn btn-primary">
-                            <i class="bi bi-speedometer2"></i> Organizer Dashboard
-                        </a>
-                        <a asp-controller="Events" asp-action="Create" class="btn btn-outline-primary">
-                            <i class="bi bi-calendar-plus"></i> New event
-                        </a>
-                        <a asp-controller="Posts" asp-action="Create" class="btn btn-outline-primary">
-                            <i class="bi bi-pencil-square"></i> New post
-                        </a>
-                        <a asp-controller="Organizer" asp-action="Profile" class="btn btn-outline-secondary">
-                            <i class="bi bi-pencil"></i> Edit organizer profile
-                        </a>
-                    </div>
-                </div>
+    <section class="groove-page-section">
+        <div class="groove-section-bar">
+            <div>
+                <span class="groove-kicker">Билети</span>
+                <h2>Последни <span>покупки</span>.</h2>
             </div>
-        }
+            <a asp-controller="Tickets" asp-action="MyTickets" class="groove-link">Виж всички</a>
+        </div>
 
-        @if (Model.Role == GlobalConstants.Roles.User)
-        {
-            @if (!Model.HasApplied)
+        <div class="groove-info-card">
+            @if (Model.RecentTickets.Count == 0)
             {
-                <div class="card border-0 bg-light shadow-sm">
-                    <div class="card-body">
-                        <h5 class="card-title"><i class="bi bi-person-badge"></i> Become an Organizer</h5>
-                        <p class="text-muted mb-3">
-                            Apply to become an organizer on GrooveOn. Once approved, you'll be able to create events and posts.
-                        </p>
-                        <a asp-action="Apply" class="btn btn-primary">
-                            <i class="bi bi-send"></i> Apply now
-                        </a>
-                    </div>
+                <p class="groove-panel-intro mb-0">Още нямаш закупени билети.</p>
+            }
+            else
+            {
+                <div class="groove-list-stack">
+                    @foreach (var t in Model.RecentTickets)
+                    {
+                        var statusClass = t.IsUsed ? "groove-status-badge-muted" : "groove-status-badge-success";
+                        var statusText = t.IsUsed ? "Използван" : "Валиден";
+
+                        <article class="groove-list-item">
+                            <div>
+                                <h3>@t.EventTitle</h3>
+                                <p>@t.TicketName</p>
+                                <p class="groove-list-meta mt-2">@t.Address, @t.City · @t.StartTime.ToString("dd.MM.yyyy HH:mm")</p>
+                            </div>
+                            <div class="groove-list-actions">
+                                <span class="groove-status-badge @statusClass">@statusText</span>
+                                <a asp-controller="Tickets" asp-action="Details" asp-route-id="@t.Id" class="groove-button groove-button-paper">
+                                    <i class="bi bi-eye"></i> Детайли
+                                </a>
+                            </div>
+                        </article>
+                    }
                 </div>
             }
-            else if (!Model.IsApproved)
-            {
-                <div class="card border-warning shadow-sm">
-                    <div class="card-header bg-warning text-dark">
-                        <i class="bi bi-hourglass-split"></i> Application pending review
-                    </div>
-                    <div class="card-body">
-                        <dl class="row mb-3">
-                            <dt class="col-sm-4">Organization</dt>
-                            <dd class="col-sm-8">@Model.OrganizationName</dd>
+        </div>
+    </section>
 
-                            <dt class="col-sm-4">Submitted</dt>
-                            <dd class="col-sm-8">@Model.ApplicationDate?.ToString("yyyy-MM-dd HH:mm")</dd>
-                        </dl>
-                        <p class="text-muted small mb-3">An admin will review your application. You'll see your status updated here.</p>
-                        <a asp-action="EditApplication" class="btn btn-outline-warning btn-sm">
-                            <i class="bi bi-pencil"></i> Edit application
-                        </a>
-                    </div>
+    <section class="groove-page-section">
+        <div class="groove-section-bar">
+            <div>
+                <span class="groove-kicker">Навигация</span>
+                <h2>Бързи <span>връзки</span>.</h2>
+            </div>
+        </div>
+
+        <div class="groove-mini-grid">
+            <article class="groove-mini-card">
+                <h3>Начало</h3>
+                <p>Разгледай нови събития и картата на сцената.</p>
+                <div class="groove-cta-row">
+                    <a asp-controller="Home" asp-action="Index" class="groove-link">Отвори</a>
                 </div>
-            }
-        }
-
-        <div class="card border-0 bg-light shadow-sm">
-            <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center">
-                <h5 class="mb-0"><i class="bi bi-sliders"></i> Preferences summary</h5>
-                <a asp-controller="Preferences" asp-action="Edit" class="btn btn-sm btn-outline-primary">
-                    @(Model.HasPreferences ? "Edit" : "Set preferences")
-                </a>
-            </div>
-            <div class="card-body pt-0">
-                @if (!Model.HasPreferences)
-                {
-                    <p class="text-muted mb-3">You have not set preferences yet.</p>
-                    <a asp-controller="Events" asp-action="Recommended" class="btn btn-sm btn-outline-secondary">
-                        <i class="bi bi-stars"></i> Recommended events
-                    </a>
-                }
-                else
-                {
-                    <dl class="row mb-0">
-                        <dt class="col-sm-4">Preferred genre</dt>
-                        <dd class="col-sm-8">@(Model.PreferredGenre?.ToString() ?? "Not set")</dd>
-
-                        <dt class="col-sm-4">Preferred city</dt>
-                        <dd class="col-sm-8">@(string.IsNullOrWhiteSpace(Model.PreferredCity) ? "Not set" : Model.PreferredCity)</dd>
-
-                        <dt class="col-sm-4">Minimum age</dt>
-                        <dd class="col-sm-8">@(Model.MinAge?.ToString() ?? "Not set")</dd>
-
-                        <dt class="col-sm-4">Max distance</dt>
-                        <dd class="col-sm-8">@(Model.MaxDistanceKm.HasValue ? $"{Model.MaxDistanceKm} km" : "Not set")</dd>
-                    </dl>
-                }
-            </div>
-        </div>
-
-        <div class="card border-0 bg-light shadow-sm">
-            <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center">
-                <h5 class="mb-0"><i class="bi bi-heart-fill text-danger"></i> Liked events</h5>
-                <a asp-controller="Home" asp-action="Index" class="btn btn-sm btn-outline-primary">Browse events</a>
-            </div>
-            <div class="card-body pt-0">
-                @if (Model.LikedEvents.Count == 0)
-                {
-                    <p class="text-muted mb-0">You have not liked any events yet.</p>
-                }
-                else
-                {
-                    <div class="row row-cols-1 row-cols-md-2 g-3">
-                        @foreach (var ev in Model.LikedEvents)
-                        {
-                            <div class="col">
-                                <partial name="_EventCard" model="ev" />
-                            </div>
-                        }
-                    </div>
-                }
-            </div>
-        </div>
-
-        <div class="card border-0 bg-light shadow-sm">
-            <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center">
-                <h5 class="mb-0"><i class="bi bi-heart-fill text-danger"></i> Liked posts</h5>
-                <a asp-controller="Posts" asp-action="Index" class="btn btn-sm btn-outline-primary">Open feed</a>
-            </div>
-            <div class="card-body pt-0">
-                @if (Model.LikedPosts.Count == 0)
-                {
-                    <p class="text-muted mb-0">You have not liked any posts yet.</p>
-                }
-                else
-                {
-                    <div class="row row-cols-1 row-cols-md-2 g-3">
-                        @foreach (var post in Model.LikedPosts)
-                        {
-                            <div class="col">
-                                <partial name="_PostCard" model="post" />
-                            </div>
-                        }
-                    </div>
-                }
-            </div>
-        </div>
-
-        <div class="card border-0 bg-light shadow-sm">
-            <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center">
-                <h5 class="mb-0"><i class="bi bi-ticket-perforated"></i> My Tickets (@Model.PurchasedTicketsCount)</h5>
-                <a asp-controller="Tickets" asp-action="MyTickets" class="btn btn-sm btn-outline-primary">View all</a>
-            </div>
-            <div class="card-body pt-0">
-                @if (Model.RecentTickets.Count == 0)
-                {
-                    <p class="text-muted mb-0">You have not purchased any tickets yet.</p>
-                }
-                else
-                {
-                    <div class="list-group list-group-flush">
-                        @foreach (var ticket in Model.RecentTickets)
-                        {
-                            <div class="list-group-item bg-transparent px-0 d-flex justify-content-between align-items-center">
-                                <div>
-                                    <strong>@ticket.EventTitle</strong>
-                                    <span class="text-muted small"> - @ticket.TicketName</span>
-                                    <div class="text-muted small">
-                                        @ticket.Address, @ticket.City - @ticket.StartTime.ToString("yyyy-MM-dd HH:mm")
-                                        @if (ticket.IsUsed)
-                                        {
-                                            <span class="badge bg-secondary ms-1">Used</span>
-                                        }
-                                        else
-                                        {
-                                            <span class="badge bg-success ms-1">Valid</span>
-                                        }
-                                    </div>
-                                </div>
-                                <div class="d-flex gap-1">
-                                    <a asp-controller="Tickets" asp-action="Details" asp-route-id="@ticket.Id" class="btn btn-sm btn-outline-primary">
-                                        <i class="bi bi-eye"></i>
-                                    </a>
-                                    <a asp-controller="Tickets" asp-action="DownloadPdf" asp-route-id="@ticket.Id" class="btn btn-sm btn-outline-primary">
-                                        <i class="bi bi-file-earmark-pdf"></i>
-                                    </a>
-                                </div>
-                            </div>
-                        }
-                    </div>
-                }
-            </div>
-        </div>
-
-        <div class="card border-0 bg-light shadow-sm">
-            <div class="card-body">
-                <h5 class="card-title mb-3"><i class="bi bi-lightning"></i> Quick links</h5>
-                <div class="d-flex flex-wrap gap-2">
-                    <a asp-controller="Home" asp-action="Index" class="btn btn-outline-primary btn-sm">
-                        <i class="bi bi-calendar2-event"></i> Browse events
-                    </a>
-                    <a asp-controller="Posts" asp-action="Index" class="btn btn-outline-primary btn-sm">
-                        <i class="bi bi-chat-square-text"></i> Feed
-                    </a>
-                    <a asp-controller="Preferences" asp-action="Index" class="btn btn-outline-secondary btn-sm">
-                        <i class="bi bi-sliders"></i> My preferences
-                    </a>
-                    <a asp-controller="Events" asp-action="Recommended" class="btn btn-outline-secondary btn-sm">
-                        <i class="bi bi-stars"></i> Recommended events
-                    </a>
+            </article>
+            <article class="groove-mini-card">
+                <h3>Поток</h3>
+                <p>Виж какво публикуват организатори и посетители.</p>
+                <div class="groove-cta-row">
+                    <a asp-controller="Posts" asp-action="Index" class="groove-link">Отвори</a>
                 </div>
-            </div>
+            </article>
+            <article class="groove-mini-card">
+                <h3>Препоръчани</h3>
+                <p>Подбор на събития според твоите предпочитания.</p>
+                <div class="groove-cta-row">
+                    <a asp-controller="Events" asp-action="Recommended" class="groove-link">Отвори</a>
+                </div>
+            </article>
         </div>
-    </div>
-</div>
+    </section>
+</section>

@@ -1,37 +1,73 @@
 @model IReadOnlyList<EventCardViewModel>
 @{
-    ViewData["Title"] = "Recommended Events";
+    ViewData["Title"] = "Препоръчани";
     var hasPrefs = (bool)(ViewBag.HasPreferences ?? false);
 }
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h1 class="h3 mb-0"><i class="bi bi-stars"></i> Recommended for you</h1>
-    <a asp-controller="Preferences" asp-action="Index" class="btn btn-sm btn-outline-secondary">
-        <i class="bi bi-sliders"></i> My preferences
-    </a>
-</div>
+<section class="groove-app-page">
+    <div class="groove-page-hero">
+        <div class="groove-page-hero__copy">
+            <span class="groove-stamp groove-stamp-teal">Подбор</span>
+            <h1>Вечери, избрани <span>за теб</span>.</h1>
+            <p>
+                Тук събираме предстоящите събития, които най-добре пасват на твоите предпочитания.
+                Ако още не си ги настроил, ще покажем всички одобрени предложения.
+            </p>
+        </div>
+        <div class="groove-page-actions">
+            <a asp-controller="Preferences" asp-action="Index" class="groove-button groove-button-paper">
+                <i class="bi bi-sliders"></i> Моите предпочитания
+            </a>
+            <a asp-controller="Preferences" asp-action="Edit" class="groove-button groove-button-dark">
+                <i class="bi bi-pencil"></i> Настрой препоръките
+            </a>
+        </div>
+    </div>
 
-@if (!hasPrefs)
-{
-    <div class="alert alert-info">
-        You don't have preferences set yet - showing all upcoming approved events.
-        <a asp-controller="Preferences" asp-action="Index" class="alert-link">Set preferences</a> to get better recommendations.
-    </div>
-}
+    @if (!hasPrefs)
+    {
+        <div class="groove-alert groove-alert-info mb-4">
+            <strong>Нямаш запазени предпочитания.</strong>
+            Показваме всички предстоящи одобрени събития. Добави любим жанр, град или радиус,
+            за да получаваш по-точни предложения.
+        </div>
+    }
 
-@if (Model.Count == 0)
-{
-    <div class="text-center text-muted py-5">
-        <i class="bi bi-calendar-x" style="font-size:2rem;"></i>
-        <p class="mt-2">No upcoming events match your preferences.</p>
-    </div>
-}
-else
-{
-    <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-3">
-        @foreach (var ev in Model)
-        {
-            <div class="col"><partial name="_EventCard" model="ev" /></div>
-        }
-    </div>
-}
+    @if (Model.Count == 0)
+    {
+        <div class="groove-empty-card">
+            <i class="bi bi-stars"></i>
+            <h2 class="groove-panel-title">Още няма <span>точно попадение</span>.</h2>
+            <p class="groove-panel-intro">
+                Няма предстоящи събития, които да отговарят на сегашните ти настройки.
+                Можеш да ги промениш или да разгледаш всички събития.
+            </p>
+            <div class="groove-form-actions justify-content-center">
+                <a asp-controller="Preferences" asp-action="Edit" class="groove-button groove-button-dark">
+                    <i class="bi bi-sliders"></i> Промени предпочитанията
+                </a>
+                <a asp-controller="Home" asp-action="Index" class="groove-button groove-button-paper">
+                    <i class="bi bi-compass"></i> Към началото
+                </a>
+            </div>
+        </div>
+    }
+    else
+    {
+        <section class="groove-page-section">
+            <div class="groove-section-bar">
+                <div>
+                    <span class="groove-kicker">Предстоящи предложения</span>
+                    <h2>@Model.Count <span>събития</span> за следващите дни.</h2>
+                </div>
+            </div>
+
+            <div class="row row-cols-1 row-cols-sm-2 row-cols-xl-3 g-3">
+                @foreach (var ev in Model)
+                {
+                    <div class="col"><partial name="_EventCard" model="ev" /></div>
+                }
+            </div>
+        </section>
+    }
+</section>

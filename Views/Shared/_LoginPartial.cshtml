@@ -7,9 +7,13 @@
     @if (SignInManager.IsSignedIn(User))
     {
         var currentUser = await UserManager.GetUserAsync(User);
-        var displayName = !string.IsNullOrWhiteSpace(currentUser?.UserName)
-            ? currentUser!.UserName
-            : (!string.IsNullOrWhiteSpace(currentUser?.Email) ? currentUser!.Email : "Account");
+        var fullName = string.Join(" ", new[] { currentUser?.FirstName, currentUser?.LastName }
+            .Where(s => !string.IsNullOrWhiteSpace(s)));
+        var displayName = !string.IsNullOrWhiteSpace(fullName)
+            ? fullName
+            : (!string.IsNullOrWhiteSpace(currentUser?.UserName)
+                ? currentUser!.UserName
+                : (!string.IsNullOrWhiteSpace(currentUser?.Email) ? currentUser!.Email : "Профил"));
         <li class="nav-item">
             <a class="nav-link" asp-controller="Account" asp-action="Index">
                 <i class="bi bi-person-circle"></i> @displayName
@@ -19,7 +23,7 @@
             <form class="form-inline" asp-area="Identity" asp-page="/Account/Logout"
                   asp-route-returnUrl="@Url.Action("Index", "Home", new { area = "" })" method="post">
                 <button type="submit" class="nav-link btn btn-link text-light">
-                    <i class="bi bi-box-arrow-right"></i> Logout
+                    <i class="bi bi-box-arrow-right"></i> Изход
                 </button>
             </form>
         </li>
@@ -28,12 +32,12 @@
     {
         <li class="nav-item">
             <a class="nav-link" asp-area="Identity" asp-page="/Account/Register">
-                <i class="bi bi-person-plus"></i> Register
+                <i class="bi bi-person-plus"></i> Регистрация
             </a>
         </li>
         <li class="nav-item">
             <a class="nav-link" asp-area="Identity" asp-page="/Account/Login">
-                <i class="bi bi-box-arrow-in-right"></i> Login
+                <i class="bi bi-box-arrow-in-right"></i> Вход
             </a>
         </li>
     }

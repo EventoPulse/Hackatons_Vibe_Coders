@@ -1,61 +1,81 @@
 @model TicketCreateEditViewModel
 @{
-    ViewData["Title"] = "Edit ticket type";
+    ViewData["Title"] = "Редакция на билет";
 }
 
-<h1 class="h3 mb-3"><i class="bi bi-pencil"></i> Edit ticket type</h1>
-<p class="text-muted">For event: <strong>@Model.EventTitle</strong></p>
-
-<form asp-action="Edit" asp-route-id="@Model.Id" method="post" class="col-lg-7">
-    @Html.AntiForgeryToken()
-    <input type="hidden" asp-for="Id" />
-    <input type="hidden" asp-for="EventId" />
-    <input type="hidden" asp-for="EventTitle" />
-
-    <div asp-validation-summary="All" class="text-danger mb-2"></div>
-
-    <div class="mb-3">
-        <label asp-for="Name" class="form-label"></label>
-        <input asp-for="Name" class="form-control" />
-        <span asp-validation-for="Name" class="text-danger"></span>
-    </div>
-    <div class="mb-3">
-        <label asp-for="Description" class="form-label"></label>
-        <textarea asp-for="Description" class="form-control" rows="3"></textarea>
-        <span asp-validation-for="Description" class="text-danger"></span>
-    </div>
-    <div class="row g-3 mb-3">
-        <div class="col-sm-4">
-            <label asp-for="Price" class="form-label"></label>
-            <input asp-for="Price" class="form-control" type="number" step="0.01" min="0" />
-            <span asp-validation-for="Price" class="text-danger"></span>
+<section class="groove-app-page groove-form-shell groove-form-shell-narrow">
+    <div class="groove-page-hero">
+        <div class="groove-page-hero__copy">
+            <span class="groove-stamp groove-stamp-red">Билет</span>
+            <h1>Редактирай типа <span>билет</span>.</h1>
+            <p>Събитие: <strong>@Model.EventTitle</strong></p>
         </div>
-        <div class="col-sm-4">
-            <label asp-for="QuantityTotal" class="form-label"></label>
-            <input asp-for="QuantityTotal" class="form-control" type="number" min="0" />
-            <span asp-validation-for="QuantityTotal" class="text-danger"></span>
-        </div>
-        <div class="col-sm-4">
-            <label asp-for="QuantityRemaining" class="form-label"></label>
-            <input asp-for="QuantityRemaining" class="form-control" type="number" min="0" />
-            <span asp-validation-for="QuantityRemaining" class="text-danger"></span>
+        <div class="groove-page-actions">
+            <a asp-action="Manage" asp-route-id="@Model.EventId" class="groove-button groove-button-paper">
+                <i class="bi bi-arrow-left"></i> Назад към билетите
+            </a>
         </div>
     </div>
-    <div class="mb-3">
-        <label asp-for="ImageUrl" class="form-label"></label>
-        <input asp-for="ImageUrl" class="form-control" />
-        <span asp-validation-for="ImageUrl" class="text-danger"></span>
-    </div>
-    <div class="form-check mb-3">
-        <input asp-for="IsActive" class="form-check-input" />
-        <label asp-for="IsActive" class="form-check-label"></label>
-    </div>
 
-    <div class="d-flex gap-2">
-        <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Save</button>
-        <a asp-action="Manage" asp-route-id="@Model.EventId" class="btn btn-outline-secondary">Cancel</a>
+    <div class="groove-form-panel">
+        <form asp-action="Edit" asp-route-id="@Model.Id" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="Id" />
+            <input type="hidden" asp-for="EventId" />
+            <input type="hidden" asp-for="EventTitle" />
+
+            <div asp-validation-summary="All" class="alert alert-danger" role="alert"></div>
+
+            <div class="mb-3">
+                <label asp-for="Name" class="form-label"></label>
+                <input asp-for="Name" class="form-control" />
+                <span asp-validation-for="Name" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Description" class="form-label"></label>
+                <textarea asp-for="Description" class="form-control" rows="3"></textarea>
+                <span asp-validation-for="Description" class="text-danger"></span>
+            </div>
+
+            <div class="groove-form-grid groove-form-grid-3">
+                <div class="mb-3">
+                    <label asp-for="Price" class="form-label"></label>
+                    <input asp-for="Price" class="form-control" type="number" step="0.01" min="0" />
+                    <span asp-validation-for="Price" class="text-danger"></span>
+                </div>
+                <div class="mb-3">
+                    <label asp-for="QuantityTotal" class="form-label"></label>
+                    <input asp-for="QuantityTotal" class="form-control" type="number" min="0" />
+                    <span asp-validation-for="QuantityTotal" class="text-danger"></span>
+                </div>
+                <div class="mb-3">
+                    <label asp-for="QuantityRemaining" class="form-label"></label>
+                    <input asp-for="QuantityRemaining" class="form-control" type="number" min="0" />
+                    <span asp-validation-for="QuantityRemaining" class="text-danger"></span>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="ImageUrl" class="form-label"></label>
+                <input asp-for="ImageUrl" class="form-control" placeholder="https://..." />
+                <span asp-validation-for="ImageUrl" class="text-danger"></span>
+            </div>
+
+            <div class="form-check mb-3">
+                <input asp-for="IsActive" class="form-check-input" />
+                <label asp-for="IsActive" class="form-check-label"></label>
+            </div>
+
+            <div class="groove-form-actions">
+                <button type="submit" class="groove-button groove-button-dark">
+                    <i class="bi bi-check-lg"></i> Запази
+                </button>
+                <a asp-action="Manage" asp-route-id="@Model.EventId" class="groove-button groove-button-paper">Отказ</a>
+            </div>
+        </form>
     </div>
-</form>
+</section>
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />

@@ -1,13 +1,23 @@
 @model PreferencesViewModel
 @{
-    ViewData["Title"] = "Edit Preferences";
+    ViewData["Title"] = "Редакция на предпочитания";
 }
 
-<div class="row justify-content-center">
-    <div class="col-lg-6">
-        <h1 class="h3 mb-4"><i class="bi bi-sliders"></i> Edit Preferences</h1>
-        <p class="text-muted">These preferences are used to recommend events that match your interests.</p>
+<section class="groove-app-page groove-form-shell groove-form-shell-narrow">
+    <div class="groove-page-hero">
+        <div class="groove-page-hero__copy">
+            <span class="groove-stamp groove-stamp-red">Персонално</span>
+            <h1>Настрой своите <span>предпочитания</span>.</h1>
+            <p>Жанрът, градът и радиусът помагат на GrooveOn да ти подбира по-подходящи събития.</p>
+        </div>
+        <div class="groove-page-actions">
+            <a asp-action="Index" class="groove-button groove-button-paper">
+                <i class="bi bi-arrow-left"></i> Обратно
+            </a>
+        </div>
+    </div>
 
+    <div class="groove-form-panel">
         <form asp-action="Edit" method="post">
             @Html.AntiForgeryToken()
             <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
@@ -15,35 +25,38 @@
             <div class="mb-3">
                 <label asp-for="PreferredGenre" class="form-label"></label>
                 <select asp-for="PreferredGenre" asp-items="Html.GetEnumSelectList<EventGenre>()" class="form-select">
-                    <option value="">— any genre —</option>
+                    <option value="">Без ограничение</option>
                 </select>
             </div>
 
             <div class="mb-3">
                 <label asp-for="PreferredCity" class="form-label"></label>
-                <input asp-for="PreferredCity" class="form-control" placeholder="e.g. Sofia" />
+                <input asp-for="PreferredCity" class="form-control" placeholder="Например София" />
                 <span asp-validation-for="PreferredCity" class="text-danger small"></span>
             </div>
 
-            <div class="mb-3">
-                <label asp-for="MinAge" class="form-label"></label>
-                <input asp-for="MinAge" type="number" class="form-control" min="0" max="120" placeholder="e.g. 18" />
-                <span asp-validation-for="MinAge" class="text-danger small"></span>
+            <div class="groove-form-grid">
+                <div class="mb-3">
+                    <label asp-for="MinAge" class="form-label"></label>
+                    <input asp-for="MinAge" type="number" class="form-control" min="0" max="120" placeholder="Например 18" />
+                    <span asp-validation-for="MinAge" class="text-danger small"></span>
+                </div>
+                <div class="mb-3">
+                    <label asp-for="MaxDistanceKm" class="form-label"></label>
+                    <input asp-for="MaxDistanceKm" type="number" class="form-control" min="0" max="10000" placeholder="Например 50" />
+                    <span asp-validation-for="MaxDistanceKm" class="text-danger small"></span>
+                </div>
             </div>
 
-            <div class="mb-3">
-                <label asp-for="MaxDistanceKm" class="form-label"></label>
-                <input asp-for="MaxDistanceKm" type="number" class="form-control" min="0" max="10000" placeholder="e.g. 50" />
-                <span asp-validation-for="MaxDistanceKm" class="text-danger small"></span>
-            </div>
-
-            <div class="d-flex gap-2">
-                <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Save</button>
-                <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
+            <div class="groove-form-actions">
+                <button type="submit" class="groove-button groove-button-dark">
+                    <i class="bi bi-check-lg"></i> Запази
+                </button>
+                <a asp-action="Index" class="groove-button groove-button-paper">Отказ</a>
             </div>
         </form>
     </div>
-</div>
+</section>
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />

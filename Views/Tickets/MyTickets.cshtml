@@ -1,52 +1,80 @@
 @model MyTicketsViewModel
 @{
-    ViewData["Title"] = "My Tickets";
+    ViewData["Title"] = "Моите билети";
 }
 
-<h1 class="h3 mb-3"><i class="bi bi-ticket-perforated"></i> My Tickets</h1>
-
-@if (Model.Tickets.Count == 0)
-{
-    <div class="alert alert-info">
-        You haven't bought any tickets yet. Browse <a asp-controller="Events" asp-action="Index" class="alert-link">Events</a> to find one.
+<section class="groove-app-page">
+    <div class="groove-page-hero">
+        <div class="groove-page-hero__copy">
+            <span class="groove-stamp groove-stamp-red">Билети</span>
+            <h1>Твоите <span>запазени</span> места.</h1>
+            <p>
+                Всички купени билети са тук, заедно с QR кода и бърз достъп до PDF версията.
+            </p>
+        </div>
+        <div class="groove-page-actions">
+            <a asp-controller="Home" asp-action="Index" class="groove-button groove-button-paper">
+                <i class="bi bi-calendar2-event"></i> Разгледай събития
+            </a>
+        </div>
     </div>
-}
-else
-{
-    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3">
-        @foreach (var t in Model.Tickets)
-        {
-            <div class="col">
-                <div class="card h-100 shadow-sm">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-start mb-2">
-                            <h5 class="card-title mb-0">@t.EventTitle</h5>
-                            @if (t.IsUsed)
-                            {
-                                <span class="badge bg-secondary">Used</span>
-                            }
-                            else
-                            {
-                                <span class="badge bg-success">Valid</span>
-                            }
-                        </div>
-                        <div class="text-muted small mb-2">@t.TicketName</div>
-                        <ul class="list-unstyled small mb-3">
-                            <li><i class="bi bi-geo-alt"></i> @t.Address, @t.City</li>
-                            <li><i class="bi bi-clock"></i> @t.StartTime.ToString("yyyy-MM-dd HH:mm")</li>
-                            <li><i class="bi bi-cash"></i> @t.Price.ToString("0.00")</li>
-                        </ul>
-                        <div class="d-flex gap-2">
-                            <a asp-action="Details" asp-route-id="@t.Id" class="btn btn-sm btn-primary">
-                                <i class="bi bi-eye"></i> Details
+
+    @if (Model.Tickets.Count == 0)
+    {
+        <div class="groove-empty-card">
+            <i class="bi bi-ticket-perforated"></i>
+            <h2 class="groove-panel-title">Още нямаш <span>купени билети</span>.</h2>
+            <p class="groove-panel-intro">
+                Когато вземеш билет за събитие, той ще се появи тук с всички детайли за вход.
+            </p>
+            <div class="groove-form-actions justify-content-center">
+                <a asp-controller="Home" asp-action="Index" class="groove-button groove-button-dark">
+                    <i class="bi bi-search"></i> Намери събитие
+                </a>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="groove-ticket-grid">
+            @foreach (var t in Model.Tickets)
+            {
+                var statusClass = t.IsUsed ? "groove-status-badge-muted" : "groove-status-badge-success";
+                var statusText = t.IsUsed ? "Използван" : "Валиден";
+
+                <article class="groove-ticket-card">
+                    <div class="d-flex justify-content-between align-items-start gap-2">
+                        <span class="groove-ticket-meta">Купен на @t.CreatedAt.ToString("dd.MM.yyyy HH:mm")</span>
+                        <span class="groove-status-badge @statusClass">@statusText</span>
+                    </div>
+
+                    <h3 class="mt-3">@t.EventTitle</h3>
+                    <p>@t.TicketName</p>
+
+                    <dl class="groove-data-list mt-3">
+                        <dt>Локация</dt>
+                        <dd>@t.Address, @t.City</dd>
+
+                        <dt>Начало</dt>
+                        <dd>@t.StartTime.ToString("dd.MM.yyyy HH:mm")</dd>
+
+                        <dt>Цена</dt>
+                        <dd>@t.Price.ToString("0.00") лв.</dd>
+                    </dl>
+
+                    <div class="groove-ticket-footer">
+                        <span class="groove-price">@t.Price.ToString("0.00") лв.</span>
+                        <div class="groove-list-actions">
+                            <a asp-action="Details" asp-route-id="@t.Id" class="groove-button groove-button-dark">
+                                <i class="bi bi-eye"></i> Детайли
                             </a>
-                            <a asp-action="DownloadPdf" asp-route-id="@t.Id" class="btn btn-sm btn-outline-primary">
+                            <a asp-action="DownloadPdf" asp-route-id="@t.Id" class="groove-button groove-button-paper">
                                 <i class="bi bi-file-earmark-pdf"></i> PDF
                             </a>
                         </div>
                     </div>
-                </div>
-            </div>
-        }
-    </div>
-}
+                </article>
+            }
+        </div>
+    }
+</section>

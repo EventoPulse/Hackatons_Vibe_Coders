@@ -40,37 +40,37 @@ namespace EventsApp.Areas.Identity.Pages.Account
             [Required]
             [StringLength(GlobalConstants.User.FirstNameMaxLength,
                 MinimumLength = GlobalConstants.User.FirstNameMinLength)]
-            [Display(Name = "First name")]
+            [Display(Name = "Име")]
             public string FirstName { get; set; } = null!;
 
             [Required]
             [StringLength(GlobalConstants.User.LastNameMaxLength,
                 MinimumLength = GlobalConstants.User.LastNameMinLength)]
-            [Display(Name = "Last name")]
+            [Display(Name = "Фамилия")]
             public string LastName { get; set; } = null!;
 
             [Required]
             [StringLength(GlobalConstants.User.UserNameMaxLength,
                 MinimumLength = GlobalConstants.User.UserNameMinLength)]
-            [RegularExpression("^[a-zA-Z0-9._-]+$",
-                ErrorMessage = "Username may contain only letters, digits, '.', '_' and '-'.")]
-            [Display(Name = "Username")]
+            [RegularExpression("^[a-zA-Z0-9._]+$",
+                ErrorMessage = "Потребителското име може да съдържа само букви, цифри, точки и долни черти.")]
+            [Display(Name = "Потребителско име")]
             public string UserName { get; set; } = null!;
 
             [Required]
             [EmailAddress]
-            [Display(Name = "Email")]
+            [Display(Name = "Имейл")]
             public string Email { get; set; } = null!;
 
             [Required]
-            [StringLength(100, ErrorMessage = "The {0} must be at least {2} characters long.", MinimumLength = 5)]
+            [StringLength(100, ErrorMessage = "{0} трябва да е поне {2} символа.", MinimumLength = 5)]
             [DataType(DataType.Password)]
-            [Display(Name = "Password")]
+            [Display(Name = "Парола")]
             public string Password { get; set; } = null!;
 
             [DataType(DataType.Password)]
-            [Display(Name = "Confirm password")]
-            [Compare("Password", ErrorMessage = "Passwords do not match.")]
+            [Display(Name = "Потвърди паролата")]
+            [Compare("Password", ErrorMessage = "Паролите не съвпадат.")]
             public string ConfirmPassword { get; set; } = null!;
         }
 
@@ -89,17 +89,22 @@ namespace EventsApp.Areas.Identity.Pages.Account
                 return Page();
             }
 
+            Input.UserName = Input.UserName.Trim();
+            Input.Email = Input.Email.Trim();
+            Input.FirstName = Input.FirstName.Trim();
+            Input.LastName = Input.LastName.Trim();
+
             var existingByName = await _userManager.FindByNameAsync(Input.UserName);
             if (existingByName != null)
             {
-                ModelState.AddModelError("Input.UserName", "This username is already taken.");
+                ModelState.AddModelError("Input.UserName", "Това потребителско име вече е заето.");
                 return Page();
             }
 
             var existingByEmail = await _userManager.FindByEmailAsync(Input.Email);
             if (existingByEmail != null)
             {
-                ModelState.AddModelError("Input.Email", "An account with this email already exists.");
+                ModelState.AddModelError("Input.Email", "Вече съществува акаунт с този имейл.");
                 return Page();
             }
 

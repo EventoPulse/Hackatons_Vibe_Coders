@@ -2,13 +2,31 @@
 @using System.Text.Json
 @using System.Text.Json.Serialization
 @{
-    ViewData["Title"] = "Home";
+    ViewData["Title"] = "Начало";
+    var hasRealEvents = Model.Events.Count > 0;
+    var hasRealMapPins = Model.MapMarkers.Count > 0;
+
     var mapJsonOptions = new JsonSerializerOptions(JsonSerializerDefaults.Web);
     mapJsonOptions.Converters.Add(new JsonStringEnumConverter());
-    var dataPayload = new { markers = Model.MapMarkers };
+    var dataPayload = new
+    {
+        markers = Model.MapMarkers.Select(m => new
+        {
+            eventId = m.EventId,
+            title = m.Title,
+            city = m.City,
+            address = m.Address,
+            startTime = m.StartTime,
+            genre = m.Genre.ToString(),
+            imageUrl = m.ImageUrl,
+            organizerName = m.OrganizerName,
+            lat = m.Lat,
+            lng = m.Lng,
+            isApproximate = m.IsApproximate
+        })
+    };
     var dataJson = JsonSerializer.Serialize(dataPayload, mapJsonOptions);
-    var mappedEventCount = Model.MapMarkers.Count;
-    var totalEventCount = Model.Events.Count;
+    var visibleCityCount = Model.MapMarkers.Select(p => p.City).Distinct().Count();
 }
 
 @section Scripts {
@@ -17,133 +35,143 @@
     <script src="~/js/home-map.js" asp-append-version="true"></script>
 }
 
-<section class="hero text-center mb-4">
-    <h1 class="display-5"><i class="bi bi-music-note-beamed"></i> GrooveOn</h1>
-    <p class="lead mb-2">Discover events and organizers - follow the scene in your city.</p>
-    <p class="small text-white-50 mb-4">Search by city, genre, venue or event keyword. Examples: <em>Русе</em>, <em>София techno</em>, <em>house</em>, <em>около мен</em>.</p>
-
-    <form id="home-smart-search-form" class="row g-2 justify-content-center mb-2" autocomplete="off">
-        @Html.AntiForgeryToken()
-        <div class="col-md-7">
-            <div class="input-group input-group-lg">
-                <span class="input-group-text bg-white"><i class="bi bi-stars text-primary"></i></span>
-                <input id="home-smart-search-input" type="text" name="q" class="form-control"
-                       placeholder="Try: techno tonight in Sofia, jazz this weekend, около мен..." />
-                <button class="btn btn-primary" type="submit"><i class="bi bi-stars"></i> Smart search</button>
-                <button id="home-smart-clear" class="btn btn-outline-light" type="button">Clear</button>
-            </div>
-        </div>
-    </form>
-    <div class="text-center"><span id="home-search-status" class="small text-muted"></span></div>
-
-    <div class="d-flex justify-content-center gap-2 flex-wrap mt-3">
-        <a asp-controller="Home" asp-action="Index" class="btn btn-light btn-lg">Browse events</a>
-        <a asp-controller="Posts" asp-action="Index" class="btn btn-outline-light btn-lg">Open feed</a>
-        @if (User.Identity?.IsAuthenticated == true)
-        {
-            <a asp-controller="Events" asp-action="Recommended" class="btn btn-light btn-lg">
-                <i class="bi bi-stars"></i> Recommended for you
-            </a>
-            <a asp-controller="Tickets" asp-action="MyTickets" class="btn btn-outline-light btn-lg">
-                <i class="bi bi-ticket-perforated"></i> My Tickets
-            </a>
-        }
-        @if (User.IsInRole(GlobalConstants.Roles.Organizer) || User.IsInRole(GlobalConstants.Roles.Admin))
-        {
-            <a asp-controller="Organizer" asp-action="Dashboard" class="btn btn-warning btn-lg">Organizer dashboard</a>
-        }
-    </div>
-</section>
-
-<section class="mb-5">
-    <div class="d-flex justify-content-between align-items-end mb-3 flex-wrap gap-2">
+<div class="groove-home">
+    <div class="groove-marquee" aria-hidden="true">
         <div>
-            <h2 class="h4 mb-0"><i class="bi bi-map"></i> Events around Bulgaria</h2>
-            <div class="small text-muted">
-                <span id="home-event-count">@totalEventCount event@(totalEventCount == 1 ? "" : "s")</span>
-                &middot; click an event to locate it
+            <span>Живи нощи</span><span>Дневник</span><span>Карта на България</span><span>Свежи билети</span>
+        </div>
+    </div>
+
+    <section class="groove-hero">
+        <div class="groove-hero__copy">
+            <div class="groove-stamp-row">
+                <span class="groove-stamp groove-stamp-teal">GrooveOn</span>
+                <span class="groove-hand-note">на живо</span>
+            </div>
+            <h1>Дневник за най-<span>шумните</span> нощи в България.</h1>
+            <p>
+                GrooveOn е част скрапбук, част карта, част бюро за събития. Организаторите движат сцената,
+                слушателите намират точната вечер, а всеки град получава своите карфици.
+            </p>
+
+            <form id="home-smart-search-form" class="groove-smart-search" autocomplete="off">
+                @Html.AntiForgeryToken()
+                <label class="groove-smart-search__field" for="home-smart-search-input">
+                    <i class="bi bi-stars groove-smart-search__icon" aria-hidden="true"></i>
+                    <input id="home-smart-search-input" type="text" name="q"
+                           placeholder="техно тази вечер в София · джаз през уикенда · около мен" />
+                </label>
+                <button class="groove-button groove-button-dark groove-smart-search__submit" type="submit">
+                    <i class="bi bi-stars"></i> Smart търсене
+                </button>
+                <button id="home-smart-clear" class="groove-button groove-button-paper groove-smart-search__clear" type="button">
+                    Изчисти
+                </button>
+                <div class="groove-smart-search__status"><span id="home-search-status"></span></div>
+            </form>
+
+            <div class="groove-hero__actions">
+                <a href="#event-map" class="groove-button groove-button-dark">Виж картата</a>
+                <a asp-controller="Posts" asp-action="Index" class="groove-button groove-button-paper">Отвори потока</a>
+                @if (User.Identity?.IsAuthenticated == true)
+                {
+                    <a asp-controller="Events" asp-action="Recommended" class="groove-button groove-button-paper">Препоръчани</a>
+                }
+            </div>
+            <div class="groove-stats">
+                <span><strong>@Model.Events.Count</strong> записани нощи</span>
+                <span><strong>@visibleCityCount</strong> града</span>
+                <span><strong>@Model.MapMarkers.Count</strong> карфици</span>
             </div>
         </div>
-        <div class="d-flex gap-2 align-items-center">
-            <button id="use-my-location" type="button" class="btn btn-outline-primary btn-sm">
-                <i class="bi bi-geo-alt-fill"></i> Use my location
+
+        <div class="groove-hero__media">
+            <div class="groove-photo-card">
+                <img src="@Url.Content("~/img/groove/crowd-doodle.png")" alt="Публика на концерт" />
+            </div>
+            <img class="groove-cassette" src="@Url.Content("~/img/groove/cassette-doodle.png")" alt="" aria-hidden="true" />
+        </div>
+    </section>
+
+    <section id="event-map" class="groove-section groove-map-section">
+        <div class="groove-map-copy">
+            <span class="groove-stamp groove-stamp-teal">Картата</span>
+            <h2><span id="home-event-count">@Model.MapMarkers.Count</span> карфици, <span>@visibleCityCount града</span>.</h2>
+            <p>
+                Когато организаторите добавят събития с координати, те се появяват тук на момента.
+                Кликни върху карфица, за да видиш детайлите.
+            </p>
+            <button id="use-my-location" class="groove-link" type="button">
+                <i class="bi bi-crosshair"></i> Покажи моето местоположение
             </button>
-            <span id="geo-status" class="small text-muted"></span>
+            <div id="geo-status" class="small text-muted mt-1"></div>
         </div>
-    </div>
-    <div id="events-map"></div>
-    <div id="home-no-results" class="alert alert-warning mt-2" style="display:none;">
-        No events found. Try clearing your search or zoom out to see all events in Bulgaria.
-    </div>
-    @if (Model.MapMarkers.Count == 0)
-    {
-        <div class="small text-muted mt-2">
-            No mapped events match your filters. Add coordinates to your events or pick a city to see them here.
+        <div class="groove-map-frame">
+            <span class="groove-map-badge groove-map-badge-left">@(hasRealMapPins ? "жива карта" : "празна карта")</span>
+            <span class="groove-map-badge groove-map-badge-right">google maps</span>
+            <div id="events-map"></div>
+            <div id="home-no-results" class="alert alert-warning mt-2" style="display:none;">Няма събития, отговарящи на търсенето.</div>
         </div>
-    }
-</section>
+    </section>
 
-@if (Model.Events.Count == 0)
-{
-    <div class="text-center text-muted py-5">
-        <i class="bi bi-calendar-x" style="font-size:2rem;"></i>
-        <p class="mt-2">No events found.</p>
-    </div>
-}
-else
-{
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h2 class="h4 mb-0"><i class="bi bi-calendar2-event"></i> Events</h2>
-        @if (User.IsInRole(GlobalConstants.Roles.Organizer) || User.IsInRole(GlobalConstants.Roles.Admin))
+    <section class="groove-section">
+        <div class="groove-section-heading">
+            <div>
+                <span class="groove-stamp groove-stamp-red">Бюро за събития</span>
+                <h2>@(hasRealEvents ? "Събития" : "Все още няма публикувани събития")</h2>
+            </div>
+            @if (User.IsInRole(GlobalConstants.Roles.Organizer) || User.IsInRole(GlobalConstants.Roles.Admin))
+            {
+                <a asp-controller="Events" asp-action="Create" class="groove-link">Създай събитие</a>
+            }
+        </div>
+
+        <form method="get" class="groove-filter">
+            <input type="text" name="search" value="@Model.Search" placeholder="Търси по заглавие..." />
+            <select name="city">
+                <option value="">Всички градове</option>
+                @foreach (var c in Model.Cities)
+                {
+                    <option value="@c" selected="@(Model.City == c)">@c</option>
+                }
+            </select>
+            <select name="genre">
+                <option value="">Всички жанрове</option>
+                @foreach (var g in Enum.GetValues<EventGenre>())
+                {
+                    <option value="@((int)g)" selected="@(Model.Genre == g)">@g.GetDisplayName()</option>
+                }
+            </select>
+            <input type="date" name="dateFrom" value="@Model.DateFrom?.ToString("yyyy-MM-dd")" />
+            <button type="submit">Филтър</button>
+            <a asp-action="Index">Изчисти</a>
+        </form>
+
+        @if (hasRealEvents)
         {
-            <a asp-controller="Events" asp-action="Create" class="btn btn-primary"><i class="bi bi-plus-lg"></i> New event</a>
-        }
-    </div>
-
-    <form method="get" class="card card-body mb-4">
-        <div class="row g-2">
-            <div class="col-md-4">
-                <input type="text" name="search" value="@Model.Search" placeholder="Search by title, city, address..." class="form-control" />
-            </div>
-            <div class="col-md-3">
-                <select name="city" class="form-select">
-                    <option value="">All cities</option>
-                    @foreach (var c in Model.Cities)
-                    {
-                        <option value="@c" selected="@(Model.City == c)">@c</option>
-                    }
-                </select>
-            </div>
-            <div class="col-md-3">
-                <select name="genre" class="form-select">
-                    <option value="">All genres</option>
-                    @foreach (var g in Enum.GetValues<EventGenre>())
-                    {
-                        <option value="@((int)g)" selected="@(Model.Genre == g)">@g</option>
-                    }
-                </select>
-            </div>
-            <div class="col-md-2">
-                <input type="date" name="dateFrom" value="@Model.DateFrom?.ToString("yyyy-MM-dd")" class="form-control" />
-            </div>
-        </div>
-        <div class="d-flex gap-2 mt-2">
-            <button type="submit" class="btn btn-outline-primary"><i class="bi bi-search"></i> Filter</button>
-            <a asp-action="Index" class="btn btn-outline-secondary">Clear</a>
-        </div>
-    </form>
-
-    <div id="event-cards-grid" class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-3">
-        @foreach (var ev in Model.Events)
-        {
-            <div class="col"
-                 data-event-id="@ev.Id"
-                 data-event-title="@ev.Title"
-                 data-event-city="@ev.City"
-                 data-event-address="@ev.Address"
-                 data-event-genre="@ev.Genre">
-                <partial name="_EventCard" model="ev" />
+            <div id="event-cards-grid" class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-3">
+                @foreach (var ev in Model.Events)
+                {
+                    <div class="col"
+                         data-event-id="@ev.Id"
+                         data-event-title="@ev.Title"
+                         data-event-city="@ev.City"
+                         data-event-address="@ev.Address"
+                         data-event-genre="@ev.Genre">
+                        <partial name="_EventCard" model="ev" />
+                    </div>
+                }
             </div>
         }
-    </div>
-}
+        else
+        {
+            <div class="groove-empty-state">
+                <p>Все още няма публикувани събития. Когато организаторите добавят такива, те ще се появят тук.</p>
+                @if (User.Identity?.IsAuthenticated == true && !User.IsInRole(GlobalConstants.Roles.Organizer) && !User.IsInRole(GlobalConstants.Roles.Admin))
+                {
+                    <a asp-controller="Account" asp-action="Apply" class="groove-link">Кандидатствай за организатор</a>
+                }
+            </div>
+        }
+    </section>
+</div>

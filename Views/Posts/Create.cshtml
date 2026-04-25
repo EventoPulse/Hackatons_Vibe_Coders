@@ -1,26 +1,37 @@
 @model PostCreateEditViewModel
 @{
-    ViewData["Title"] = "New Post";
+    ViewData["Title"] = "Нова публикация";
 }
 
-<div class="row justify-content-center">
-    <div class="col-lg-7">
-        <h1 class="h3 mb-4"><i class="bi bi-pencil-square"></i> New Post</h1>
+<section class="groove-app-page groove-form-shell">
+    <div class="groove-page-hero">
+        <div class="groove-page-hero__copy">
+            <span class="groove-stamp groove-stamp-teal">Поток</span>
+            <h1>Нова <span>публикация</span>.</h1>
+            <p>Сподели новина, настроение или ъпдейт около събитие с добавена снимка или видео.</p>
+        </div>
+        <div class="groove-page-actions">
+            <a asp-action="Index" class="groove-button groove-button-paper">
+                <i class="bi bi-arrow-left"></i> Към потока
+            </a>
+        </div>
+    </div>
 
+    <div class="groove-form-panel">
         <form asp-action="Create" method="post" enctype="multipart/form-data">
             @Html.AntiForgeryToken()
             <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
 
             <div class="mb-3">
                 <label asp-for="Content" class="form-label"></label>
-                <textarea asp-for="Content" class="form-control" rows="6" placeholder="Write something…"></textarea>
+                <textarea asp-for="Content" class="form-control" rows="6" placeholder="Напиши нещо..."></textarea>
                 <span asp-validation-for="Content" class="text-danger small"></span>
             </div>
 
             <div class="mb-3">
                 <label asp-for="EventId" class="form-label"></label>
                 <select asp-for="EventId" asp-items="Model.Events" class="form-select">
-                    <option value="">— no linked event —</option>
+                    <option value="">Без свързано събитие</option>
                 </select>
             </div>
 
@@ -28,23 +39,25 @@
                 <label asp-for="MediaFile" class="form-label"></label>
                 <input asp-for="MediaFile" class="form-control" type="file"
                        accept="image/jpeg,image/png,image/gif,image/webp,video/mp4,video/webm,video/quicktime" />
-                <div class="form-text">Image up to 5 MB · Video up to 100 MB. Supported: jpg, png, gif, webp, mp4, webm, mov.</div>
+                <div class="form-text">Снимка до 5 MB · Видео до 100 MB. Поддържани: jpg, png, gif, webp, mp4, webm, mov.</div>
                 <span asp-validation-for="MediaFile" class="text-danger small"></span>
             </div>
 
             <div class="mb-4">
                 <label asp-for="ImageUrl" class="form-label"></label>
-                <input asp-for="ImageUrl" class="form-control" placeholder="https://… (used only if no file selected)" />
+                <input asp-for="ImageUrl" class="form-control" placeholder="https://... (ако няма избран файл)" />
                 <span asp-validation-for="ImageUrl" class="text-danger small"></span>
             </div>
 
-            <div class="d-flex gap-2">
-                <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Publish</button>
-                <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
+            <div class="groove-form-actions">
+                <button type="submit" class="groove-button groove-button-dark">
+                    <i class="bi bi-send"></i> Публикувай
+                </button>
+                <a asp-action="Index" class="groove-button groove-button-paper">Отказ</a>
             </div>
         </form>
     </div>
-</div>
+</section>
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />

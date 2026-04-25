@@ -1,64 +1,112 @@
 @model TicketValidationViewModel
 @{
-    ViewData["Title"] = "Validate Ticket";
+    ViewData["Title"] = "Валидиране на билет";
     var result = ViewBag.Result as TicketValidationResultViewModel;
+    var dashboardController = User.IsInRole(GlobalConstants.Roles.Admin) ? "Admin" : "Organizer";
+    var dashboardAction = "Index";
+    var dashboardLabel = "Админ";
+
+    if (dashboardController == "Organizer")
+    {
+        dashboardAction = "Dashboard";
+        dashboardLabel = "Организатор";
+    }
 }
 
-<h1 class="h3 mb-3"><i class="bi bi-qr-code-scan"></i> Validate Ticket</h1>
-<p class="text-muted">Paste the QR code value to check in a ticket. (No camera scanner — manual paste only.)</p>
+<section class="groove-app-page">
+    <div class="groove-page-hero">
+        <div class="groove-page-hero__copy">
+            <span class="groove-stamp groove-stamp-yellow">Вход</span>
+            <h1>Провери <span>QR кода</span> на място.</h1>
+            <p>
+                Постави стойността на QR кода, за да валидираш билет и да отбележиш присъствието му.
+                В момента проверката е с ръчно поставяне на кода.
+            </p>
+        </div>
+        <div class="groove-page-actions">
+            <a asp-controller="@dashboardController" asp-action="@dashboardAction" class="groove-button groove-button-paper">
+                <i class="bi bi-arrow-left"></i> Към @dashboardLabel
+            </a>
+        </div>
+    </div>
 
-<div class="row g-4">
-    <div class="col-lg-6">
-        <form asp-action="Validate" method="post" class="card shadow-sm">
-            @Html.AntiForgeryToken()
-            <div class="card-body">
-                <div asp-validation-summary="ModelOnly" class="text-danger mb-2"></div>
+    <div class="groove-split">
+        <div class="groove-form-panel groove-highlight-card">
+            <span class="groove-kicker">Проверка</span>
+            <h2 class="groove-panel-title">Въведи <span>QR кода</span>.</h2>
+            <p class="groove-panel-intro">След успешна проверка билетът се отбелязва като използван.</p>
+
+            <form asp-action="Validate" method="post" class="mt-4">
+                @Html.AntiForgeryToken()
+                <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
                 <div class="mb-3">
                     <label asp-for="QrCode" class="form-label"></label>
                     <input asp-for="QrCode" class="form-control" autocomplete="off" autofocus />
                     <span asp-validation-for="QrCode" class="text-danger"></span>
                 </div>
-                <button type="submit" class="btn btn-primary"><i class="bi bi-check2-circle"></i> Validate</button>
-            </div>
-        </form>
-    </div>
 
-    <div class="col-lg-6">
-        @if (result != null)
-        {
-            string alertClass = result.Valid ? "alert-success"
-                : result.AlreadyUsed ? "alert-warning"
-                : result.NotAllowed ? "alert-warning"
-                : "alert-danger";
+                <div class="groove-note mb-3">
+                    <strong>Съвет</strong>
+                    Ако скенерът даде цялата стойност на QR кода, постави я директно тук без допълнителни символи.
+                </div>
 
-            string icon = result.Valid ? "bi-check-circle-fill"
-                : result.AlreadyUsed ? "bi-exclamation-triangle-fill"
-                : result.NotAllowed ? "bi-shield-exclamation"
-                : "bi-x-circle-fill";
+                <div class="groove-form-actions">
+                    <button type="submit" class="groove-button groove-button-dark">
+                        <i class="bi bi-check2-circle"></i> Валидирай
+                    </button>
+                </div>
+            </form>
+        </div>
 
-            <div class="alert @alertClass d-flex align-items-start gap-2">
-                <i class="bi @icon fs-4"></i>
-                <div>
-                    <strong>@result.Message</strong>
-                    @if (result.Ticket != null)
-                    {
-                        <hr class="my-2" />
-                        <div class="small">
-                            <div><strong>Event:</strong> @result.Ticket.EventTitle</div>
-                            <div><strong>Ticket:</strong> @result.Ticket.TicketName</div>
-                            <div><strong>Holder:</strong> @result.Ticket.OwnerUserName</div>
-                            <div><strong>Starts:</strong> @result.Ticket.StartTime.ToString("yyyy-MM-dd HH:mm")</div>
+        <div class="groove-info-card">
+            @if (result == null)
+            {
+                <span class="groove-kicker">Резултат</span>
+                <h2 class="groove-panel-title">Очаквам <span>проверка</span>.</h2>
+                <p class="groove-panel-intro">
+                    След валидиране тук ще се покажат статусът на билета, притежателят и часът на събитието.
+                </p>
+            }
+            else
+            {
+                var statusClass = result.Valid ? "groove-status-badge-success"
+                    : result.AlreadyUsed || result.NotAllowed ? "groove-status-badge-warning"
+                    : "groove-status-badge-danger";
+
+                <span class="groove-status-badge @statusClass">@result.Message</span>
+
+                @if (result.Ticket != null)
+                {
+                    <div class="mt-4">
+                        <h2 class="groove-panel-title">@result.Ticket.EventTitle</h2>
+                        <p class="groove-muted-copy">@result.Ticket.TicketName</p>
+
+                        <dl class="groove-data-list mt-3">
+                            <dt>Притежател</dt>
+                            <dd>@result.Ticket.OwnerUserName</dd>
+
+                            <dt>Имейл</dt>
+                            <dd>@result.Ticket.OwnerEmail</dd>
+
+                            <dt>Начало</dt>
+                            <dd>@result.Ticket.StartTime.ToString("dd.MM.yyyy HH:mm")</dd>
+
+                            <dt>Статус</dt>
+                            <dd>@result.Ticket.TransactionStatus.ToTransactionStatusDisplay()</dd>
+
                             @if (result.Ticket.IsUsed && result.Ticket.UsedAt.HasValue)
                             {
-                                <div><strong>Used at:</strong> @result.Ticket.UsedAt?.ToString("yyyy-MM-dd HH:mm")</div>
+                                <dt>Използван</dt>
+                                <dd>@result.Ticket.UsedAt?.ToString("dd.MM.yyyy HH:mm")</dd>
                             }
-                        </div>
-                    }
-                </div>
-            </div>
-        }
+                        </dl>
+                    </div>
+                }
+            }
+        </div>
     </div>
-</div>
+</section>
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />

@@ -1,15 +1,15 @@
 @page
 @model LoginModel
 @{
-    ViewData["Title"] = "Log in";
+    ViewData["Title"] = "Вход";
 }
 
 <section class="auth-zine-page">
     <div class="auth-zine-shell">
         <div class="auth-zine-copy">
-            <span class="auth-zine-stamp auth-zine-stamp-teal">Front Desk</span>
-            <h1>Step <span>inside</span>.</h1>
-            <p>Welcome back to GrooveOn. Sign in to follow events, manage tickets and keep your scene close.</p>
+            <span class="auth-zine-stamp auth-zine-stamp-teal">Вход</span>
+            <h1>Влез <span>вътре</span>.</h1>
+            <p>Добре дошъл отново в GrooveOn. Влез, за да следиш събития, билети и любимите си сцени.</p>
         </div>
 
         <div class="auth-zine-card">
@@ -24,24 +24,24 @@
 
                 <div class="auth-zine-field">
                     <label asp-for="Input.Password"></label>
-                    <input asp-for="Input.Password" autocomplete="current-password" placeholder="password" />
+                    <input asp-for="Input.Password" autocomplete="current-password" placeholder="парола" />
                     <span asp-validation-for="Input.Password"></span>
                 </div>
 
                 <label class="auth-zine-check">
                     <input asp-for="Input.RememberMe" />
-                    <span>Remember me</span>
+                    <span>Запомни ме</span>
                 </label>
 
                 <button id="login-submit" type="submit" class="auth-zine-button auth-zine-button-red">
-                    <i class="bi bi-box-arrow-in-right"></i> Log in
+                    <i class="bi bi-box-arrow-in-right"></i> Вход
                 </button>
             </form>
         </div>
 
         <p class="auth-zine-alt">
-            New here?
-            <a asp-area="Identity" asp-page="/Account/Register" asp-route-returnUrl="@Model.ReturnUrl">Create an account</a>
+            Нямаш профил?
+            <a asp-area="Identity" asp-page="/Account/Register" asp-route-returnUrl="@Model.ReturnUrl">Създай акаунт</a>
         </p>
     </div>
 </section>

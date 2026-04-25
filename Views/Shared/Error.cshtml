@@ -1,25 +1,45 @@
 @model ErrorViewModel
 @{
-    ViewData["Title"] = "Error";
+    ViewData["Title"] = "Грешка";
 }
 
-<h1 class="text-danger">Error.</h1>
-<h2 class="text-danger">An error occurred while processing your request.</h2>
+<section class="groove-app-page">
+    <div class="groove-page-hero">
+        <div class="groove-page-hero__copy">
+            <span class="groove-stamp groove-stamp-red">Проблем</span>
+            <h1>Нещо се обърка при <span>зареждането</span>.</h1>
+            <p>
+                Заявката не можа да бъде обработена успешно. Можеш да опиташ отново или да се върнеш към
+                началната страница.
+            </p>
+        </div>
+        <div class="groove-page-actions">
+            <a asp-controller="Home" asp-action="Index" class="groove-button groove-button-paper">
+                <i class="bi bi-house-door"></i> Към начало
+            </a>
+        </div>
+    </div>
 
-@if (Model.ShowRequestId)
-{
-    <p>
-        <strong>Request ID:</strong> <code>@Model.RequestId</code>
-    </p>
-}
+    <div class="groove-page-grid groove-page-grid-2">
+        <article class="groove-highlight-card">
+            <span class="groove-kicker">Статус</span>
+            <h2 class="groove-panel-title">Възникна <span>грешка</span>.</h2>
+            <p class="groove-panel-intro">
+                Ако проблемът се повтаря, провери дали приложението е стартирано коректно и дали всички
+                зависимости са налични.
+            </p>
+        </article>
 
-<h3>Development Mode</h3>
-<p>
-    Swapping to <strong>Development</strong> environment will display more detailed information about the error that occurred.
-</p>
-<p>
-    <strong>The Development environment shouldn't be enabled for deployed applications.</strong>
-    It can result in displaying sensitive information from exceptions to end users.
-    For local debugging, enable the <strong>Development</strong> environment by setting the <strong>ASPNETCORE_ENVIRONMENT</strong> environment variable to <strong>Development</strong>
-    and restarting the app.
-</p>
+        @if (Model.ShowRequestId)
+        {
+            <article class="groove-info-card">
+                <span class="groove-kicker">Диагностика</span>
+                <h2 class="groove-panel-title">Идентификатор на <span>заявката</span>.</h2>
+                <p class="groove-panel-intro mb-2">
+                    Използвай този код, ако трябва да проследиш конкретната грешка:
+                </p>
+                <p class="groove-note mb-0"><strong>ID:</strong> <code>@Model.RequestId</code></p>
+            </article>
+        }
+    </div>
+</section>

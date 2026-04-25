@@ -1,82 +1,108 @@
 @model IReadOnlyList<EventCardViewModel>
 @{
-    ViewData["Title"] = "Manage Events";
+    ViewData["Title"] = "Събития";
     var pendingOnly = (bool)(ViewBag.PendingOnly ?? false);
 }
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h1 class="h3 mb-0"><i class="bi bi-calendar2-event"></i> Events</h1>
-    <div class="d-flex gap-2">
-        <a asp-action="Events" asp-route-pending="@(!pendingOnly)" class="btn btn-sm btn-outline-secondary">
-            @if (pendingOnly)
-            {
-                <text><i class="bi bi-list"></i> Show all</text>
-            }
-            else
-            {
-                <text><i class="bi bi-hourglass-split"></i> Pending only</text>
-            }
-        </a>
-        <a asp-action="Index" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i> Dashboard</a>
-    </div>
-</div>
-
-@if (Model.Count == 0)
-{
-    <p class="text-muted">No events found.</p>
-}
-else
-{
-    <div class="table-responsive">
-        <table class="table table-hover align-middle">
-            <thead class="table-light">
-                <tr>
-                    <th>Title</th>
-                    <th>Organizer</th>
-                    <th>Location</th>
-                    <th>Start</th>
-                    <th>Genre</th>
-                    <th>Status</th>
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var ev in Model)
+<section class="groove-app-page">
+    <div class="groove-page-hero">
+        <div class="groove-page-hero__copy">
+            <span class="groove-stamp groove-stamp-teal">Каталог</span>
+            <h1>Админ преглед на <span>събития</span>.</h1>
+            <p>Одобрявай, редактирай и управлявай публикуваните събития и билетите към тях.</p>
+        </div>
+        <div class="groove-page-actions">
+            <a asp-action="Events" asp-route-pending="@(!pendingOnly)" class="groove-button groove-button-paper">
+                @if (pendingOnly)
                 {
-                    <tr>
-                        <td>
-                            <a asp-controller="Events" asp-action="Details" asp-route-id="@ev.Id">@ev.Title</a>
-                        </td>
-                        <td>@ev.OrganizerName</td>
-                        <td>@ev.Address, @ev.City</td>
-                        <td>@ev.StartTime.ToString("yyyy-MM-dd HH:mm")</td>
-                        <td><span class="badge bg-secondary">@ev.Genre</span></td>
-                        <td>
-                            @if (ev.IsApproved)
-                            {
-                                <span class="badge bg-success">Approved</span>
-                            }
-                            else
-                            {
-                                <span class="badge bg-warning text-dark">Pending</span>
-                            }
-                        </td>
-                        <td>
-                            <form asp-action="ApproveEvent" asp-route-id="@ev.Id" method="post">
-                                @Html.AntiForgeryToken()
-                                @if (ev.IsApproved)
-                                {
-                                    <button class="btn btn-sm btn-outline-warning" type="submit">Unapprove</button>
-                                }
-                                else
-                                {
-                                    <button class="btn btn-sm btn-success" type="submit">Approve</button>
-                                }
-                            </form>
-                        </td>
-                    </tr>
+                    <text><i class="bi bi-list"></i> Покажи всички</text>
                 }
-            </tbody>
-        </table>
+                else
+                {
+                    <text><i class="bi bi-hourglass-split"></i> Само чакащи</text>
+                }
+            </a>
+            <a asp-action="Index" class="groove-button groove-button-paper">
+                <i class="bi bi-arrow-left"></i> Към админ
+            </a>
+        </div>
     </div>
-}
+
+    @if (Model.Count == 0)
+    {
+        <div class="groove-empty-card">
+            <i class="bi bi-calendar2-event"></i>
+            <h2 class="groove-panel-title">Няма <span>събития</span>.</h2>
+        </div>
+    }
+    else
+    {
+        <div class="groove-table-card">
+            <div class="groove-table-wrap">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Заглавие</th>
+                            <th>Организатор</th>
+                            <th>Локация</th>
+                            <th>Начало</th>
+                            <th>Жанр</th>
+                            <th>Статус</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var ev in Model)
+                        {
+                            <tr>
+                                <td><strong>@ev.Title</strong></td>
+                                <td>@ev.OrganizerName</td>
+                                <td>@ev.Address, @ev.City</td>
+                                <td>@ev.StartTime.ToString("dd.MM.yyyy HH:mm")</td>
+                                <td><span class="groove-badge">@ev.Genre.GetDisplayName()</span></td>
+                                <td>
+                                    @if (ev.IsApproved)
+                                    {
+                                        <span class="groove-status-badge groove-status-badge-success">Одобрено</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="groove-status-badge groove-status-badge-warning">Чака</span>
+                                    }
+                                </td>
+                                <td>
+                                    <div class="groove-list-actions">
+                                        <a asp-controller="Events" asp-action="Details" asp-route-id="@ev.Id" class="groove-button groove-button-paper">
+                                            <i class="bi bi-eye"></i> Преглед
+                                        </a>
+                                        <a asp-controller="Events" asp-action="Edit" asp-route-id="@ev.Id" class="groove-button groove-button-paper">
+                                            <i class="bi bi-pencil"></i> Редакция
+                                        </a>
+                                        <a asp-controller="Tickets" asp-action="Manage" asp-route-id="@ev.Id" class="groove-button groove-button-paper">
+                                            <i class="bi bi-ticket-perforated"></i> Билети
+                                        </a>
+                                        <form asp-action="ApproveEvent" asp-route-id="@ev.Id" method="post">
+                                            @Html.AntiForgeryToken()
+                                            @if (ev.IsApproved)
+                                            {
+                                                <button class="groove-button groove-button-paper" type="submit">
+                                                    <i class="bi bi-pause-circle"></i> Свали одобрение
+                                                </button>
+                                            }
+                                            else
+                                            {
+                                                <button class="groove-button groove-button-dark" type="submit">
+                                                    <i class="bi bi-check-circle"></i> Одобри
+                                                </button>
+                                            }
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+</section>

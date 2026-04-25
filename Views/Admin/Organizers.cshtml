@@ -1,136 +1,151 @@
 @model IReadOnlyList<AdminOrganizerRowViewModel>
 @{
-    ViewData["Title"] = "Organizer Applications";
+    ViewData["Title"] = "Организатори";
     var pending = Model.Where(o => !o.Approved).ToList();
     var approved = Model.Where(o => o.Approved).ToList();
 }
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h1 class="h3 mb-0"><i class="bi bi-person-badge"></i> Organizer Applications</h1>
-    <a asp-action="Index" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i> Dashboard</a>
-</div>
+<section class="groove-app-page">
+    <div class="groove-page-hero">
+        <div class="groove-page-hero__copy">
+            <span class="groove-stamp groove-stamp-red">Кандидатури</span>
+            <h1>Организаторски <span>профили</span>.</h1>
+            <p>Преглеждай новите заявки и управлявай вече одобрените организатори.</p>
+        </div>
+        <div class="groove-page-actions">
+            <a asp-action="Index" class="groove-button groove-button-paper">
+                <i class="bi bi-arrow-left"></i> Към админ
+            </a>
+        </div>
+    </div>
 
-@if (Model.Count == 0)
-{
-    <p class="text-muted">No organizer applications yet.</p>
-}
-else
-{
-    @* ===== PENDING SECTION ===== *@
-    @if (pending.Count > 0)
+    @if (Model.Count == 0)
     {
-        <div class="mb-4">
-            <h2 class="h5 mb-3">
-                <span class="badge bg-warning text-dark me-2">@pending.Count</span>
-                Pending review
-            </h2>
-            <div class="row g-3">
-                @foreach (var org in pending)
-                {
-                    <div class="col-md-6">
-                        <div class="card border-warning shadow-sm h-100">
-                            <div class="card-header d-flex justify-content-between align-items-center bg-warning bg-opacity-10">
-                                <span class="fw-semibold">@org.OrganizationName</span>
-                                <span class="badge bg-warning text-dark"><i class="bi bi-hourglass-split"></i> Pending</span>
-                            </div>
-                            <div class="card-body">
-                                <dl class="row small mb-0">
-                                    <dt class="col-5 text-muted">User</dt>
-                                    <dd class="col-7">@org.UserName</dd>
-
-                                    <dt class="col-5 text-muted">Email</dt>
-                                    <dd class="col-7">@org.Email</dd>
-
-                                    @if (!string.IsNullOrWhiteSpace(org.PhoneNumber))
-                                    {
-                                        <dt class="col-5 text-muted">Phone</dt>
-                                        <dd class="col-7">@org.PhoneNumber</dd>
-                                    }
-
-                                    @if (!string.IsNullOrWhiteSpace(org.CompanyNumber))
-                                    {
-                                        <dt class="col-5 text-muted">Company #</dt>
-                                        <dd class="col-7">@org.CompanyNumber</dd>
-                                    }
-
-                                    @if (!string.IsNullOrWhiteSpace(org.Website))
-                                    {
-                                        <dt class="col-5 text-muted">Website</dt>
-                                        <dd class="col-7">
-                                            <a href="@org.Website" target="_blank" rel="noopener">
-                                                @org.Website <i class="bi bi-box-arrow-up-right"></i>
-                                            </a>
-                                        </dd>
-                                    }
-
-                                    <dt class="col-5 text-muted">Applied</dt>
-                                    <dd class="col-7">@org.CreatedAt.ToString("yyyy-MM-dd HH:mm")</dd>
-                                </dl>
-                            </div>
-                            <div class="card-footer bg-transparent">
-                                <form asp-action="ApproveOrganizer" asp-route-id="@org.OrganizerId" method="post">
-                                    @Html.AntiForgeryToken()
-                                    <button class="btn btn-success w-100" type="submit">
-                                        <i class="bi bi-check-circle-fill"></i> Approve — grant Organizer role
-                                    </button>
-                                </form>
-                            </div>
-                        </div>
-                    </div>
-                }
-            </div>
+        <div class="groove-empty-card">
+            <i class="bi bi-person-badge"></i>
+            <h2 class="groove-panel-title">Още няма <span>кандидатури</span>.</h2>
+            <p class="groove-panel-intro">Когато някой кандидатства за организатор, ще се появи тук.</p>
         </div>
     }
     else
     {
-        <div class="alert alert-success mb-4">
-            <i class="bi bi-check-circle-fill"></i> No pending applications.
-        </div>
-    }
+        <section class="groove-page-section">
+            <div class="groove-section-bar">
+                <div>
+                    <span class="groove-kicker">За преглед</span>
+                    <h2>@pending.Count <span>чакащи</span> кандидатури.</h2>
+                </div>
+            </div>
 
-    @* ===== APPROVED SECTION ===== *@
-    @if (approved.Count > 0)
-    {
-        <h2 class="h5 mb-3">
-            <span class="badge bg-success me-2">@approved.Count</span>
-            Approved organizers
-        </h2>
-        <div class="table-responsive">
-            <table class="table table-hover align-middle">
-                <thead class="table-light">
-                    <tr>
-                        <th>Organization</th>
-                        <th>User</th>
-                        <th>Email</th>
-                        <th>Phone</th>
-                        <th>Company #</th>
-                        <th>Since</th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var org in approved)
+            @if (pending.Count == 0)
+            {
+                <div class="groove-alert groove-alert-success">
+                    Няма чакащи кандидатури в момента.
+                </div>
+            }
+            else
+            {
+                <div class="groove-ticket-grid">
+                    @foreach (var org in pending)
                     {
-                        <tr>
-                            <td><strong>@org.OrganizationName</strong></td>
-                            <td>@org.UserName</td>
-                            <td>@org.Email</td>
-                            <td>@(org.PhoneNumber ?? "—")</td>
-                            <td>@(org.CompanyNumber ?? "—")</td>
-                            <td>@org.CreatedAt.ToString("yyyy-MM-dd")</td>
-                            <td>
+                        <article class="groove-paper-card">
+                            <div class="d-flex justify-content-between align-items-start gap-2">
+                                <span class="groove-kicker">@org.UserName</span>
+                                <span class="groove-status-badge groove-status-badge-warning">Чака</span>
+                            </div>
+
+                            <h3 class="mt-3">@org.OrganizationName</h3>
+                            <dl class="groove-data-list mt-3">
+                                <dt>Имейл</dt>
+                                <dd>@org.Email</dd>
+
+                                @if (!string.IsNullOrWhiteSpace(org.PhoneNumber))
+                                {
+                                    <dt>Телефон</dt>
+                                    <dd>@org.PhoneNumber</dd>
+                                }
+
+                                @if (!string.IsNullOrWhiteSpace(org.CompanyNumber))
+                                {
+                                    <dt>Фирмен номер</dt>
+                                    <dd>@org.CompanyNumber</dd>
+                                }
+
+                                @if (!string.IsNullOrWhiteSpace(org.Website))
+                                {
+                                    <dt>Уебсайт</dt>
+                                    <dd><a href="@org.Website" target="_blank" rel="noopener">@org.Website</a></dd>
+                                }
+
+                                <dt>Подадена</dt>
+                                <dd>@org.CreatedAt.ToString("dd.MM.yyyy HH:mm")</dd>
+                            </dl>
+
+                            <div class="groove-form-actions">
                                 <form asp-action="ApproveOrganizer" asp-route-id="@org.OrganizerId" method="post">
                                     @Html.AntiForgeryToken()
-                                    <button class="btn btn-sm btn-outline-warning" type="submit"
-                                            onclick="return confirm('Revoke organizer status from @org.UserName?')">
-                                        Revoke
+                                    <button class="groove-button groove-button-dark" type="submit">
+                                        <i class="bi bi-check-circle"></i> Одобри организатор
                                     </button>
                                 </form>
-                            </td>
-                        </tr>
+                            </div>
+                        </article>
                     }
-                </tbody>
-            </table>
-        </div>
+                </div>
+            }
+        </section>
+
+        @if (approved.Count > 0)
+        {
+            <section class="groove-page-section">
+                <div class="groove-section-bar">
+                    <div>
+                        <span class="groove-kicker">Активни</span>
+                        <h2>@approved.Count <span>одобрени</span> организатори.</h2>
+                    </div>
+                </div>
+
+                <div class="groove-table-card">
+                    <div class="groove-table-wrap">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Организация</th>
+                                    <th>Потребител</th>
+                                    <th>Имейл</th>
+                                    <th>Телефон</th>
+                                    <th>Фирмен номер</th>
+                                    <th>От</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var org in approved)
+                                {
+                                    <tr>
+                                        <td><strong>@org.OrganizationName</strong></td>
+                                        <td>@org.UserName</td>
+                                        <td>@org.Email</td>
+                                        <td>@(org.PhoneNumber ?? "—")</td>
+                                        <td>@(org.CompanyNumber ?? "—")</td>
+                                        <td>@org.CreatedAt.ToString("dd.MM.yyyy")</td>
+                                        <td>
+                                            <form asp-action="ApproveOrganizer" asp-route-id="@org.OrganizerId" method="post">
+                                                @Html.AntiForgeryToken()
+                                                <button class="groove-button groove-button-paper"
+                                                        type="submit"
+                                                        onclick="return confirm('Да отнема ли организаторските права на @org.UserName?')">
+                                                    <i class="bi bi-person-dash"></i> Отнеми
+                                                </button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        }
     }
-}
+</section>
