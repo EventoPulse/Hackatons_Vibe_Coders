@@ -27,7 +27,9 @@
       "Bash(rm -f /tmp/cj.txt)",
       "Bash(curl -sk -c /tmp/cj.txt -b /tmp/cj.txt \"https://localhost:7180/Identity/Account/Login\" -o /tmp/login.html)",
       "Bash(dotnet add *)",
-      "Bash(sqlcmd -S \"\\(localdb\\)\\\\MSSQLLocalDB\" -d EventsApp -Q \"SELECT name FROM sys.tables WHERE name IN \\('Tickets','Transactions','UserTickets'\\) ORDER BY name;\" -h -1)"
+      "Bash(sqlcmd -S \"\\(localdb\\)\\\\MSSQLLocalDB\" -d EventsApp -Q \"SELECT name FROM sys.tables WHERE name IN \\('Tickets','Transactions','UserTickets'\\) ORDER BY name;\" -h -1)",
+      "Bash(rm -rf obj bin)",
+      "Bash(dotnet restore *)"
     ],
     "additionalDirectories": [
       "\\tmp"

@@ -1,0 +1,52 @@
+@model MyTicketsViewModel
+@{
+    ViewData["Title"] = "My Tickets";
+}
+
+<h1 class="h3 mb-3"><i class="bi bi-ticket-perforated"></i> My Tickets</h1>
+
+@if (Model.Tickets.Count == 0)
+{
+    <div class="alert alert-info">
+        You haven't bought any tickets yet. Browse <a asp-controller="Events" asp-action="Index" class="alert-link">Events</a> to find one.
+    </div>
+}
+else
+{
+    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3">
+        @foreach (var t in Model.Tickets)
+        {
+            <div class="col">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <h5 class="card-title mb-0">@t.EventTitle</h5>
+                            @if (t.IsUsed)
+                            {
+                                <span class="badge bg-secondary">Used</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-success">Valid</span>
+                            }
+                        </div>
+                        <div class="text-muted small mb-2">@t.TicketName</div>
+                        <ul class="list-unstyled small mb-3">
+                            <li><i class="bi bi-geo-alt"></i> @t.VenueName, @t.VenueCity</li>
+                            <li><i class="bi bi-clock"></i> @t.StartTime.ToString("yyyy-MM-dd HH:mm")</li>
+                            <li><i class="bi bi-cash"></i> @t.Price.ToString("0.00")</li>
+                        </ul>
+                        <div class="d-flex gap-2">
+                            <a asp-action="Details" asp-route-id="@t.Id" class="btn btn-sm btn-primary">
+                                <i class="bi bi-eye"></i> Details
+                            </a>
+                            <a asp-action="DownloadPdf" asp-route-id="@t.Id" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-file-earmark-pdf"></i> PDF
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}

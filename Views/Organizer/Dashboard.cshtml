@@ -59,11 +59,84 @@ else
         </div>
     </div>
 
+    <div class="row g-3 mb-4">
+        <div class="col-sm-4">
+            <div class="card text-center border-0 bg-light">
+                <div class="card-body">
+                    <div class="display-6 fw-bold text-success">@Model.TicketTypesCount</div>
+                    <div class="text-muted">Ticket types</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-4">
+            <div class="card text-center border-0 bg-light">
+                <div class="card-body">
+                    <div class="display-6 fw-bold text-success">@Model.TicketsSoldCount</div>
+                    <div class="text-muted">Tickets sold</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-4">
+            <div class="card text-center border-0 bg-light">
+                <div class="card-body">
+                    <div class="display-6 fw-bold text-success">@Model.EventsWithTicketsCount</div>
+                    <div class="text-muted">Events with tickets</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="d-flex flex-wrap gap-2 mb-4">
         <a asp-controller="Venues" asp-action="Create" class="btn btn-outline-primary"><i class="bi bi-building-add"></i> New venue</a>
         <a asp-controller="Events" asp-action="Create" class="btn btn-outline-primary"><i class="bi bi-calendar-plus"></i> New event</a>
         <a asp-controller="Posts" asp-action="Create" class="btn btn-outline-primary"><i class="bi bi-pencil-square"></i> New post</a>
+        <a asp-controller="Tickets" asp-action="Validate" class="btn btn-outline-success"><i class="bi bi-qr-code-scan"></i> Validate ticket</a>
     </div>
+
+    @if (Model.EventTicketRows.Count > 0)
+    {
+        <h2 class="h5 mb-3"><i class="bi bi-ticket-perforated"></i> Tickets per event</h2>
+        <div class="table-responsive mb-4">
+            <table class="table align-middle">
+                <thead>
+                    <tr>
+                        <th>Event</th>
+                        <th>Starts</th>
+                        <th>Status</th>
+                        <th>Sold</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in Model.EventTicketRows)
+                    {
+                        <tr>
+                            <td>
+                                <a asp-controller="Events" asp-action="Details" asp-route-id="@row.EventId">@row.EventTitle</a>
+                            </td>
+                            <td class="small text-muted">@row.StartTime.ToString("yyyy-MM-dd HH:mm")</td>
+                            <td>
+                                @if (row.HasActiveTickets)
+                                {
+                                    <span class="badge bg-success">Tickets enabled</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary">No tickets</span>
+                                }
+                            </td>
+                            <td>@row.Sold</td>
+                            <td class="text-end">
+                                <a asp-controller="Tickets" asp-action="Manage" asp-route-id="@row.EventId" class="btn btn-sm btn-outline-success">
+                                    <i class="bi bi-ticket-perforated"></i> Manage Tickets
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
 
     @if (Model.RecentEvents.Count > 0)
     {

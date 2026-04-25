@@ -1,0 +1,65 @@
+@model TicketValidationViewModel
+@{
+    ViewData["Title"] = "Validate Ticket";
+    var result = ViewBag.Result as TicketValidationResultViewModel;
+}
+
+<h1 class="h3 mb-3"><i class="bi bi-qr-code-scan"></i> Validate Ticket</h1>
+<p class="text-muted">Paste the QR code value to check in a ticket. (No camera scanner — manual paste only.)</p>
+
+<div class="row g-4">
+    <div class="col-lg-6">
+        <form asp-action="Validate" method="post" class="card shadow-sm">
+            @Html.AntiForgeryToken()
+            <div class="card-body">
+                <div asp-validation-summary="ModelOnly" class="text-danger mb-2"></div>
+                <div class="mb-3">
+                    <label asp-for="QrCode" class="form-label"></label>
+                    <input asp-for="QrCode" class="form-control" autocomplete="off" autofocus />
+                    <span asp-validation-for="QrCode" class="text-danger"></span>
+                </div>
+                <button type="submit" class="btn btn-primary"><i class="bi bi-check2-circle"></i> Validate</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="col-lg-6">
+        @if (result != null)
+        {
+            string alertClass = result.Valid ? "alert-success"
+                : result.AlreadyUsed ? "alert-warning"
+                : result.NotAllowed ? "alert-warning"
+                : "alert-danger";
+
+            string icon = result.Valid ? "bi-check-circle-fill"
+                : result.AlreadyUsed ? "bi-exclamation-triangle-fill"
+                : result.NotAllowed ? "bi-shield-exclamation"
+                : "bi-x-circle-fill";
+
+            <div class="alert @alertClass d-flex align-items-start gap-2">
+                <i class="bi @icon fs-4"></i>
+                <div>
+                    <strong>@result.Message</strong>
+                    @if (result.Ticket != null)
+                    {
+                        <hr class="my-2" />
+                        <div class="small">
+                            <div><strong>Event:</strong> @result.Ticket.EventTitle</div>
+                            <div><strong>Ticket:</strong> @result.Ticket.TicketName</div>
+                            <div><strong>Holder:</strong> @result.Ticket.OwnerUserName</div>
+                            <div><strong>Starts:</strong> @result.Ticket.StartTime.ToString("yyyy-MM-dd HH:mm")</div>
+                            @if (result.Ticket.IsUsed && result.Ticket.UsedAt.HasValue)
+                            {
+                                <div><strong>Used at:</strong> @result.Ticket.UsedAt?.ToString("yyyy-MM-dd HH:mm")</div>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

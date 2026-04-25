@@ -21,5 +21,10 @@ namespace EventsApp.ViewModels.Account
         public int VenuesCount { get; set; }
         public int EventsCount { get; set; }
         public int PostsCount { get; set; }
+
+        // Purchased tickets
+        public int PurchasedTicketsCount { get; set; }
+        public IReadOnlyList<EventsApp.ViewModels.Tickets.MyTicketRowViewModel> RecentTickets { get; set; }
+            = Array.Empty<EventsApp.ViewModels.Tickets.MyTicketRowViewModel>();
     }
 }

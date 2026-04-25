@@ -165,6 +165,53 @@
             }
         }
 
+        @* ===== PURCHASED TICKETS ===== *@
+        <div class="card border-0 bg-light shadow-sm">
+            <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-ticket-perforated"></i> My Tickets (@Model.PurchasedTicketsCount)</h5>
+                <a asp-controller="Tickets" asp-action="MyTickets" class="btn btn-sm btn-outline-primary">View all</a>
+            </div>
+            <div class="card-body pt-0">
+                @if (Model.RecentTickets.Count == 0)
+                {
+                    <p class="text-muted mb-0">You haven't purchased any tickets yet.</p>
+                }
+                else
+                {
+                    <div class="list-group list-group-flush">
+                        @foreach (var t in Model.RecentTickets)
+                        {
+                            <div class="list-group-item bg-transparent px-0 d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>@t.EventTitle</strong>
+                                    <span class="text-muted small">— @t.TicketName</span>
+                                    <div class="text-muted small">
+                                        @t.VenueName, @t.VenueCity • @t.StartTime.ToString("yyyy-MM-dd HH:mm")
+                                        @if (t.IsUsed)
+                                        {
+                                            <span class="badge bg-secondary ms-1">Used</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-success ms-1">Valid</span>
+                                        }
+                                    </div>
+                                </div>
+                                <div class="d-flex gap-1">
+                                    <a asp-controller="Tickets" asp-action="Details" asp-route-id="@t.Id" class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    <a asp-controller="Tickets" asp-action="DownloadPdf" asp-route-id="@t.Id" class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-file-earmark-pdf"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+
         @* ===== USER QUICK LINKS ===== *@
         <div class="card border-0 bg-light shadow-sm">
             <div class="card-body">

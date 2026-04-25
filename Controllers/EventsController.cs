@@ -100,6 +100,7 @@ namespace EventsApp.Controllers
                 .Include(e => e.Organizer)
                 .Include(e => e.Images)
                 .Include(e => e.Likes)
+                .Include(e => e.Tickets)
                 .Include(e => e.Comments)
                     .ThenInclude(c => c.User)
                 .FirstOrDefaultAsync(e => e.Id == id);
@@ -147,6 +148,20 @@ namespace EventsApp.Controllers
                     .ToList(),
                 CanEdit = isAdmin || ev.OrganizerId == userId,
                 CanDelete = isAdmin || ev.OrganizerId == userId,
+                CanManageTickets = isAdmin || ev.OrganizerId == userId,
+                Tickets = ev.Tickets
+                    .Where(t => t.IsActive)
+                    .OrderBy(t => t.Price)
+                    .Select(t => new EventsApp.ViewModels.Tickets.EventTicketOptionViewModel
+                    {
+                        Id = t.Id,
+                        Name = t.Name,
+                        Description = t.Description,
+                        Price = t.Price,
+                        QuantityRemaining = t.QuantityRemaining,
+                        IsActive = t.IsActive,
+                    })
+                    .ToList(),
             };
 
             return View(vm);

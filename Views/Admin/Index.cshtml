@@ -69,6 +69,15 @@
     <a asp-action="Users" class="btn btn-outline-secondary">
         <i class="bi bi-people"></i> Manage users &amp; roles
     </a>
+    <a asp-action="Tickets" class="btn btn-outline-success">
+        <i class="bi bi-ticket-perforated"></i> Tickets overview
+    </a>
+    <a asp-action="Transactions" class="btn btn-outline-success">
+        <i class="bi bi-receipt"></i> Transactions
+    </a>
+    <a asp-controller="Tickets" asp-action="Validate" class="btn btn-outline-success">
+        <i class="bi bi-qr-code-scan"></i> Validate ticket
+    </a>
 </div>
 
 @if (Model.RecentPosts.Count > 0)

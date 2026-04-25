@@ -79,6 +79,28 @@ namespace EventsApp.Controllers
                 })
                 .ToListAsync();
 
+            var ticketTypesCount = await _db.Tickets
+                .CountAsync(t => t.Event.OrganizerId == userId);
+            var ticketsSoldCount = await _db.UserTickets
+                .CountAsync(ut => ut.Ticket.Event.OrganizerId == userId);
+            var eventsWithTickets = await _db.Events
+                .CountAsync(e => e.OrganizerId == userId && e.Tickets.Any(t => t.IsActive));
+
+            var eventTicketRows = await _db.Events
+                .AsNoTracking()
+                .Where(e => e.OrganizerId == userId)
+                .OrderByDescending(e => e.CreatedAt)
+                .Take(8)
+                .Select(e => new OrganizerEventTicketRowViewModel
+                {
+                    EventId = e.Id,
+                    EventTitle = e.Title,
+                    StartTime = e.StartTime,
+                    HasActiveTickets = e.Tickets.Any(t => t.IsActive),
+                    Sold = e.Tickets.SelectMany(t => t.UserTickets).Count(),
+                })
+                .ToListAsync();
+
             var vm = new OrganizerDashboardViewModel
             {
                 HasProfile = true,
@@ -91,8 +113,12 @@ namespace EventsApp.Controllers
                 VenuesCount = await _db.Venues.CountAsync(v => v.OrganizerId == userId),
                 EventsCount = await _db.Events.CountAsync(e => e.OrganizerId == userId),
                 PostsCount = await _db.Posts.CountAsync(p => p.OrganizerId == userId),
+                TicketTypesCount = ticketTypesCount,
+                TicketsSoldCount = ticketsSoldCount,
+                EventsWithTicketsCount = eventsWithTickets,
                 RecentEvents = recentEvents,
                 RecentPosts = recentPosts,
+                EventTicketRows = eventTicketRows,
             };
 
             return View(vm);

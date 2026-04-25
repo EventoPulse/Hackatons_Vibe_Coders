@@ -4,6 +4,7 @@ using EventsApp.Models;
 using EventsApp.ViewModels.Admin;
 using EventsApp.ViewModels.Events;
 using EventsApp.ViewModels.Posts;
+using EventsApp.ViewModels.Tickets;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -209,6 +210,73 @@ namespace EventsApp.Controllers
                 model.Add((user, roles));
             }
             return View(model);
+        }
+
+        public async Task<IActionResult> Tickets()
+        {
+            var ticketTypesCount = await _db.Tickets.CountAsync();
+            var soldCount = await _db.UserTickets.CountAsync();
+            var usedCount = await _db.UserTickets.CountAsync(ut => ut.IsUsed);
+            var unusedCount = soldCount - usedCount;
+
+            var totalRevenue = await _db.Transactions
+                .Where(t => t.Status == GlobalConstants.TransactionStatuses.Paid)
+                .SumAsync(t => (decimal?)t.TotalAmount) ?? 0m;
+
+            var recent = await _db.UserTickets
+                .AsNoTracking()
+                .OrderByDescending(ut => ut.CreatedAt)
+                .Take(50)
+                .Select(ut => new AdminTicketRowViewModel
+                {
+                    Id = ut.Id,
+                    TicketName = ut.Ticket.Name,
+                    EventTitle = ut.Ticket.Event.Title,
+                    EventId = ut.Ticket.EventId,
+                    OwnerUserName = ut.Transaction.User.UserName ?? string.Empty,
+                    CreatedAt = ut.CreatedAt,
+                    IsUsed = ut.IsUsed,
+                    Price = ut.Ticket.Price,
+                })
+                .ToListAsync();
+
+            return View(new AdminTicketsViewModel
+            {
+                TicketTypesCount = ticketTypesCount,
+                TicketsSoldCount = soldCount,
+                UsedTicketsCount = usedCount,
+                UnusedTicketsCount = unusedCount,
+                TotalRevenue = totalRevenue,
+                Recent = recent,
+            });
+        }
+
+        public async Task<IActionResult> Transactions()
+        {
+            var transactions = await _db.Transactions
+                .AsNoTracking()
+                .OrderByDescending(t => t.CreatedAt)
+                .Select(t => new AdminTransactionRowViewModel
+                {
+                    Id = t.Id,
+                    UserName = t.User.UserName ?? string.Empty,
+                    Email = t.User.Email ?? string.Empty,
+                    TotalAmount = t.TotalAmount,
+                    Status = t.Status,
+                    CreatedAt = t.CreatedAt,
+                    TicketCount = t.UserTickets.Count,
+                })
+                .ToListAsync();
+
+            var totalRevenue = transactions
+                .Where(t => t.Status == GlobalConstants.TransactionStatuses.Paid)
+                .Sum(t => t.TotalAmount);
+
+            return View(new AdminTransactionsViewModel
+            {
+                Transactions = transactions,
+                TotalRevenue = totalRevenue,
+            });
         }
 
         [HttpPost]

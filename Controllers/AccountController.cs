@@ -54,6 +54,29 @@ namespace EventsApp.Controllers
                 vm.PostsCount = await _db.Posts.CountAsync(p => p.OrganizerId == user.Id);
             }
 
+            vm.PurchasedTicketsCount = await _db.UserTickets
+                .CountAsync(ut => ut.Transaction.UserId == user.Id);
+
+            vm.RecentTickets = await _db.UserTickets
+                .AsNoTracking()
+                .Where(ut => ut.Transaction.UserId == user.Id)
+                .OrderByDescending(ut => ut.CreatedAt)
+                .Take(5)
+                .Select(ut => new EventsApp.ViewModels.Tickets.MyTicketRowViewModel
+                {
+                    Id = ut.Id,
+                    EventId = ut.Ticket.EventId,
+                    EventTitle = ut.Ticket.Event.Title,
+                    TicketName = ut.Ticket.Name,
+                    VenueName = ut.Ticket.Event.Venue.Name,
+                    VenueCity = ut.Ticket.Event.Venue.City,
+                    StartTime = ut.Ticket.Event.StartTime,
+                    Price = ut.Ticket.Price,
+                    IsUsed = ut.IsUsed,
+                    CreatedAt = ut.CreatedAt,
+                })
+                .ToListAsync();
+
             return View(vm);
         }
 

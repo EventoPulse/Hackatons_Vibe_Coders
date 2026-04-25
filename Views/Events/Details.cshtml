@@ -13,6 +13,12 @@
     {
         <a asp-action="Delete" asp-route-id="@Model.Id" class="btn btn-sm btn-outline-danger ms-1"><i class="bi bi-trash"></i> Delete</a>
     }
+    @if (Model.CanManageTickets)
+    {
+        <a asp-controller="Tickets" asp-action="Manage" asp-route-id="@Model.Id" class="btn btn-sm btn-outline-success ms-1">
+            <i class="bi bi-ticket-perforated"></i> Manage Tickets
+        </a>
+    }
 </div>
 
 @if (!Model.IsApproved)
@@ -89,6 +95,68 @@
         </div>
     </div>
 </div>
+
+<hr class="my-4" />
+<h3 class="h5"><i class="bi bi-ticket-perforated"></i> Tickets</h3>
+
+@if (Model.Tickets.Count == 0)
+{
+    <p class="text-muted">Tickets are not available for this event.</p>
+}
+else
+{
+    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3 mb-4">
+        @foreach (var t in Model.Tickets)
+        {
+            <div class="col">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <h5 class="card-title mb-0">@t.Name</h5>
+                            @if (t.SoldOut)
+                            {
+                                <span class="badge bg-danger">Sold out</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-success">@t.QuantityRemaining left</span>
+                            }
+                        </div>
+                        @if (!string.IsNullOrWhiteSpace(t.Description))
+                        {
+                            <p class="text-muted small">@t.Description</p>
+                        }
+                        <div class="fs-5 fw-bold mb-3">@t.Price.ToString("0.00")</div>
+
+                        @if (User.Identity?.IsAuthenticated == true)
+                        {
+                            @if (!t.SoldOut)
+                            {
+                                <form asp-controller="Tickets" asp-action="Buy" asp-route-id="@t.Id" method="post">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="btn btn-primary w-100">
+                                        <i class="bi bi-bag-check"></i> Buy (demo)
+                                    </button>
+                                </form>
+                            }
+                            else
+                            {
+                                <button class="btn btn-secondary w-100" disabled>Sold out</button>
+                            }
+                        }
+                        else
+                        {
+                            <a asp-area="Identity" asp-page="/Account/Login" class="btn btn-outline-primary w-100">
+                                <i class="bi bi-box-arrow-in-right"></i> Login to buy
+                            </a>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+    <p class="text-muted small"><i class="bi bi-info-circle"></i> Demo purchase / payment integration coming soon.</p>
+}
 
 <hr class="my-4" />
 <h3 class="h5"><i class="bi bi-chat-square-text"></i> Comments (@Model.Comments.Count)</h3>

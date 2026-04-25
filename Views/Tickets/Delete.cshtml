@@ -1,0 +1,25 @@
+@model EventsApp.Models.Ticket
+@{
+    ViewData["Title"] = "Disable ticket type";
+    var sold = (int)(ViewBag.SoldCount ?? 0);
+}
+
+<h1 class="h3 mb-3 text-danger"><i class="bi bi-slash-circle"></i> Disable ticket type</h1>
+
+<div class="card border-danger col-lg-7">
+    <div class="card-body">
+        <p>Are you sure you want to disable <strong>@Model.Name</strong> for <strong>@Model.Event?.Title</strong>?</p>
+        <ul class="text-muted small">
+            <li>Price: @Model.Price.ToString("0.00")</li>
+            <li>Total: @Model.QuantityTotal — Remaining: @Model.QuantityRemaining</li>
+            <li>Already sold: @sold</li>
+        </ul>
+        <p class="text-muted">This is a soft-disable: existing buyers keep their purchased tickets, but new purchases will not be possible.</p>
+
+        <form asp-action="Delete" asp-route-id="@Model.Id" method="post" class="d-inline">
+            @Html.AntiForgeryToken()
+            <button type="submit" class="btn btn-danger"><i class="bi bi-slash-circle"></i> Disable</button>
+            <a asp-action="Manage" asp-route-id="@Model.EventId" class="btn btn-outline-secondary">Cancel</a>
+        </form>
+    </div>
+</div>

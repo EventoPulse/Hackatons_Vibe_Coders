@@ -1,4 +1,5 @@
 using EventsApp.Models;
+using EventsApp.ViewModels.Tickets;
 
 namespace EventsApp.ViewModels.Events
 {
@@ -24,6 +25,8 @@ namespace EventsApp.ViewModels.Events
         public IReadOnlyList<EventCommentViewModel> Comments { get; set; } = Array.Empty<EventCommentViewModel>();
         public bool CanEdit { get; set; }
         public bool CanDelete { get; set; }
+        public bool CanManageTickets { get; set; }
+        public IReadOnlyList<EventTicketOptionViewModel> Tickets { get; set; } = Array.Empty<EventTicketOptionViewModel>();
     }
 
     public class EventCommentViewModel

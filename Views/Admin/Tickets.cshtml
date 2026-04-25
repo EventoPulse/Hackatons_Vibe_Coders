@@ -1,0 +1,95 @@
+@model AdminTicketsViewModel
+@{
+    ViewData["Title"] = "Tickets overview";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h3"><i class="bi bi-ticket-perforated"></i> Tickets overview</h1>
+    <a asp-action="Index" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i> Admin</a>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-sm-6 col-lg-3">
+        <div class="card border-0 bg-light text-center">
+            <div class="card-body">
+                <div class="display-6 fw-bold text-success">@Model.TicketTypesCount</div>
+                <div class="text-muted">Ticket types</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+        <div class="card border-0 bg-light text-center">
+            <div class="card-body">
+                <div class="display-6 fw-bold text-success">@Model.TicketsSoldCount</div>
+                <div class="text-muted">Tickets sold</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+        <div class="card border-0 bg-light text-center">
+            <div class="card-body">
+                <div class="display-6 fw-bold text-secondary">@Model.UsedTicketsCount</div>
+                <div class="text-muted">Used</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+        <div class="card border-0 bg-light text-center">
+            <div class="card-body">
+                <div class="display-6 fw-bold text-primary">@Model.TotalRevenue.ToString("0.00")</div>
+                <div class="text-muted">Revenue (demo)</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<h2 class="h5 mb-3">Recent purchased tickets</h2>
+@if (Model.Recent.Count == 0)
+{
+    <p class="text-muted">No tickets purchased yet.</p>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-sm align-middle">
+            <thead>
+                <tr>
+                    <th>Event</th>
+                    <th>Ticket</th>
+                    <th>Holder</th>
+                    <th>Price</th>
+                    <th>Bought</th>
+                    <th>Status</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var t in Model.Recent)
+                {
+                    <tr>
+                        <td><a asp-controller="Events" asp-action="Details" asp-route-id="@t.EventId">@t.EventTitle</a></td>
+                        <td>@t.TicketName</td>
+                        <td>@t.OwnerUserName</td>
+                        <td>@t.Price.ToString("0.00")</td>
+                        <td class="small text-muted">@t.CreatedAt.ToString("yyyy-MM-dd HH:mm")</td>
+                        <td>
+                            @if (t.IsUsed)
+                            {
+                                <span class="badge bg-secondary">Used</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-success">Valid</span>
+                            }
+                        </td>
+                        <td class="text-end">
+                            <a asp-controller="Tickets" asp-action="Details" asp-route-id="@t.Id" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}

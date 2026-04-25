@@ -29,6 +29,7 @@ builder.Services.AddDefaultIdentity<ApplicationUser>(options =>
     .AddEntityFrameworkStores<ApplicationDbContext>();
 
 builder.Services.AddSingleton<IMediaUploadService, MediaUploadService>();
+builder.Services.AddSingleton<ITicketDocumentService, TicketDocumentService>();
 
 builder.Services.Configure<FormOptions>(options =>
 {
