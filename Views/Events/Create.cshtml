@@ -32,14 +32,24 @@
             <div class="row">
                 <div class="col-md-6 mb-3">
                     <label asp-for="City" class="form-label"></label>
-                    <input asp-for="City" id="City" class="form-control" autocomplete="off" />
+                    <select asp-for="City" id="City" class="form-select">
+                        <option value="">-- Изберете град --</option>
+                        @foreach (var item in Model.Cities)
+                        {
+                            var latlng = Model.CityCoordinatesMap != null && Model.CityCoordinatesMap.ContainsKey(item.Value) ? Model.CityCoordinatesMap[item.Value] : string.Empty;
+                            <option value="@item.Value" data-latlng="@latlng">@item.Text</option>
+                        }
+                    </select>
                     <span asp-validation-for="City" class="text-danger small"></span>
                 </div>
                 <div class="col-md-6 mb-3">
                     <label asp-for="Address" class="form-label"></label>
-                    <input asp-for="Address" id="Address" class="form-control"
-                           autocomplete="off"
-                           placeholder="Start typing a venue or address (Google Places)" />
+                          <div style="position:relative;">
+                           <input asp-for="Address" id="Address" class="form-control"
+                               autocomplete="off"
+                               placeholder="Start typing a venue or address (Google Places)" />
+                           <div id="city-address-suggestions" class="list-group" style="position:absolute;z-index:1050;left:0;right:0;max-height:150px;overflow:auto;display:none;"></div>
+                          </div>
                     <span asp-validation-for="Address" class="text-danger small"></span>
                     <div class="form-text">Pick from the suggestions and the city + coordinates will fill in automatically.</div>
                 </div>

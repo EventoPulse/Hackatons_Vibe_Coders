@@ -150,15 +150,19 @@ namespace EventsApp.Controllers
             return View(vm);
         }
 
+
         [Authorize(Roles = GlobalConstants.Roles.Admin + "," + GlobalConstants.Roles.Organizer)]
         public IActionResult Create()
         {
             var vm = new EventCreateEditViewModel
             {
                 CanEditApproval = User.IsInRole(GlobalConstants.Roles.Admin),
+                Cities = GetAllBgCities(),
+                CityCoordinatesMap = GetAllBgCitiesMap()
             };
             return View(vm);
         }
+
 
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -173,9 +177,12 @@ namespace EventsApp.Controllers
                 ModelState.AddModelError(nameof(input.EndTime), "End time must be after start time.");
             }
 
+
             if (!ModelState.IsValid)
             {
                 input.CanEditApproval = isAdmin;
+                input.Cities = GetAllBgCities();
+                input.CityCoordinatesMap = GetAllBgCitiesMap();
                 return View(input);
             }
 
@@ -231,6 +238,43 @@ namespace EventsApp.Controllers
             return RedirectToAction(nameof(Details), new { id = ev.Id });
         }
 
+        // Връща всички градове от CityCoordinates
+        private List<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> GetAllBgCities()
+        {
+            var cities = typeof(EventsApp.Common.CityCoordinates)
+                .GetField("Coords", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)
+                ?.GetValue(null) as Dictionary<string, (double Lat, double Lng)>;
+
+            if (cities == null) return new List<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>();
+
+            return cities
+                .Where(kv => !string.IsNullOrWhiteSpace(kv.Key) && kv.Key.All(ch => ch < 128))
+                .Select(kv => kv.Key)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(c => c)
+                .Select(c => new Microsoft.AspNetCore.Mvc.Rendering.SelectListItem { Value = c, Text = c })
+                .ToList();
+        }
+
+        private Dictionary<string, string> GetAllBgCitiesMap()
+        {
+            var cities = typeof(EventsApp.Common.CityCoordinates)
+                .GetField("Coords", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)
+                ?.GetValue(null) as Dictionary<string, (double Lat, double Lng)>;
+
+            var dict = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            if (cities == null) return dict;
+
+            foreach (var kv in cities)
+            {
+                var name = kv.Key;
+                // only keep latin keys (the map contains both latin and cyrillic entries)
+                if (string.IsNullOrWhiteSpace(name) || !name.All(ch => ch < 128)) continue;
+                dict[name] = kv.Value.Lat.ToString(System.Globalization.CultureInfo.InvariantCulture) + "," + kv.Value.Lng.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            }
+
+            return dict;
+        }
         [Authorize(Roles = GlobalConstants.Roles.Admin + "," + GlobalConstants.Roles.Organizer)]
         public async Task<IActionResult> Edit(int id)
         {

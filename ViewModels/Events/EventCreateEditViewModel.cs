@@ -61,5 +61,10 @@ namespace EventsApp.ViewModels.Events
         public bool IsApproved { get; set; }
 
         public bool CanEditApproval { get; set; }
+
+        // Dropdown със списък с градове
+        public List<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> Cities { get; set; } = new();
+        // Map city name -> "lat,lng" for client-side bounds
+        public Dictionary<string, string> CityCoordinatesMap { get; set; } = new();
     }
 }

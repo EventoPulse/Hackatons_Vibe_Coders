@@ -49,6 +49,13 @@
 
     function setVal(input, value, autoset) {
         if (!input) return;
+        // Позволяваме презапис дори със същата стойност за City
+        if (input.id === 'City') {
+            input.value = value == null ? '' : value;
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+            input.dispatchEvent(new Event('change', { bubbles: true }));
+            return;
+        }
         if (input.value === value) return;
         input.value = value == null ? '' : value;
         if (autoset) input.dataset.autoset = '1';
@@ -192,6 +199,90 @@
 
                 addressInput.setAttribute('placeholder',
                     addressInput.getAttribute('placeholder') || 'Start typing a venue or address...');
+            }
+
+            // Custom city-based suggestions: show top-3 addresses for selected city on focus
+            var acService = google.maps.places && google.maps.places.AutocompleteService ? new google.maps.places.AutocompleteService() : null;
+            var suggestionsEl = document.getElementById('city-address-suggestions');
+
+            function parseLatLngFromOption(el) {
+                if (!el) return null;
+                var opt = el.options[el.selectedIndex];
+                if (!opt) return null;
+                var v = opt.getAttribute('data-latlng');
+                if (!v) return null;
+                var parts = v.split(',');
+                var lat = parseFloat(parts[0]);
+                var lng = parseFloat(parts[1]);
+                if (!isFinite(lat) || !isFinite(lng)) return null;
+                return { lat: lat, lng: lng };
+            }
+
+            function showCityAddressSuggestions() {
+                if (!acService || !suggestionsEl || !cityInput || !addressInput) return;
+                var cityName = cityInput.value && cityInput.value.trim();
+                var coords = parseLatLngFromOption(cityInput);
+                if (!cityName || !coords) { suggestionsEl.style.display = 'none'; return; }
+
+                // build loose bounds around city center (~0.08 deg lat/lng)
+                var lat = coords.lat, lng = coords.lng;
+                var sw = new google.maps.LatLng(lat - 0.08, lng - 0.12);
+                var ne = new google.maps.LatLng(lat + 0.08, lng + 0.12);
+                var bounds = new google.maps.LatLngBounds(sw, ne);
+
+                acService.getPlacePredictions({
+                    input: cityName + ' ',
+                    bounds: bounds,
+                    componentRestrictions: { country: 'bg' },
+                    types: ['address']
+                }, function (preds, status) {
+                    if (status !== google.maps.places.PlacesServiceStatus.OK || !preds || !preds.length) {
+                        suggestionsEl.style.display = 'none';
+                        return;
+                    }
+                    // take up to 3
+                    var items = preds.slice(0, 3);
+                    suggestionsEl.innerHTML = '';
+                    items.forEach(function (p) {
+                        var a = document.createElement('a');
+                        a.className = 'list-group-item list-group-item-action';
+                        a.href = '#';
+                        a.textContent = p.description;
+                        a.dataset.placeid = p.place_id;
+                        a.addEventListener('click', function (ev) {
+                            ev.preventDefault();
+                            // geocode by placeId to get geometry and address components
+                            geocoder.geocode({ placeId: p.place_id, language: 'bg' }, function (results, gst) {
+                                if (gst !== 'OK' || !results || !results.length) return;
+                                var place = results[0];
+                                var loc = place.geometry.location;
+                                setVal(latInput, loc.lat().toFixed(6));
+                                setVal(lngInput, loc.lng().toFixed(6));
+                                var city = pickCity(place);
+                                if (city) setVal(cityInput, city, true);
+                                var addr = buildAddress(place);
+                                if (addr) setVal(addressInput, addr, true);
+                                if (map) { placeMarker(loc); map.panTo(loc); map.setZoom(17); }
+                                suggestionsEl.style.display = 'none';
+                                if (statusEl) statusEl.textContent = 'Pinned: ' + (place.formatted_address || addr);
+                            });
+                        });
+                        suggestionsEl.appendChild(a);
+                    });
+                    suggestionsEl.style.display = 'block';
+                });
+            }
+
+            // Show suggestions when focusing address input if city is set
+            if (addressInput) {
+                addressInput.addEventListener('focus', function () {
+                    // small delay to ensure select value is set
+                    setTimeout(showCityAddressSuggestions, 50);
+                });
+                // hide suggestions when typing to prefer pac-dropdown
+                addressInput.addEventListener('input', function () { if (suggestionsEl) suggestionsEl.style.display = 'none'; });
+                // hide when clicking outside
+                document.addEventListener('click', function (e) { if (suggestionsEl && !suggestionsEl.contains(e.target) && e.target !== addressInput) suggestionsEl.style.display = 'none'; });
             }
 
             [addressInput, cityInput].forEach(function (el) {
