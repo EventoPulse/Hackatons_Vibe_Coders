@@ -59,11 +59,11 @@
                         <dd>@t.StartTime.ToString("dd.MM.yyyy HH:mm")</dd>
 
                         <dt>Цена</dt>
-                        <dd>@t.Price.ToString("0.00") лв.</dd>
+                        <dd>@t.Price.ToTicketPriceDisplay()</dd>
                     </dl>
 
                     <div class="groove-ticket-footer">
-                        <span class="groove-price">@t.Price.ToString("0.00") лв.</span>
+                        <span class="groove-price">@t.Price.ToTicketPriceDisplay()</span>
                         <div class="groove-list-actions">
                             <a asp-action="Details" asp-route-id="@t.Id" class="groove-button groove-button-dark">
                                 <i class="bi bi-eye"></i> Детайли

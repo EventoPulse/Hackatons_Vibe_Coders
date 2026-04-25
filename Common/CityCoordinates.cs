@@ -72,5 +72,25 @@ namespace EventsApp.Common
             lng = 0;
             return false;
         }
+
+        public static IReadOnlyList<string> GetEquivalentNames(string? city)
+        {
+            if (string.IsNullOrWhiteSpace(city))
+            {
+                return Array.Empty<string>();
+            }
+
+            var trimmed = city.Trim();
+            if (!Coords.TryGetValue(trimmed, out var match))
+            {
+                return new[] { trimmed };
+            }
+
+            return Coords
+                .Where(kv => kv.Value.Lat == match.Lat && kv.Value.Lng == match.Lng)
+                .Select(kv => kv.Key)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+        }
     }
 }

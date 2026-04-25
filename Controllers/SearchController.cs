@@ -48,7 +48,7 @@ namespace EventsApp.Controllers
                 intent = await _ai.InterpretAsync(term, cancellationToken);
             }
 
-            var keyword = intent?.Keyword ?? term;
+            var keyword = ResolveKeyword(term, intent);
 
             var visibleEventsQuery = _db.Events
                 .AsNoTracking()
@@ -58,8 +58,8 @@ namespace EventsApp.Controllers
 
             if (intent?.City != null)
             {
-                var c = intent.City;
-                eventsQuery = eventsQuery.Where(e => e.City == c || e.City.Contains(c));
+                var cityVariants = CityCoordinates.GetEquivalentNames(intent.City);
+                eventsQuery = eventsQuery.Where(e => cityVariants.Contains(e.City));
             }
 
             if (intent?.Genre.HasValue == true)
@@ -155,26 +155,35 @@ namespace EventsApp.Controllers
             });
         }
 
-        private IQueryable<PostCardViewModel> ProjectPostCards(string keyword, string? userId)
+        private IQueryable<PostCardViewModel> ProjectPostCards(string? keyword, string? userId)
         {
-            return _db.Posts
-                .AsNoTracking()
-                .Where(p => p.Content.Contains(keyword) || (p.Event != null && p.Event.Title.Contains(keyword)))
-                .Select(p => new PostCardViewModel
-                {
-                    Id = p.Id,
-                    OrganizerId = p.OrganizerId,
-                    OrganizerName = p.Organizer.UserName ?? string.Empty,
-                    Content = p.Content,
-                    CreatedAt = p.CreatedAt,
-                    EventId = p.EventId,
-                    EventTitle = p.Event != null ? p.Event.Title : null,
-                    FirstMediaUrl = p.Images.Select(i => i.ImageUrl).FirstOrDefault(),
-                    FirstMediaType = p.Images.Select(i => i.MediaType).FirstOrDefault(),
-                    LikesCount = p.Likes.Count,
-                    CommentsCount = p.Comments.Count,
-                    CurrentUserLiked = userId != null && p.Likes.Any(l => l.UserId == userId),
-                });
+            var posts = _db.Posts.AsNoTracking();
+
+            if (string.IsNullOrWhiteSpace(keyword))
+            {
+                posts = posts.Where(_ => false);
+            }
+            else
+            {
+                var term = keyword.Trim();
+                posts = posts.Where(p => p.Content.Contains(term) || (p.Event != null && p.Event.Title.Contains(term)));
+            }
+
+            return posts.Select(p => new PostCardViewModel
+            {
+                Id = p.Id,
+                OrganizerId = p.OrganizerId,
+                OrganizerName = p.Organizer.UserName ?? string.Empty,
+                Content = p.Content,
+                CreatedAt = p.CreatedAt,
+                EventId = p.EventId,
+                EventTitle = p.Event != null ? p.Event.Title : null,
+                FirstMediaUrl = p.Images.Select(i => i.ImageUrl).FirstOrDefault(),
+                FirstMediaType = p.Images.Select(i => i.MediaType).FirstOrDefault(),
+                LikesCount = p.Likes.Count,
+                CommentsCount = p.Comments.Count,
+                CurrentUserLiked = userId != null && p.Likes.Any(l => l.UserId == userId),
+            });
         }
 
         private void ApplyHint(SearchResultsViewModel vm, bool intentExtracted)
@@ -219,6 +228,31 @@ namespace EventsApp.Controllers
                     vm.AiHint = "Smart AI search is on.";
                     break;
             }
+        }
+
+        private static string? ResolveKeyword(string rawQuery, AiSearchIntent? intent)
+        {
+            if (intent == null)
+            {
+                return rawQuery;
+            }
+
+            if (!string.IsNullOrWhiteSpace(intent.Keyword))
+            {
+                return intent.Keyword.Trim();
+            }
+
+            var hasStructuredFilters =
+                !string.IsNullOrWhiteSpace(intent.City) ||
+                intent.Genre.HasValue ||
+                intent.DateFrom.HasValue ||
+                intent.DateTo.HasValue ||
+                intent.NearMe ||
+                !string.IsNullOrWhiteSpace(intent.DateIntent) ||
+                intent.Latitude.HasValue ||
+                intent.Longitude.HasValue;
+
+            return hasStructuredFilters ? null : rawQuery;
         }
 
         private static IReadOnlyList<EventMapMarkerViewModel> BuildMarkers(IReadOnlyList<EventCardViewModel> events)

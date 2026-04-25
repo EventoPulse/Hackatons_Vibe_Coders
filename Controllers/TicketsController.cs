@@ -84,6 +84,7 @@ namespace EventsApp.Controllers
                 EventId = ev.Id,
                 EventTitle = ev.Title,
                 IsActive = true,
+                IsFree = false,
             };
 
             return View(vm);
@@ -102,6 +103,7 @@ namespace EventsApp.Controllers
             if (!isAdmin && ev.OrganizerId != userId) return Forbid();
 
             input.EventTitle = ev.Title;
+            NormalizeFreeTicketInput(input);
 
             if (!ModelState.IsValid)
             {
@@ -148,6 +150,7 @@ namespace EventsApp.Controllers
                 Name = ticket.Name,
                 Description = ticket.Description,
                 Price = ticket.Price,
+                IsFree = ticket.Price.IsFreeTicket(),
                 QuantityTotal = ticket.QuantityTotal,
                 QuantityRemaining = ticket.QuantityRemaining,
                 ImageUrl = ticket.ImageUrl,
@@ -173,6 +176,7 @@ namespace EventsApp.Controllers
             if (!isAdmin && ticket.Event.OrganizerId != userId) return Forbid();
 
             var remaining = input.QuantityRemaining ?? ticket.QuantityRemaining;
+            NormalizeFreeTicketInput(input);
             if (remaining > input.QuantityTotal)
             {
                 ModelState.AddModelError(nameof(input.QuantityRemaining),
@@ -467,6 +471,17 @@ namespace EventsApp.Controllers
                 OwnerUserName = ut.Transaction.User.UserName ?? string.Empty,
                 OwnerEmail = ut.Transaction.User.Email ?? string.Empty,
             };
+        }
+
+        private void NormalizeFreeTicketInput(TicketCreateEditViewModel input)
+        {
+            if (!input.IsFree)
+            {
+                return;
+            }
+
+            input.Price = 0m;
+            ModelState.Remove(nameof(input.Price));
         }
     }
 }

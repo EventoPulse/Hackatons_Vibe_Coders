@@ -1,0 +1,34 @@
+<script>
+    (function () {
+        var priceInput = document.getElementById('Price');
+        var freeCheckbox = document.getElementById('IsFree');
+        if (!priceInput || !freeCheckbox) return;
+
+        function syncPriceField() {
+            if (freeCheckbox.checked) {
+                if (!priceInput.dataset.lastPaidPrice && priceInput.value && priceInput.value !== '0') {
+                    priceInput.dataset.lastPaidPrice = priceInput.value;
+                }
+                priceInput.value = '0';
+                priceInput.readOnly = true;
+                priceInput.classList.add('bg-light');
+                return;
+            }
+
+            priceInput.readOnly = false;
+            priceInput.classList.remove('bg-light');
+            if (priceInput.value === '0' && priceInput.dataset.lastPaidPrice) {
+                priceInput.value = priceInput.dataset.lastPaidPrice;
+            }
+        }
+
+        freeCheckbox.addEventListener('change', syncPriceField);
+        priceInput.addEventListener('input', function () {
+            if (!freeCheckbox.checked && priceInput.value && priceInput.value !== '0') {
+                priceInput.dataset.lastPaidPrice = priceInput.value;
+            }
+        });
+
+        syncPriceField();
+    })();
+</script>

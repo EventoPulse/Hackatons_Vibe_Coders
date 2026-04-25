@@ -41,8 +41,13 @@
             <div class="groove-form-grid groove-form-grid-3">
                 <div class="mb-3">
                     <label asp-for="Price" class="form-label"></label>
-                    <input asp-for="Price" class="form-control" type="number" step="0.01" min="0" />
+                    <input asp-for="Price" id="Price" class="form-control" type="number" step="0.01" min="0" />
                     <span asp-validation-for="Price" class="text-danger"></span>
+                    <div class="form-check mt-2">
+                        <input asp-for="IsFree" id="IsFree" class="form-check-input" />
+                        <label asp-for="IsFree" class="form-check-label"></label>
+                    </div>
+                    <div class="form-text">Стойност `0` или отметка на `Безплатен билет` ще се показва като Free.</div>
                 </div>
                 <div class="mb-3">
                     <label asp-for="QuantityTotal" class="form-label"></label>
@@ -79,4 +84,5 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <partial name="_TicketPriceToggleScript" />
 }

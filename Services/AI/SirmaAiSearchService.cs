@@ -39,7 +39,10 @@ Rules:
 - If the query says 'около мен', 'near me', set nearMe=true.
 - If the query contains a city, set city.
 - If the query contains a genre, set genre.
-- Put remaining meaningful words in keyword (single short term) and keywords (array of all meaningful tokens).
+- Ignore conversational filler such as 'искам', 'искам да участвам', 'търся', 'покажи ми', 'намери', 'събития', 'event', 'events' unless it is truly useful for search.
+- Put only the remaining meaningful domain words in keyword (single short term) and keywords (array of all meaningful tokens).
+- If city/genre/date already capture the user intent and the remaining words are generic or conversational, set keyword=null and keywords=[].
+- Treat hackathon-related wording such as 'хакатон', 'хакатона', 'hackathon', 'hack' as the same concept; prefer a short keyword like 'hack' when a keyword is needed.
 - A Google Maps toolkit (geocode_address) is available. When you detect a city, you SHOULD call geocode_address with the city name plus ', Bulgaria' (e.g. 'Ruse, Bulgaria') to obtain accurate latitude/longitude and put them into the latitude and longitude fields. If geocoding fails, leave them null.
 - dateIntent: short label such as 'tonight','tomorrow','this weekend','this week' or null.
 - dateFrom / dateTo: ISO 8601 date strings. Resolve relative phrases:

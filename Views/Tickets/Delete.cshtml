@@ -15,7 +15,7 @@
 
         <dl class="groove-data-list text-start mt-4">
             <dt>Цена</dt>
-            <dd>@Model.Price.ToString("0.00") лв.</dd>
+            <dd>@Model.Price.ToTicketPriceDisplay()</dd>
 
             <dt>Общо</dt>
             <dd>@Model.QuantityTotal</dd>

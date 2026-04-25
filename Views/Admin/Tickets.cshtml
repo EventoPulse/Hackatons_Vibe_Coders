@@ -81,7 +81,7 @@
                                     <td><strong>@t.EventTitle</strong></td>
                                     <td>@t.TicketName</td>
                                     <td>@t.OwnerUserName</td>
-                                    <td>@t.Price.ToString("0.00") лв.</td>
+                                    <td>@t.Price.ToTicketPriceDisplay()</td>
                                     <td>@t.CreatedAt.ToString("dd.MM.yyyy HH:mm")</td>
                                     <td><span class="groove-status-badge @statusClass">@statusText</span></td>
                                     <td>

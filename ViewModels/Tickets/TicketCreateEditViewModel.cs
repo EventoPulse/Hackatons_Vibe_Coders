@@ -23,6 +23,9 @@ namespace EventsApp.ViewModels.Tickets
         [Range(0, 1_000_000)]
         public decimal Price { get; set; }
 
+        [Display(Name = "Безплатен билет")]
+        public bool IsFree { get; set; }
+
         [Required]
         [Range(0, int.MaxValue)]
         [Display(Name = "Total quantity")]

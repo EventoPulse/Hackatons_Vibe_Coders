@@ -1993,6 +1993,14 @@ video.card-img-top-fixed {
     border-color: var(--groove-ink);
 }
 
+.validation-summary-valid {
+    display: none;
+}
+
+.pac-container {
+    z-index: 1060 !important;
+}
+
 .groove-form-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));

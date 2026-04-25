@@ -1,3 +1,4 @@
+using EventsApp.Common;
 using EventsApp.ViewModels.Tickets;
 using QRCoder;
 using QuestPDF.Fluent;
@@ -57,7 +58,7 @@ namespace EventsApp.Services
                             col.Item().Text($"Ticket: {ticket.TicketName}").FontSize(13);
                             col.Item().Text($"Location: {ticket.Address}, {ticket.City}");
                             col.Item().Text($"Starts: {ticket.StartTime:yyyy-MM-dd HH:mm}");
-                            col.Item().Text($"Price: {ticket.Price:0.00}");
+                            col.Item().Text($"Price: {ticket.Price.ToTicketPriceDisplay()}");
                             col.Item().Text($"Holder: {ticket.OwnerUserName}");
                             col.Item().Text($"Email: {ticket.OwnerEmail}");
                             col.Item().Text($"Transaction: {ticket.TransactionStatus}");

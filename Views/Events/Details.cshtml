@@ -103,6 +103,12 @@
                 <span class="groove-kicker">Продажби</span>
                 <h2>Налични <span>билети</span>.</h2>
             </div>
+            @if (Model.CanManageTickets)
+            {
+                <a asp-controller="Tickets" asp-action="Create" asp-route-id="@Model.Id" class="groove-button groove-button-paper">
+                    <i class="bi bi-plus-lg"></i> Добави билет
+                </a>
+            }
         </div>
 
         @if (Model.Tickets.Count == 0)
@@ -110,6 +116,14 @@
             <div class="groove-empty-card">
                 <i class="bi bi-ticket-perforated"></i>
                 <h2 class="groove-panel-title">Все още няма <span>билети</span>.</h2>
+                @if (Model.CanManageTickets)
+                {
+                    <div class="groove-form-actions justify-content-center mt-3">
+                        <a asp-controller="Tickets" asp-action="Create" asp-route-id="@Model.Id" class="groove-button groove-button-dark">
+                            <i class="bi bi-plus-lg"></i> Добави първи билет
+                        </a>
+                    </div>
+                }
             </div>
         }
         else
@@ -119,6 +133,7 @@
                 {
                     var ticketStatusClass = t.SoldOut ? "groove-status-badge-danger" : "groove-status-badge-success";
                     var ticketStatusText = t.SoldOut ? "Разпродаден" : $"{t.QuantityRemaining} останали";
+                    var ticketActionText = t.Price.IsFreeTicket() ? "Вземи безплатно" : "Купи";
 
                     <article class="groove-ticket-card">
                         <div class="d-flex justify-content-between align-items-start gap-2">
@@ -132,7 +147,7 @@
                         }
 
                         <div class="groove-ticket-footer">
-                            <span class="groove-price">@t.Price.ToString("0.00") лв.</span>
+                            <span class="groove-price">@t.Price.ToTicketPriceDisplay()</span>
 
                             @if (User.Identity?.IsAuthenticated == true)
                             {
@@ -141,7 +156,7 @@
                                     <form asp-controller="Tickets" asp-action="Buy" asp-route-id="@t.Id" method="post">
                                         @Html.AntiForgeryToken()
                                         <button type="submit" class="groove-button groove-button-dark">
-                                            <i class="bi bi-bag-check"></i> Купи
+                                            <i class="bi bi-bag-check"></i> @ticketActionText
                                         </button>
                                     </form>
                                 }

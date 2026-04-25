@@ -48,7 +48,8 @@ namespace EventsApp.Controllers
 
             if (!string.IsNullOrWhiteSpace(city))
             {
-                query = query.Where(e => e.City == city);
+                var cityVariants = CityCoordinates.GetEquivalentNames(city);
+                query = query.Where(e => cityVariants.Contains(e.City));
             }
 
             if (genre.HasValue)

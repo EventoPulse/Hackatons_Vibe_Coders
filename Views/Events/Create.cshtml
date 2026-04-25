@@ -18,7 +18,7 @@
     </div>
 
     <div class="groove-form-panel">
-        <form asp-action="Create" method="post">
+        <form asp-action="Create" method="post" enctype="multipart/form-data">
             @Html.AntiForgeryToken()
             <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
 
@@ -29,23 +29,51 @@
             </div>
 
             <div class="mb-3">
-                <label asp-for="Description" class="form-label"></label>
-                <textarea asp-for="Description" class="form-control" rows="4"></textarea>
+                <div class="d-flex justify-content-between align-items-end gap-2">
+                    <label asp-for="Description" class="form-label mb-0"></label>
+                    <button type="button" id="ai-generate-description" class="groove-button groove-button-paper btn-sm">
+                        <i class="bi bi-stars"></i> Генерирай с AI
+                    </button>
+                </div>
+                <textarea asp-for="Description" id="event-description" class="form-control" rows="4"></textarea>
                 <span asp-validation-for="Description" class="text-danger small"></span>
+                <div id="ai-description-status" class="form-text"></div>
             </div>
 
             <div class="groove-form-grid">
                 <div class="mb-3">
                     <label asp-for="City" class="form-label"></label>
-                    <input asp-for="City" class="form-control" />
+                    <select asp-for="City" id="City" class="form-select" autocomplete="off">
+                        <option value="">-- Избери град --</option>
+                        @foreach (var item in Model.Cities)
+                        {
+                            var latlng = Model.CityCoordinatesMap != null && Model.CityCoordinatesMap.ContainsKey(item.Value) ? Model.CityCoordinatesMap[item.Value] : string.Empty;
+                            <option value="@item.Value" data-latlng="@latlng">@item.Text</option>
+                        }
+                    </select>
                     <span asp-validation-for="City" class="text-danger small"></span>
                 </div>
                 <div class="mb-3">
                     <label asp-for="Address" class="form-label"></label>
-                    <input asp-for="Address" class="form-control" />
+                    <div style="position:relative;">
+                        <input asp-for="Address" id="Address" class="form-control"
+                               autocomplete="off"
+                               placeholder="Започни да пишеш адрес или място..." />
+                        <div id="city-address-suggestions" class="list-group" style="position:absolute;z-index:1050;left:0;right:0;max-height:180px;overflow:auto;display:none;"></div>
+                    </div>
                     <span asp-validation-for="Address" class="text-danger small"></span>
+                    <div class="form-text">Избери предложение и градът + координатите ще се попълнят автоматично.</div>
                 </div>
             </div>
+
+            <div class="mb-3">
+                <label class="form-label"><i class="bi bi-geo-alt"></i> Маркирай локацията</label>
+                <div id="event-location-map" style="height: 300px; border-radius: 0.5rem; overflow: hidden;"></div>
+                <div id="event-location-status" class="form-text"></div>
+            </div>
+
+            <input asp-for="Latitude" id="Latitude" type="hidden" />
+            <input asp-for="Longitude" id="Longitude" type="hidden" />
 
             <div class="groove-form-grid">
                 <div class="mb-3">
@@ -66,6 +94,13 @@
                 <label asp-for="Genre" class="form-label"></label>
                 <select asp-for="Genre" asp-items="Html.GetEnumSelectList<EventGenre>()" class="form-select"></select>
                 <span asp-validation-for="Genre" class="text-danger small"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Photo" class="form-label"><i class="bi bi-cloud-upload"></i> Качи снимка</label>
+                <input asp-for="Photo" class="form-control" type="file" accept="image/jpeg,image/png,image/webp,image/gif" />
+                <span asp-validation-for="Photo" class="text-danger small"></span>
+                <div class="form-text">JPG, PNG, WebP или GIF, до 5 MB.</div>
             </div>
 
             <div class="mb-3">
@@ -94,4 +129,7 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <partial name="_AiDescriptionScript" />
+    <partial name="_GoogleMapsLoader" />
+    <script src="~/js/event-place-picker.js" asp-append-version="true"></script>
 }

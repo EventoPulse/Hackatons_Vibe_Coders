@@ -31,7 +31,6 @@ namespace EventsApp.Controllers.Api
             var result = new AiSearchResult
             {
                 RawQuery = query,
-                Keyword = string.IsNullOrWhiteSpace(query) ? null : query,
             };
 
             if (string.IsNullOrWhiteSpace(query))
@@ -44,6 +43,7 @@ namespace EventsApp.Controllers.Api
             if (!_ai.IsEnabled)
             {
                 ApplyCityFallback(result, query);
+                ApplyKeywordFallback(result, query);
                 result.AiUsed = false;
                 result.AiStatus = "Disabled";
                 result.AiStatusDetail = "Sirma AI not configured. Add Sirma_key + Sirma_agent_id to .env or user-secrets.";
@@ -81,6 +81,7 @@ namespace EventsApp.Controllers.Api
             result.AiStatusDetail = _ai.LastStatusDetail;
 
             ApplyCityFallback(result, query);
+            ApplyKeywordFallback(result, query);
 
             return Ok(result);
         }
@@ -109,6 +110,32 @@ namespace EventsApp.Controllers.Api
                 result.Longitude ??= lng;
                 result.City ??= cityName;
             }
+        }
+
+        private static void ApplyKeywordFallback(AiSearchResult result, string query)
+        {
+            if (!string.IsNullOrWhiteSpace(result.Keyword))
+            {
+                result.Keyword = result.Keyword.Trim();
+                return;
+            }
+
+            var hasStructuredFilters =
+                !string.IsNullOrWhiteSpace(result.City) ||
+                !string.IsNullOrWhiteSpace(result.Genre) ||
+                !string.IsNullOrWhiteSpace(result.DateIntent) ||
+                result.NearMe ||
+                result.Latitude.HasValue ||
+                result.Longitude.HasValue;
+
+            if (result.AiUsed && hasStructuredFilters)
+            {
+                result.Keyword = null;
+                result.Keywords = Array.Empty<string>();
+                return;
+            }
+
+            result.Keyword = string.IsNullOrWhiteSpace(query) ? null : query;
         }
     }
 }

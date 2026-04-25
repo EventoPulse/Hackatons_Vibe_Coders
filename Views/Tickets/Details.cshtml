@@ -43,7 +43,7 @@
                 <dd>@Model.StartTime.ToString("dd.MM.yyyy HH:mm")</dd>
 
                 <dt>Цена</dt>
-                <dd>@Model.Price.ToString("0.00") лв.</dd>
+                <dd>@Model.Price.ToTicketPriceDisplay()</dd>
 
                 <dt>Транзакция</dt>
                 <dd>@Model.TransactionStatus.ToTransactionStatusDisplay()</dd>

@@ -57,7 +57,7 @@
 
                             <tr>
                                 <td><strong>@t.Name</strong></td>
-                                <td>@t.Price.ToString("0.00") лв.</td>
+                                <td>@t.Price.ToTicketPriceDisplay()</td>
                                 <td>@t.QuantityTotal</td>
                                 <td>@t.QuantityRemaining</td>
                                 <td>@t.Sold</td>
