@@ -40,10 +40,14 @@ namespace EventsApp.ViewModels.Events
         [Required]
         public EventGenre Genre { get; set; }
 
+
         [Url]
         [StringLength(GlobalConstants.Event.ImageUrlMaxLength)]
         [Display(Name = "Image URL")]
         public string? ImageUrl { get; set; }
+
+        [Display(Name = "Upload Photo")]
+        public IFormFile? Photo { get; set; }
 
         [Display(Name = "Approved")]
         public bool IsApproved { get; set; }

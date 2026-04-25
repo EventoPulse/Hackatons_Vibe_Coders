@@ -2,6 +2,7 @@ using EventsApp.Common;
 using EventsApp.Data;
 using EventsApp.Models;
 using EventsApp.ViewModels.Events;
+using EventsApp.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -13,11 +14,13 @@ namespace EventsApp.Controllers
     {
         private readonly ApplicationDbContext _db;
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly IMediaUploadService _mediaUploadService;
 
-        public EventsController(ApplicationDbContext db, UserManager<ApplicationUser> userManager)
+        public EventsController(ApplicationDbContext db, UserManager<ApplicationUser> userManager, IMediaUploadService mediaUploadService)
         {
             _db = db;
             _userManager = userManager;
+            _mediaUploadService = mediaUploadService;
         }
 
         public IActionResult Index(string? search, string? city, EventGenre? genre, DateTime? dateFrom)
@@ -139,12 +142,26 @@ namespace EventsApp.Controllers
                 StartTime = input.StartTime,
                 EndTime = input.EndTime,
                 Genre = input.Genre,
-                ImageUrl = input.ImageUrl,
+                ImageUrl = input.ImageUrl, // fallback to URL if no upload
                 IsApproved = isAdmin && input.IsApproved,
             };
 
             _db.Events.Add(ev);
             await _db.SaveChangesAsync();
+
+            // Handle photo upload
+            if (input.Photo != null && input.Photo.Length > 0)
+            {
+                var uploadResult = await _mediaUploadService.SaveAsync(input.Photo, "events");
+                if (uploadResult != null)
+                {
+                    // Save as main image if not set
+                    ev.ImageUrl = uploadResult.Url;
+                    // Optionally, add to Images collection
+                    _db.EventImages.Add(new EventImage { EventId = ev.Id, ImageUrl = uploadResult.Url });
+                    await _db.SaveChangesAsync();
+                }
+            }
 
             TempData["StatusMessage"] = "Event created.";
             return RedirectToAction(nameof(Details), new { id = ev.Id });

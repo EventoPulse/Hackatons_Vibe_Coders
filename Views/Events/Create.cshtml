@@ -7,7 +7,7 @@
     <div class="col-lg-7">
         <h1 class="h3 mb-4"><i class="bi bi-calendar-plus"></i> New Event</h1>
 
-        <form asp-action="Create" method="post">
+        <form asp-action="Create" method="post" enctype="multipart/form-data">
             @Html.AntiForgeryToken()
             <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
 
@@ -57,10 +57,17 @@
                 <span asp-validation-for="Genre" class="text-danger small"></span>
             </div>
 
+
             <div class="mb-3">
                 <label asp-for="ImageUrl" class="form-label"></label>
                 <input asp-for="ImageUrl" class="form-control" placeholder="https://..." />
                 <span asp-validation-for="ImageUrl" class="text-danger small"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Photo" class="form-label"></label>
+                <input asp-for="Photo" class="form-control" type="file" accept="image/*" />
+                <span asp-validation-for="Photo" class="text-danger small"></span>
             </div>
 
             @if (Model.CanEditApproval)
