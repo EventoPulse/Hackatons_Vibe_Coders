@@ -54,7 +54,10 @@
       "Bash(curl -s -o /tmp/search.html -w \"SEARCH HTTP:%{http_code} SIZE:%{size_download}\\\\n\" --connect-timeout 5 --max-time 30 \"http://localhost:5180/Search?q=techno+tonight+in+sofia\")",
       "Bash(taskkill //F //IM dotnet.exe)",
       "Bash(curl -s -o /tmp/search.html -w \"SEARCH HTTP:%{http_code} SIZE:%{size_download}\\\\n\" --max-time 25 \"http://localhost:5180/Search?q=jazz+in+sofia\")",
-      "Bash(curl -s -H 'X-API-Key: 4ObuHAHmWf81NUNnx6QdQBRANZiATNBYK6Z7qLSzAcTiAMQuvflNxbmb6YXSn3Crzp9Sx0Hzloyo33wWA66LxIG0fZVz7StPngmpPzalrOKKkNDisxBdG9awndZyWMhL' https://stage.sirma.ai/client/api/v1/agents)"
+      "Bash(curl -s -H 'X-API-Key: 4ObuHAHmWf81NUNnx6QdQBRANZiATNBYK6Z7qLSzAcTiAMQuvflNxbmb6YXSn3Crzp9Sx0Hzloyo33wWA66LxIG0fZVz7StPngmpPzalrOKKkNDisxBdG9awndZyWMhL' https://stage.sirma.ai/client/api/v1/agents)",
+      "Bash(git checkout *)",
+      "Bash(git rm *)",
+      "Bash(git add *)"
     ],
     "additionalDirectories": [
       "\\tmp"
