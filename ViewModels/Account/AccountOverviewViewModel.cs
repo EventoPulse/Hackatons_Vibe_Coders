@@ -1,29 +1,39 @@
+using EventsApp.Models;
+using EventsApp.ViewModels.Events;
+using EventsApp.ViewModels.Posts;
+using EventsApp.ViewModels.Tickets;
+
 namespace EventsApp.ViewModels.Account
 {
     public class AccountOverviewViewModel
     {
-        public string UserName { get; set; } = null!;
-        public string Email { get; set; } = null!;
-        public DateTime CreatedAt { get; set; }
-        public string? ProfileImageUrl { get; set; }
+        public string? UserName { get; set; }
+        public string? Email { get; set; }
+        public string? PhoneNumber { get; set; }
         public string? Bio { get; set; }
+        public string? ProfileImageUrl { get; set; }
+        public DateTime CreatedAt { get; set; }
 
-        // Роля
         public string Role { get; set; } = null!;
 
-        // Статус на кандидатура за организатор
         public bool HasApplied { get; set; }
         public bool IsApproved { get; set; }
         public string? OrganizationName { get; set; }
         public DateTime? ApplicationDate { get; set; }
 
-        // Статистики (за organizers)
         public int EventsCount { get; set; }
         public int PostsCount { get; set; }
 
-        // Purchased tickets
+        public bool HasPreferences { get; set; }
+        public EventGenre? PreferredGenre { get; set; }
+        public string? PreferredCity { get; set; }
+        public int? MinAge { get; set; }
+        public int? MaxDistanceKm { get; set; }
+
+        public IReadOnlyList<EventCardViewModel> LikedEvents { get; set; } = Array.Empty<EventCardViewModel>();
+        public IReadOnlyList<PostCardViewModel> LikedPosts { get; set; } = Array.Empty<PostCardViewModel>();
+
         public int PurchasedTicketsCount { get; set; }
-        public IReadOnlyList<EventsApp.ViewModels.Tickets.MyTicketRowViewModel> RecentTickets { get; set; }
-            = Array.Empty<EventsApp.ViewModels.Tickets.MyTicketRowViewModel>();
+        public IReadOnlyList<MyTicketRowViewModel> RecentTickets { get; set; } = Array.Empty<MyTicketRowViewModel>();
     }
 }

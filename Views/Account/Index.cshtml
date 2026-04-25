@@ -2,52 +2,86 @@
 @model AccountOverviewViewModel
 @{
     ViewData["Title"] = "My Account";
+
+    var displayName = !string.IsNullOrWhiteSpace(Model.UserName)
+        ? Model.UserName
+        : (!string.IsNullOrWhiteSpace(Model.Email) ? Model.Email : "Account");
+    var avatarInitial = !string.IsNullOrWhiteSpace(displayName)
+        ? displayName[0].ToString().ToUpperInvariant()
+        : "?";
+    var createdAtText = Model.CreatedAt.ToString("yyyy-MM-dd HH:mm");
+    var roleBadge = Model.Role switch
+    {
+        GlobalConstants.Roles.Admin => "bg-danger",
+        GlobalConstants.Roles.Organizer => "bg-primary",
+        _ => "bg-secondary",
+    };
+    var roleIcon = Model.Role switch
+    {
+        GlobalConstants.Roles.Admin => "bi-shield-fill",
+        GlobalConstants.Roles.Organizer => "bi-person-badge-fill",
+        _ => "bi-person-fill",
+    };
 }
 
 <div class="row g-4">
-    <div class="col-lg-4">
-        <div class="card shadow-sm h-100">
-            <div class="card-body text-center py-4">
-                @if (!string.IsNullOrWhiteSpace(Model.ProfileImageUrl))
-                {
-                    <img src="@Model.ProfileImageUrl" class="rounded-circle mb-3" style="width:96px;height:96px;object-fit:cover;" alt="avatar" />
-                }
-                else
-                {
-                    <div class="rounded-circle bg-secondary d-inline-flex align-items-center justify-content-center mb-3"
-                         style="width:96px;height:96px;">
-                        <i class="bi bi-person-fill text-white" style="font-size:3rem;"></i>
-                    </div>
-                }
-
-                <h4 class="mb-1">@Model.UserName</h4>
-                <p class="text-muted small mb-2">@Model.Email</p>
-
-                @{
-                    var (badgeClass, roleIcon) = Model.Role switch
+    <div class="col-xl-4 d-flex flex-column gap-3">
+        <div class="card shadow-sm">
+            <div class="card-header bg-transparent border-0 pb-0">
+                <h5 class="mb-0"><i class="bi bi-person-vcard"></i> Profile information</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex align-items-center gap-3 mb-4">
+                    @if (!string.IsNullOrWhiteSpace(Model.ProfileImageUrl))
                     {
-                        "Admin" => ("bg-danger", "bi-shield-fill"),
-                        "Organizer" => ("bg-primary", "bi-person-badge-fill"),
-                        _ => ("bg-secondary", "bi-person-fill"),
-                    };
-                }
-                <span class="badge @badgeClass fs-6 px-3 py-2">
-                    <i class="bi @roleIcon me-1"></i> @Model.Role
-                </span>
+                        <img src="@Model.ProfileImageUrl"
+                             class="rounded-circle object-fit-cover flex-shrink-0"
+                             style="width:96px;height:96px;"
+                             alt="Profile image for @displayName" />
+                    }
+                    else
+                    {
+                        <div class="rounded-circle bg-secondary text-white d-inline-flex align-items-center justify-content-center flex-shrink-0 fw-semibold fs-2"
+                             style="width:96px;height:96px;">
+                            @avatarInitial
+                        </div>
+                    }
 
-                @if (!string.IsNullOrWhiteSpace(Model.Bio))
-                {
-                    <p class="text-muted small mt-3">@Model.Bio</p>
-                }
-
-                <div class="text-muted small mt-3">
-                    <i class="bi bi-calendar-check"></i> Member since @Model.CreatedAt.ToString("MMMM yyyy")
+                    <div>
+                        <h4 class="mb-1">@displayName</h4>
+                        <div class="text-muted small mb-2">Manage your public account details.</div>
+                        <span class="badge @roleBadge px-3 py-2">
+                            <i class="bi @roleIcon me-1"></i> @Model.Role
+                        </span>
+                    </div>
                 </div>
+
+                <dl class="row mb-4">
+                    <dt class="col-sm-4">User name</dt>
+                    <dd class="col-sm-8">@(string.IsNullOrWhiteSpace(Model.UserName) ? "Not set" : Model.UserName)</dd>
+
+                    <dt class="col-sm-4">Email</dt>
+                    <dd class="col-sm-8 text-break">@(string.IsNullOrWhiteSpace(Model.Email) ? "Not set" : Model.Email)</dd>
+
+                    <dt class="col-sm-4">Phone</dt>
+                    <dd class="col-sm-8">@(string.IsNullOrWhiteSpace(Model.PhoneNumber) ? "Not set" : Model.PhoneNumber)</dd>
+
+                    <dt class="col-sm-4">Bio</dt>
+                    <dd class="col-sm-8" style="white-space:pre-wrap;">@(string.IsNullOrWhiteSpace(Model.Bio) ? "No bio yet." : Model.Bio)</dd>
+
+                    <dt class="col-sm-4">Profile image</dt>
+                    <dd class="col-sm-8 text-break">@(string.IsNullOrWhiteSpace(Model.ProfileImageUrl) ? "Default avatar" : Model.ProfileImageUrl)</dd>
+
+                    <dt class="col-sm-4">Created at</dt>
+                    <dd class="col-sm-8">@createdAtText</dd>
+                </dl>
+
+                <a asp-action="EditProfile" class="btn btn-primary">
+                    <i class="bi bi-pencil-square"></i> Edit Profile
+                </a>
             </div>
         </div>
-    </div>
 
-    <div class="col-lg-8 d-flex flex-column gap-3">
         @if (Model.Role == GlobalConstants.Roles.Admin)
         {
             <div class="card border-danger shadow-sm">
@@ -76,12 +110,14 @@
                 </div>
             </div>
         }
+    </div>
 
+    <div class="col-xl-8 d-flex flex-column gap-3">
         @if (Model.Role == GlobalConstants.Roles.Organizer)
         {
             <div class="card border-primary shadow-sm">
                 <div class="card-header bg-primary text-white">
-                    <i class="bi bi-person-badge-fill"></i> Organizer Panel - @Model.OrganizationName
+                    <i class="bi bi-person-badge-fill"></i> Organizer Panel - @(Model.OrganizationName ?? "Organizer")
                     <span class="badge bg-success ms-2"><i class="bi bi-check-circle-fill"></i> Approved</span>
                 </div>
                 <div class="card-body">
@@ -106,7 +142,7 @@
                             <i class="bi bi-pencil-square"></i> New post
                         </a>
                         <a asp-controller="Organizer" asp-action="Profile" class="btn btn-outline-secondary">
-                            <i class="bi bi-pencil"></i> Edit profile
+                            <i class="bi bi-pencil"></i> Edit organizer profile
                         </a>
                     </div>
                 </div>
@@ -139,6 +175,7 @@
                         <dl class="row mb-3">
                             <dt class="col-sm-4">Organization</dt>
                             <dd class="col-sm-8">@Model.OrganizationName</dd>
+
                             <dt class="col-sm-4">Submitted</dt>
                             <dd class="col-sm-8">@Model.ApplicationDate?.ToString("yyyy-MM-dd HH:mm")</dd>
                         </dl>
@@ -151,7 +188,88 @@
             }
         }
 
-        @* ===== PURCHASED TICKETS ===== *@
+        <div class="card border-0 bg-light shadow-sm">
+            <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-sliders"></i> Preferences summary</h5>
+                <a asp-controller="Preferences" asp-action="Edit" class="btn btn-sm btn-outline-primary">
+                    @(Model.HasPreferences ? "Edit" : "Set preferences")
+                </a>
+            </div>
+            <div class="card-body pt-0">
+                @if (!Model.HasPreferences)
+                {
+                    <p class="text-muted mb-3">You have not set preferences yet.</p>
+                    <a asp-controller="Events" asp-action="Recommended" class="btn btn-sm btn-outline-secondary">
+                        <i class="bi bi-stars"></i> Recommended events
+                    </a>
+                }
+                else
+                {
+                    <dl class="row mb-0">
+                        <dt class="col-sm-4">Preferred genre</dt>
+                        <dd class="col-sm-8">@(Model.PreferredGenre?.ToString() ?? "Not set")</dd>
+
+                        <dt class="col-sm-4">Preferred city</dt>
+                        <dd class="col-sm-8">@(string.IsNullOrWhiteSpace(Model.PreferredCity) ? "Not set" : Model.PreferredCity)</dd>
+
+                        <dt class="col-sm-4">Minimum age</dt>
+                        <dd class="col-sm-8">@(Model.MinAge?.ToString() ?? "Not set")</dd>
+
+                        <dt class="col-sm-4">Max distance</dt>
+                        <dd class="col-sm-8">@(Model.MaxDistanceKm.HasValue ? $"{Model.MaxDistanceKm} km" : "Not set")</dd>
+                    </dl>
+                }
+            </div>
+        </div>
+
+        <div class="card border-0 bg-light shadow-sm">
+            <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-heart-fill text-danger"></i> Liked events</h5>
+                <a asp-controller="Home" asp-action="Index" class="btn btn-sm btn-outline-primary">Browse events</a>
+            </div>
+            <div class="card-body pt-0">
+                @if (Model.LikedEvents.Count == 0)
+                {
+                    <p class="text-muted mb-0">You have not liked any events yet.</p>
+                }
+                else
+                {
+                    <div class="row row-cols-1 row-cols-md-2 g-3">
+                        @foreach (var ev in Model.LikedEvents)
+                        {
+                            <div class="col">
+                                <partial name="_EventCard" model="ev" />
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div class="card border-0 bg-light shadow-sm">
+            <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-heart-fill text-danger"></i> Liked posts</h5>
+                <a asp-controller="Posts" asp-action="Index" class="btn btn-sm btn-outline-primary">Open feed</a>
+            </div>
+            <div class="card-body pt-0">
+                @if (Model.LikedPosts.Count == 0)
+                {
+                    <p class="text-muted mb-0">You have not liked any posts yet.</p>
+                }
+                else
+                {
+                    <div class="row row-cols-1 row-cols-md-2 g-3">
+                        @foreach (var post in Model.LikedPosts)
+                        {
+                            <div class="col">
+                                <partial name="_PostCard" model="post" />
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+
         <div class="card border-0 bg-light shadow-sm">
             <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center">
                 <h5 class="mb-0"><i class="bi bi-ticket-perforated"></i> My Tickets (@Model.PurchasedTicketsCount)</h5>
@@ -160,20 +278,20 @@
             <div class="card-body pt-0">
                 @if (Model.RecentTickets.Count == 0)
                 {
-                    <p class="text-muted mb-0">You haven't purchased any tickets yet.</p>
+                    <p class="text-muted mb-0">You have not purchased any tickets yet.</p>
                 }
                 else
                 {
                     <div class="list-group list-group-flush">
-                        @foreach (var t in Model.RecentTickets)
+                        @foreach (var ticket in Model.RecentTickets)
                         {
                             <div class="list-group-item bg-transparent px-0 d-flex justify-content-between align-items-center">
                                 <div>
-                                    <strong>@t.EventTitle</strong>
-                                    <span class="text-muted small">— @t.TicketName</span>
+                                    <strong>@ticket.EventTitle</strong>
+                                    <span class="text-muted small"> - @ticket.TicketName</span>
                                     <div class="text-muted small">
-                                        @t.Address, @t.City • @t.StartTime.ToString("yyyy-MM-dd HH:mm")
-                                        @if (t.IsUsed)
+                                        @ticket.Address, @ticket.City - @ticket.StartTime.ToString("yyyy-MM-dd HH:mm")
+                                        @if (ticket.IsUsed)
                                         {
                                             <span class="badge bg-secondary ms-1">Used</span>
                                         }
@@ -184,10 +302,10 @@
                                     </div>
                                 </div>
                                 <div class="d-flex gap-1">
-                                    <a asp-controller="Tickets" asp-action="Details" asp-route-id="@t.Id" class="btn btn-sm btn-outline-primary">
+                                    <a asp-controller="Tickets" asp-action="Details" asp-route-id="@ticket.Id" class="btn btn-sm btn-outline-primary">
                                         <i class="bi bi-eye"></i>
                                     </a>
-                                    <a asp-controller="Tickets" asp-action="DownloadPdf" asp-route-id="@t.Id" class="btn btn-sm btn-outline-primary">
+                                    <a asp-controller="Tickets" asp-action="DownloadPdf" asp-route-id="@ticket.Id" class="btn btn-sm btn-outline-primary">
                                         <i class="bi bi-file-earmark-pdf"></i>
                                     </a>
                                 </div>
