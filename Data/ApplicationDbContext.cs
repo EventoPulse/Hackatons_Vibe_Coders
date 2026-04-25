@@ -13,8 +13,6 @@ namespace EventsApp.Data
 
         public DbSet<OrganizerData> OrganizerData { get; set; } = null!;
 
-        public DbSet<Venue> Venues { get; set; } = null!;
-
         public DbSet<Event> Events { get; set; } = null!;
 
         public DbSet<Post> Posts { get; set; } = null!;
@@ -63,21 +61,8 @@ namespace EventsApp.Data
                 entity.HasIndex(p => p.UserId).IsUnique();
             });
 
-            builder.Entity<Venue>(entity =>
-            {
-                entity.HasOne(v => v.Organizer)
-                      .WithMany(u => u.Venues)
-                      .HasForeignKey(v => v.OrganizerId)
-                      .OnDelete(DeleteBehavior.Restrict);
-            });
-
             builder.Entity<Event>(entity =>
             {
-                entity.HasOne(e => e.Venue)
-                      .WithMany(v => v.Events)
-                      .HasForeignKey(e => e.VenueId)
-                      .OnDelete(DeleteBehavior.Restrict);
-
                 entity.HasOne(e => e.Organizer)
                       .WithMany(u => u.Events)
                       .HasForeignKey(e => e.OrganizerId)

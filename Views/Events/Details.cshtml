@@ -4,7 +4,7 @@
 }
 
 <div class="mb-3">
-    <a asp-action="Index" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back</a>
+    <a asp-controller="Home" asp-action="Index" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back</a>
     @if (Model.CanEdit)
     {
         <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-sm btn-outline-primary ms-1"><i class="bi bi-pencil"></i> Edit</a>
@@ -55,9 +55,7 @@
             <div class="card-body">
                 <ul class="list-unstyled mb-0">
                     <li class="mb-2"><i class="bi bi-geo-alt-fill text-primary"></i>
-                        <strong>Venue:</strong>
-                        <a asp-controller="Venues" asp-action="Details" asp-route-id="@Model.VenueId">@Model.VenueName</a>,
-                        @Model.VenueCity — @Model.VenueAddress
+                        <strong>Location:</strong> @Model.Address, @Model.City
                     </li>
                     <li class="mb-2"><i class="bi bi-clock-fill text-primary"></i>
                         <strong>Start:</strong> @Model.StartTime.ToString("yyyy-MM-dd HH:mm")
@@ -166,7 +164,7 @@ else
     <form asp-action="AddComment" asp-route-id="@Model.Id" method="post" class="mb-4">
         @Html.AntiForgeryToken()
         <div class="input-group">
-            <input type="text" name="content" class="form-control" placeholder="Write a comment…" maxlength="1000" required />
+            <input type="text" name="content" class="form-control" placeholder="Write a comment..." maxlength="1000" required />
             <button class="btn btn-primary" type="submit"><i class="bi bi-send"></i> Post</button>
         </div>
     </form>

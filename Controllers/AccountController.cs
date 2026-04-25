@@ -49,7 +49,6 @@ namespace EventsApp.Controllers
 
             if (role == GlobalConstants.Roles.Organizer)
             {
-                vm.VenuesCount = await _db.Venues.CountAsync(v => v.OrganizerId == user.Id);
                 vm.EventsCount = await _db.Events.CountAsync(e => e.OrganizerId == user.Id);
                 vm.PostsCount = await _db.Posts.CountAsync(p => p.OrganizerId == user.Id);
             }

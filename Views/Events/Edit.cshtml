@@ -23,12 +23,17 @@
                 <span asp-validation-for="Description" class="text-danger small"></span>
             </div>
 
-            <div class="mb-3">
-                <label asp-for="VenueId" class="form-label">Venue</label>
-                <select asp-for="VenueId" asp-items="Model.Venues" class="form-select">
-                    <option value="">— select venue —</option>
-                </select>
-                <span asp-validation-for="VenueId" class="text-danger small"></span>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label asp-for="City" class="form-label"></label>
+                    <input asp-for="City" class="form-control" />
+                    <span asp-validation-for="City" class="text-danger small"></span>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label asp-for="Address" class="form-label"></label>
+                    <input asp-for="Address" class="form-control" />
+                    <span asp-validation-for="Address" class="text-danger small"></span>
+                </div>
             </div>
 
             <div class="row">
@@ -54,7 +59,7 @@
 
             <div class="mb-3">
                 <label asp-for="ImageUrl" class="form-label"></label>
-                <input asp-for="ImageUrl" class="form-control" placeholder="https://…" />
+                <input asp-for="ImageUrl" class="form-control" placeholder="https://..." />
                 <span asp-validation-for="ImageUrl" class="text-danger small"></span>
             </div>
 

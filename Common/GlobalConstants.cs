@@ -31,16 +31,6 @@ namespace EventsApp.Common
             public const int CompanyNumberMaxLength = 50;
         }
 
-        public static class Venue
-        {
-            public const int NameMinLength = 2;
-            public const int NameMaxLength = 100;
-            public const int DescriptionMaxLength = 1000;
-            public const int AddressMaxLength = 200;
-            public const int CityMaxLength = 80;
-            public const int ImageUrlMaxLength = 500;
-        }
-
         public static class Event
         {
             public const int TitleMinLength = 3;
@@ -48,6 +38,8 @@ namespace EventsApp.Common
             public const int DescriptionMaxLength = 2000;
             public const int GenreMaxLength = 50;
             public const int ImageUrlMaxLength = 500;
+            public const int AddressMaxLength = 200;
+            public const int CityMaxLength = 80;
         }
 
         public static class Post

@@ -13,10 +13,8 @@ namespace EventsApp.ViewModels.Events
         public EventGenre Genre { get; set; }
         public string? ImageUrl { get; set; }
         public bool IsApproved { get; set; }
-        public int VenueId { get; set; }
-        public string VenueName { get; set; } = null!;
-        public string VenueCity { get; set; } = null!;
-        public string VenueAddress { get; set; } = null!;
+        public string Address { get; set; } = null!;
+        public string City { get; set; } = null!;
         public string OrganizerId { get; set; } = null!;
         public string OrganizerName { get; set; } = null!;
         public IReadOnlyList<string> ImageUrls { get; set; } = Array.Empty<string>();

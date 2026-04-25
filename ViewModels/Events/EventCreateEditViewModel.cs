@@ -18,8 +18,14 @@ namespace EventsApp.ViewModels.Events
         public string? Description { get; set; }
 
         [Required]
-        [Display(Name = "Venue")]
-        public int VenueId { get; set; }
+        [StringLength(GlobalConstants.Event.CityMaxLength)]
+        [Display(Name = "City")]
+        public string City { get; set; } = null!;
+
+        [Required]
+        [StringLength(GlobalConstants.Event.AddressMaxLength)]
+        [Display(Name = "Address")]
+        public string Address { get; set; } = null!;
 
         [Required]
         [Display(Name = "Start time")]
@@ -43,7 +49,5 @@ namespace EventsApp.ViewModels.Events
         public bool IsApproved { get; set; }
 
         public bool CanEditApproval { get; set; }
-
-        public IEnumerable<SelectListItem> Venues { get; set; } = Array.Empty<SelectListItem>();
     }
 }

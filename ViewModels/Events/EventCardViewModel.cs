@@ -7,8 +7,8 @@ namespace EventsApp.ViewModels.Events
         public int Id { get; set; }
         public string Title { get; set; } = null!;
         public string? ImageUrl { get; set; }
-        public string VenueName { get; set; } = null!;
-        public string VenueCity { get; set; } = null!;
+        public string Address { get; set; } = null!;
+        public string City { get; set; } = null!;
         public DateTime StartTime { get; set; }
         public EventGenre Genre { get; set; }
         public bool IsApproved { get; set; }

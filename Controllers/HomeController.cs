@@ -13,7 +13,7 @@ namespace EventsApp.Controllers
 {
     public class HomeController : Controller
     {
-        private const int LatestCount = 12;
+        private const int LatestCount = 6;
         private const int MapMarkerCount = 30;
 
         private readonly ApplicationDbContext _db;
@@ -32,45 +32,20 @@ namespace EventsApp.Controllers
 
         public async Task<IActionResult> Index(string? search, string? city, EventGenre? genre, DateTime? dateFrom)
         {
-            var now = DateTime.UtcNow;
+            var isAdmin = User.IsInRole(GlobalConstants.Roles.Admin);
             var userId = _userManager.GetUserId(User);
 
-            var query = _db.Events
+            var events = await _db.Events
                 .AsNoTracking()
-                .Where(e => e.IsApproved && e.StartTime >= now);
-
-            if (!string.IsNullOrWhiteSpace(search))
-            {
-                var term = search.Trim();
-                query = query.Where(e => e.Title.Contains(term));
-            }
-
-            if (!string.IsNullOrWhiteSpace(city))
-            {
-                query = query.Where(e => e.Venue.City == city);
-            }
-
-            if (genre.HasValue)
-            {
-                query = query.Where(e => e.Genre == genre.Value);
-            }
-
-            if (dateFrom.HasValue)
-            {
-                var from = dateFrom.Value.Date;
-                query = query.Where(e => e.StartTime >= from);
-            }
-
-            var events = await query
+                .Where(e => e.IsApproved && e.StartTime >= now)
                 .OrderBy(e => e.StartTime)
-                .Take(LatestCount)
                 .Select(e => new EventCardViewModel
                 {
                     Id = e.Id,
                     Title = e.Title,
                     ImageUrl = e.ImageUrl,
-                    VenueName = e.Venue.Name,
-                    VenueCity = e.Venue.City,
+                    Address = e.Address,
+                    City = e.City,
                     StartTime = e.StartTime,
                     Genre = e.Genre,
                     IsApproved = e.IsApproved,
@@ -82,7 +57,30 @@ namespace EventsApp.Controllers
                 })
                 .ToListAsync();
 
-            var upcomingForMap = await query
+            var posts = await _db.Posts
+                .AsNoTracking()
+                .OrderByDescending(p => p.CreatedAt)
+                .Take(LatestCount)
+                .Select(p => new PostCardViewModel
+                {
+                    Id = p.Id,
+                    OrganizerId = p.OrganizerId,
+                    OrganizerName = p.Organizer.UserName ?? string.Empty,
+                    Content = p.Content,
+                    CreatedAt = p.CreatedAt,
+                    EventId = p.EventId,
+                    EventTitle = p.Event != null ? p.Event.Title : null,
+                    FirstMediaUrl = p.Images.Select(i => i.ImageUrl).FirstOrDefault(),
+                    FirstMediaType = p.Images.Select(i => i.MediaType).FirstOrDefault(),
+                    LikesCount = p.Likes.Count,
+                    CommentsCount = p.Comments.Count,
+                    CurrentUserLiked = userId != null && p.Likes.Any(l => l.UserId == userId),
+                })
+                .ToListAsync();
+
+            var upcomingForMap = await _db.Events
+                .AsNoTracking()
+                .Where(e => e.IsApproved && e.StartTime >= now)
                 .OrderBy(e => e.StartTime)
                 .Take(MapMarkerCount)
                 .Select(e => new
@@ -100,36 +98,30 @@ namespace EventsApp.Controllers
                 .Where(e => CityCoordinates.TryGetCoordinates(e.VenueCity, out _, out _))
                 .Select(e =>
                 {
-                    CityCoordinates.TryGetCoordinates(e.VenueCity, out var lat, out var lng);
+                    CityCoordinates.TryGetCoordinates(e.City, out var lat, out var lng);
                     return new EventMapMarkerViewModel
                     {
-                        EventId = e.Id,
-                        Title = e.Title,
-                        VenueName = e.VenueName,
-                        City = e.VenueCity,
-                        StartTime = e.StartTime,
+                        City = e.City,
+                        EventCount = e.EventCount,
                         Lat = lat,
                         Lng = lng,
-                        ImageUrl = e.ImageUrl,
                     };
                 })
+                .OrderBy(m => m.City)
                 .ToList();
 
-            var cities = await _db.Venues
-                .AsNoTracking()
-                .Select(v => v.City)
-                .Distinct()
-                .OrderBy(c => c)
-                .Select(c => new SelectListItem { Value = c, Text = c })
-                .ToListAsync();
-
-            return View(new HomeIndexViewModel
+            var showPrefsPrompt = false;
+            if (userId != null
+                && !User.IsInRole(GlobalConstants.Roles.Admin)
+                && !User.IsInRole(GlobalConstants.Roles.Organizer))
             {
-                Search = search,
-                City = city,
-                Genre = genre,
-                DateFrom = dateFrom,
+                showPrefsPrompt = !await _db.UserPreferences.AnyAsync(p => p.UserId == userId);
+            }
+
+            return View(new EventsIndexViewModel
+            {
                 LatestEvents = events,
+                LatestPosts = posts,
                 MapMarkers = markers,
                 Cities = cities,
             });

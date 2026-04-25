@@ -50,7 +50,6 @@ namespace EventsApp.Controllers
             {
                 UsersCount = await _db.Users.CountAsync(),
                 OrganizersCount = await _db.OrganizerData.CountAsync(),
-                VenuesCount = await _db.Venues.CountAsync(),
                 EventsCount = await _db.Events.CountAsync(),
                 PendingOrganizersCount = await _db.OrganizerData.CountAsync(o => !o.Approved),
                 PendingEventsCount = await _db.Events.CountAsync(e => !e.IsApproved),
@@ -134,8 +133,8 @@ namespace EventsApp.Controllers
                     Id = e.Id,
                     Title = e.Title,
                     ImageUrl = e.ImageUrl,
-                    VenueName = e.Venue.Name,
-                    VenueCity = e.Venue.City,
+                    Address = e.Address,
+                    City = e.City,
                     StartTime = e.StartTime,
                     Genre = e.Genre,
                     IsApproved = e.IsApproved,

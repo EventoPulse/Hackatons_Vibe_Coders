@@ -1,4 +1,4 @@
-@model HomeIndexViewModel
+@model EventsIndexViewModel
 @using System.Text.Json
 @{
     ViewData["Title"] = "Home";
@@ -8,6 +8,7 @@
         .Select(g => new { Value = g, Text = g.ToString() })
         .ToList();
     var markersJson = JsonSerializer.Serialize(Model.MapMarkers);
+    var mappedEventCount = Model.MapMarkers.Sum(m => m.EventCount);
 }
 
 @section Scripts {
@@ -21,53 +22,79 @@
             var mapEl = document.getElementById('events-map');
             if (!mapEl || typeof L === 'undefined') return;
 
-            var defaultCenter = [42.7339, 25.4858]; // Bulgaria
-            var map = L.map('events-map').setView(defaultCenter, 7);
+            function escapeHtml(value) {
+                return String(value ?? '')
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#39;');
+            }
+
+            var bulgariaBounds = L.latLngBounds(
+                [41.2354, 22.3571],
+                [44.2156, 28.6122]);
+
+            var map = L.map('events-map', {
+                maxBoundsViscosity: 0.75
+            });
+
+            map.fitBounds(bulgariaBounds, { padding: [12, 12], animate: false });
+            map.setMaxBounds(bulgariaBounds.pad(0.2));
+
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                maxZoom: 18,
+                minZoom: 6,
+                maxZoom: 12,
+                bounds: bulgariaBounds.pad(0.2),
+                noWrap: true,
                 attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
             }).addTo(map);
 
-            if (markers && markers.length) {
-                var bounds = [];
-                markers.forEach(function (m) {
-                    var latlng = [m.Lat, m.Lng];
-                    bounds.push(latlng);
-                    var thumb = m.ImageUrl ? '<img src="' + m.ImageUrl + '" style="width:100%;height:80px;object-fit:cover;border-radius:6px;margin-bottom:6px;" />' : '';
-                    var popup = thumb +
-                        '<strong>' + m.Title + '</strong><br>' +
-                        '<small>' + m.VenueName + ', ' + m.City + '</small><br>' +
-                        '<small>' + new Date(m.StartTime).toLocaleString() + '</small><br>' +
-                        '<a href="/Events/Details/' + m.EventId + '" class="btn btn-sm btn-primary mt-2">Details</a>';
-                    L.marker(latlng).addTo(map).bindPopup(popup);
+            if (!markers || !markers.length) return;
+
+            markers.forEach(function (m) {
+                var latlng = [m.Lat, m.Lng];
+                var eventLabel = m.EventCount === 1 ? 'event' : 'events';
+                var icon = L.divIcon({
+                    className: 'event-count-marker',
+                    html: '<span class="event-count-marker__city">' + escapeHtml(m.City) + '</span>' +
+                        '<span class="event-count-marker__number">' + m.EventCount + '</span>' +
+                        '<span class="event-count-marker__label">' + eventLabel + '</span>',
+                    iconSize: [128, 42],
+                    iconAnchor: [64, 21]
                 });
-                if (bounds.length > 1) {
-                    map.fitBounds(bounds, { padding: [40, 40] });
-                } else {
-                    map.setView(bounds[0], 11);
-                }
-            }
+
+                L.marker(latlng, {
+                    icon: icon
+                })
+                    .addTo(map)
+                    .bindPopup(
+                        '<strong>' + escapeHtml(m.City) + '</strong><br>' +
+                        '<small>' + m.EventCount + ' ' + eventLabel + '</small><br>' +
+                        '<a href="/?city=' + encodeURIComponent(m.City) + '" class="btn btn-sm btn-primary mt-2">Show events</a>');
+            });
         })();
     </script>
 }
 
-<section class="hero text-center mb-4 py-4 rounded bg-dark text-white shadow-sm">
-    <h1 class="display-5 fw-bold"><i class="bi bi-music-note-beamed"></i> Открий събития около теб</h1>
-    <p class="lead mb-4">
-        GrooveOn ти показва концерти, парти-та и фестивали в твоя град. Филтрирай по жанр, град или дата.
-    </p>
+<section class="hero text-center mb-4">
+    <h1 class="display-5"><i class="bi bi-music-note-beamed"></i> GrooveOn</h1>
+    <p class="lead mb-4">Discover events, venues and organizers — follow the scene in your city.</p>
+
+    <form asp-controller="Search" asp-action="Index" method="get" class="row g-2 justify-content-center mb-3">
+        <div class="col-md-7">
+            <div class="input-group input-group-lg">
+                <span class="input-group-text bg-white"><i class="bi bi-stars text-primary"></i></span>
+                <input type="text" name="q" class="form-control" placeholder="Search events, venues, posts…" />
+                <button class="btn btn-primary" type="submit">Search</button>
+            </div>
+        </div>
+    </form>
 
     <div class="d-flex justify-content-center gap-2 flex-wrap">
-        @if (!isAuthed)
-        {
-            <a asp-area="Identity" asp-page="/Account/Login" class="btn btn-light btn-lg">
-                <i class="bi bi-box-arrow-in-right"></i> Login
-            </a>
-            <a asp-area="Identity" asp-page="/Account/Register" class="btn btn-outline-light btn-lg">
-                <i class="bi bi-person-plus"></i> Register
-            </a>
-        }
-        else if (!isStaff)
+        <a asp-controller="Events" asp-action="Index" class="btn btn-light btn-lg">Browse events</a>
+        <a asp-controller="Posts" asp-action="Index" class="btn btn-outline-light btn-lg">Open feed</a>
+        @if (User.Identity?.IsAuthenticated == true)
         {
             <a asp-controller="Events" asp-action="Recommended" class="btn btn-light btn-lg">
                 <i class="bi bi-stars"></i> Recommended for you
@@ -79,68 +106,25 @@
     </div>
 </section>
 
-<section class="mb-4">
-    <form asp-action="Index" method="get" class="card shadow-sm">
-        <div class="card-body">
-            <h2 class="h6 mb-3"><i class="bi bi-funnel"></i> Filters</h2>
-            <div class="row g-2">
-                <div class="col-md-4">
-                    <label class="form-label small mb-1">Search</label>
-                    <input type="text" name="search" value="@Model.Search" class="form-control" placeholder="Event title…" />
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label small mb-1">City</label>
-                    <select name="city" class="form-select">
-                        <option value="">All cities</option>
-                        @foreach (var c in Model.Cities)
-                        {
-                            if (c.Value == Model.City)
-                            {
-                                <option value="@c.Value" selected>@c.Text</option>
-                            }
-                            else
-                            {
-                                <option value="@c.Value">@c.Text</option>
-                            }
-                        }
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label small mb-1">Genre</label>
-                    <select name="genre" class="form-select">
-                        <option value="">All</option>
-                        @foreach (var g in genres)
-                        {
-                            if (Model.Genre.HasValue && Model.Genre.Value == g.Value)
-                            {
-                                <option value="@g.Value" selected>@g.Text</option>
-                            }
-                            else
-                            {
-                                <option value="@g.Value">@g.Text</option>
-                            }
-                        }
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label small mb-1">From date</label>
-                    <input type="date" name="dateFrom" value="@(Model.DateFrom?.ToString("yyyy-MM-dd"))" class="form-control" />
-                </div>
-            </div>
-            <div class="d-flex gap-2 mt-3">
-                <button type="submit" class="btn btn-primary"><i class="bi bi-search"></i> Apply filters</button>
-                <a asp-action="Index" class="btn btn-outline-secondary"><i class="bi bi-x-circle"></i> Clear</a>
-            </div>
+@if (Model.ShowPreferencesPrompt)
+{
+    <div class="alert alert-primary d-flex align-items-center justify-content-between flex-wrap gap-2 shadow-sm" role="alert">
+        <div>
+            <i class="bi bi-stars me-2"></i>
+            <strong>Welcome!</strong> Tell us what you like to get personalized event recommendations.
         </div>
-    </form>
-</section>
+        <a asp-controller="Preferences" asp-action="Edit" class="btn btn-primary">
+            <i class="bi bi-sliders"></i> Set preferences
+        </a>
+    </div>
+}
 
 <section class="mb-5">
     <div class="d-flex justify-content-between align-items-end mb-3">
-        <h2 class="h4 mb-0"><i class="bi bi-geo-alt"></i> Events Map</h2>
+        <h2 class="h4 mb-0"><i class="bi bi-map"></i> Events around Bulgaria</h2>
         <span class="small text-muted">@Model.MapMarkers.Count on map &middot; OpenStreetMap</span>
     </div>
-    <div id="events-map" style="height: 420px; border-radius: 0.5rem; box-shadow: 0 1px 6px rgba(0,0,0,.08);"></div>
+    <div id="events-map"></div>
     @if (Model.MapMarkers.Count == 0)
     {
         <div class="small text-muted mt-2">
@@ -152,13 +136,11 @@
 <section class="mb-5">
     <div class="d-flex justify-content-between align-items-end mb-3">
         <h2 class="h4 mb-0"><i class="bi bi-calendar2-event"></i> Upcoming events</h2>
-        <span class="small text-muted">@Model.LatestEvents.Count results</span>
+        <a asp-controller="Events" asp-action="Index" class="small">All events →</a>
     </div>
     @if (Model.LatestEvents.Count == 0)
     {
-        <div class="alert alert-light border text-center">
-            <i class="bi bi-calendar-x"></i> No events match your filters. Try clearing them.
-        </div>
+        <div class="empty-state">No upcoming events yet.</div>
     }
     else
     {
@@ -166,6 +148,26 @@
             @foreach (var ev in Model.LatestEvents)
             {
                 <div class="col"><partial name="_EventCard" model="ev" /></div>
+            }
+        </div>
+    }
+</section>
+
+<section class="mb-5">
+    <div class="d-flex justify-content-between align-items-end mb-3">
+        <h2 class="h4 mb-0"><i class="bi bi-chat-square-text"></i> Latest from organizers</h2>
+        <a asp-controller="Posts" asp-action="Index" class="small">All posts →</a>
+    </div>
+    @if (Model.LatestPosts.Count == 0)
+    {
+        <div class="empty-state">No posts yet.</div>
+    }
+    else
+    {
+        <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-3">
+            @foreach (var post in Model.LatestPosts)
+            {
+                <div class="col"><partial name="_PostCard" model="post" /></div>
             }
         </div>
     }

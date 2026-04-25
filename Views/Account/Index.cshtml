@@ -5,8 +5,6 @@
 }
 
 <div class="row g-4">
-
-    @* Left column: profile card *@
     <div class="col-lg-4">
         <div class="card shadow-sm h-100">
             <div class="card-body text-center py-4">
@@ -49,10 +47,7 @@
         </div>
     </div>
 
-    @* Right column: status + actions *@
     <div class="col-lg-8 d-flex flex-column gap-3">
-
-        @* ===== ADMIN PANEL ===== *@
         @if (Model.Role == GlobalConstants.Roles.Admin)
         {
             <div class="card border-danger shadow-sm">
@@ -82,25 +77,20 @@
             </div>
         }
 
-        @* ===== ORGANIZER PANEL ===== *@
         @if (Model.Role == GlobalConstants.Roles.Organizer)
         {
             <div class="card border-primary shadow-sm">
                 <div class="card-header bg-primary text-white">
-                    <i class="bi bi-person-badge-fill"></i> Organizer Panel — @Model.OrganizationName
+                    <i class="bi bi-person-badge-fill"></i> Organizer Panel - @Model.OrganizationName
                     <span class="badge bg-success ms-2"><i class="bi bi-check-circle-fill"></i> Approved</span>
                 </div>
                 <div class="card-body">
                     <div class="row g-3 mb-3 text-center">
-                        <div class="col-4">
-                            <div class="fs-3 fw-bold text-primary">@Model.VenuesCount</div>
-                            <div class="text-muted small">Venues</div>
-                        </div>
-                        <div class="col-4">
+                        <div class="col-6">
                             <div class="fs-3 fw-bold text-primary">@Model.EventsCount</div>
                             <div class="text-muted small">Events</div>
                         </div>
-                        <div class="col-4">
+                        <div class="col-6">
                             <div class="fs-3 fw-bold text-primary">@Model.PostsCount</div>
                             <div class="text-muted small">Posts</div>
                         </div>
@@ -108,9 +98,6 @@
                     <div class="d-flex flex-wrap gap-2">
                         <a asp-controller="Organizer" asp-action="Dashboard" class="btn btn-primary">
                             <i class="bi bi-speedometer2"></i> Organizer Dashboard
-                        </a>
-                        <a asp-controller="Venues" asp-action="Create" class="btn btn-outline-primary">
-                            <i class="bi bi-building-add"></i> New venue
                         </a>
                         <a asp-controller="Events" asp-action="Create" class="btn btn-outline-primary">
                             <i class="bi bi-calendar-plus"></i> New event
@@ -126,7 +113,6 @@
             </div>
         }
 
-        @* ===== ORGANIZER APPLICATION STATUS ===== *@
         @if (Model.Role == GlobalConstants.Roles.User)
         {
             @if (!Model.HasApplied)
@@ -135,7 +121,7 @@
                     <div class="card-body">
                         <h5 class="card-title"><i class="bi bi-person-badge"></i> Become an Organizer</h5>
                         <p class="text-muted mb-3">
-                            Apply to become an organizer on GrooveOn. Once approved, you'll be able to create venues, events and posts.
+                            Apply to become an organizer on GrooveOn. Once approved, you'll be able to create events and posts.
                         </p>
                         <a asp-action="Apply" class="btn btn-primary">
                             <i class="bi bi-send"></i> Apply now
@@ -212,16 +198,12 @@
             </div>
         </div>
 
-        @* ===== USER QUICK LINKS ===== *@
         <div class="card border-0 bg-light shadow-sm">
             <div class="card-body">
                 <h5 class="card-title mb-3"><i class="bi bi-lightning"></i> Quick links</h5>
                 <div class="d-flex flex-wrap gap-2">
-                    <a asp-controller="Events" asp-action="Index" class="btn btn-outline-primary btn-sm">
-                        <i class="bi bi-calendar2-event"></i> Events
-                    </a>
-                    <a asp-controller="Venues" asp-action="Index" class="btn btn-outline-primary btn-sm">
-                        <i class="bi bi-geo-alt"></i> Venues
+                    <a asp-controller="Home" asp-action="Index" class="btn btn-outline-primary btn-sm">
+                        <i class="bi bi-calendar2-event"></i> Browse events
                     </a>
                     <a asp-controller="Posts" asp-action="Index" class="btn btn-outline-primary btn-sm">
                         <i class="bi bi-chat-square-text"></i> Feed
@@ -235,6 +217,5 @@
                 </div>
             </div>
         </div>
-
     </div>
 </div>

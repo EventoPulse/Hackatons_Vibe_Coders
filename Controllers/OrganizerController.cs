@@ -46,8 +46,8 @@ namespace EventsApp.Controllers
                     Id = e.Id,
                     Title = e.Title,
                     ImageUrl = e.ImageUrl,
-                    VenueName = e.Venue.Name,
-                    VenueCity = e.Venue.City,
+                    Address = e.Address,
+                    City = e.City,
                     StartTime = e.StartTime,
                     Genre = e.Genre,
                     IsApproved = e.IsApproved,
@@ -55,6 +55,7 @@ namespace EventsApp.Controllers
                     OrganizerName = e.Organizer.UserName ?? string.Empty,
                     LikesCount = e.Likes.Count,
                     CommentsCount = e.Comments.Count,
+                    CurrentUserLiked = e.Likes.Any(l => l.UserId == userId),
                 })
                 .ToListAsync();
 
@@ -110,7 +111,6 @@ namespace EventsApp.Controllers
                 Website = orgData.Website,
                 CompanyNumber = orgData.CompanyNumber,
                 Approved = orgData.Approved,
-                VenuesCount = await _db.Venues.CountAsync(v => v.OrganizerId == userId),
                 EventsCount = await _db.Events.CountAsync(e => e.OrganizerId == userId),
                 PostsCount = await _db.Posts.CountAsync(p => p.OrganizerId == userId),
                 TicketTypesCount = ticketTypesCount,

@@ -10,7 +10,6 @@ namespace EventsApp.Models
         {
             this.CreatedAt = DateTime.UtcNow;
 
-            this.Venues = new HashSet<Venue>();
             this.Events = new HashSet<Event>();
             this.Posts = new HashSet<Post>();
             this.PostComments = new HashSet<PostComment>();
@@ -37,8 +36,6 @@ namespace EventsApp.Models
         public OrganizerData? OrganizerData { get; set; }
 
         public UserPreferences? UserPreferences { get; set; }
-
-        public ICollection<Venue> Venues { get; set; }
 
         public ICollection<Event> Events { get; set; }
 

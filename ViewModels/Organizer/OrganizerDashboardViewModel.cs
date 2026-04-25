@@ -12,7 +12,6 @@ namespace EventsApp.ViewModels.Organizer
         public string? Website { get; set; }
         public string? CompanyNumber { get; set; }
         public bool Approved { get; set; }
-        public int VenuesCount { get; set; }
         public int EventsCount { get; set; }
         public int PostsCount { get; set; }
         public int TicketTypesCount { get; set; }

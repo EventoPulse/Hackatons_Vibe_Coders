@@ -22,12 +22,6 @@ namespace EventsApp.Models
         public int Id { get; set; }
 
         [Required]
-        [ForeignKey(nameof(Venue))]
-        public int VenueId { get; set; }
-
-        public Venue Venue { get; set; } = null!;
-
-        [Required]
         [ForeignKey(nameof(Organizer))]
         public string OrganizerId { get; set; } = null!;
 
@@ -49,6 +43,14 @@ namespace EventsApp.Models
 
         [Required]
         public EventGenre Genre { get; set; }
+
+        [Required]
+        [MaxLength(GlobalConstants.Event.AddressMaxLength)]
+        public string Address { get; set; } = null!;
+
+        [Required]
+        [MaxLength(GlobalConstants.Event.CityMaxLength)]
+        public string City { get; set; } = null!;
 
         [MaxLength(GlobalConstants.Event.ImageUrlMaxLength)]
         public string? ImageUrl { get; set; }

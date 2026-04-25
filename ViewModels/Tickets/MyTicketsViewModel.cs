@@ -11,8 +11,8 @@ namespace EventsApp.ViewModels.Tickets
         public int EventId { get; set; }
         public string EventTitle { get; set; } = null!;
         public string TicketName { get; set; } = null!;
-        public string VenueName { get; set; } = null!;
-        public string VenueCity { get; set; } = null!;
+        public string Address { get; set; } = null!;
+        public string City { get; set; } = null!;
         public DateTime StartTime { get; set; }
         public decimal Price { get; set; }
         public bool IsUsed { get; set; }

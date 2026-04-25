@@ -4,7 +4,6 @@ using EventsApp.Models;
 using EventsApp.ViewModels.Events;
 using EventsApp.ViewModels.Posts;
 using EventsApp.ViewModels.Search;
-using EventsApp.ViewModels.Venues;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -44,8 +43,8 @@ namespace EventsApp.Controllers
                 .Where(e =>
                     e.Title.Contains(term)
                     || (e.Description != null && e.Description.Contains(term))
-                    || e.Venue.Name.Contains(term)
-                    || e.Venue.City.Contains(term));
+                    || e.Address.Contains(term)
+                    || e.City.Contains(term));
 
             vm.Events = await eventsQuery
                 .OrderBy(e => e.StartTime)
@@ -55,8 +54,8 @@ namespace EventsApp.Controllers
                     Id = e.Id,
                     Title = e.Title,
                     ImageUrl = e.ImageUrl,
-                    VenueName = e.Venue.Name,
-                    VenueCity = e.Venue.City,
+                    Address = e.Address,
+                    City = e.City,
                     StartTime = e.StartTime,
                     Genre = e.Genre,
                     IsApproved = e.IsApproved,
@@ -65,22 +64,6 @@ namespace EventsApp.Controllers
                     LikesCount = e.Likes.Count,
                     CommentsCount = e.Comments.Count,
                     CurrentUserLiked = userId != null && e.Likes.Any(l => l.UserId == userId),
-                })
-                .ToListAsync();
-
-            vm.Venues = await _db.Venues
-                .AsNoTracking()
-                .Where(v => v.Name.Contains(term) || v.City.Contains(term) || v.Address.Contains(term))
-                .OrderBy(v => v.Name)
-                .Take(ResultsPerSection)
-                .Select(v => new VenueCardViewModel
-                {
-                    Id = v.Id,
-                    Name = v.Name,
-                    Address = v.Address,
-                    City = v.City,
-                    ImageUrl = v.ImageUrl,
-                    EventsCount = v.Events.Count,
                 })
                 .ToListAsync();
 
@@ -106,7 +89,7 @@ namespace EventsApp.Controllers
                 })
                 .ToListAsync();
 
-            var totalHits = vm.Events.Count + vm.Venues.Count + vm.Posts.Count;
+            var totalHits = vm.Events.Count + vm.Posts.Count;
             vm.AiHint = totalHits == 0
                 ? "Smart AI search is on the way — try a simpler keyword for now."
                 : "Smart AI search arriving soon. Until then, results are matched by keyword.";

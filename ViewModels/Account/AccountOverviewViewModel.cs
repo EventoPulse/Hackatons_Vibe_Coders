@@ -18,7 +18,6 @@ namespace EventsApp.ViewModels.Account
         public DateTime? ApplicationDate { get; set; }
 
         // Статистики (за organizers)
-        public int VenuesCount { get; set; }
         public int EventsCount { get; set; }
         public int PostsCount { get; set; }
 

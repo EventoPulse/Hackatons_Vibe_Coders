@@ -87,11 +87,67 @@ video.card-img-top-fixed {
 
 #events-map {
     z-index: 0;
+    height: 420px;
+    border-radius: 0.5rem;
+    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
 }
 
 .leaflet-popup-content {
     margin: 8px 12px;
     min-width: 200px;
+}
+
+.event-count-marker {
+    width: 128px !important;
+    height: 42px !important;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-rows: auto auto;
+    column-gap: 0.35rem;
+    align-items: center;
+    box-sizing: border-box;
+    padding: 0.28rem 0.55rem;
+    color: #fff;
+    background: #0f766e;
+    border: 2px solid #fff;
+    border-radius: 999px;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.24);
+    line-height: 1.05;
+}
+
+.event-count-marker__city {
+    grid-column: 1;
+    grid-row: 1;
+    overflow: hidden;
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.event-count-marker__number {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    font-size: 1.15rem;
+    font-weight: 800;
+}
+
+.event-count-marker__label {
+    grid-column: 1;
+    grid-row: 2;
+    font-size: 0.62rem;
+    opacity: 0.88;
+}
+
+@media (max-width: 575.98px) {
+    #events-map {
+        height: 340px;
+    }
+
+    .event-count-marker {
+        width: 112px !important;
+    }
 }
 
 .btn-primary {

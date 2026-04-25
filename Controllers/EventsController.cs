@@ -5,7 +5,6 @@ using EventsApp.ViewModels.Events;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 
 namespace EventsApp.Controllers
@@ -21,72 +20,9 @@ namespace EventsApp.Controllers
             _userManager = userManager;
         }
 
-        public async Task<IActionResult> Index(string? search, string? city, EventGenre? genre, DateTime? dateFrom)
+        public IActionResult Index(string? search, string? city, EventGenre? genre, DateTime? dateFrom)
         {
-            var isAdmin = User.IsInRole(GlobalConstants.Roles.Admin);
-
-            var query = _db.Events.AsNoTracking().AsQueryable();
-            if (!isAdmin)
-            {
-                query = query.Where(e => e.IsApproved);
-            }
-
-            if (!string.IsNullOrWhiteSpace(search))
-            {
-                query = query.Where(e => e.Title.Contains(search));
-            }
-
-            if (!string.IsNullOrWhiteSpace(city))
-            {
-                query = query.Where(e => e.Venue.City == city);
-            }
-
-            if (genre.HasValue)
-            {
-                query = query.Where(e => e.Genre == genre.Value);
-            }
-
-            if (dateFrom.HasValue)
-            {
-                var from = dateFrom.Value.Date;
-                query = query.Where(e => e.StartTime >= from);
-            }
-
-            var events = await query
-                .OrderBy(e => e.StartTime)
-                .Select(e => new EventCardViewModel
-                {
-                    Id = e.Id,
-                    Title = e.Title,
-                    ImageUrl = e.ImageUrl,
-                    VenueName = e.Venue.Name,
-                    VenueCity = e.Venue.City,
-                    StartTime = e.StartTime,
-                    Genre = e.Genre,
-                    IsApproved = e.IsApproved,
-                    OrganizerId = e.OrganizerId,
-                    OrganizerName = e.Organizer.UserName ?? string.Empty,
-                    LikesCount = e.Likes.Count,
-                    CommentsCount = e.Comments.Count,
-                })
-                .ToListAsync();
-
-            var cities = await _db.Venues
-                .AsNoTracking()
-                .Select(v => v.City)
-                .Distinct()
-                .OrderBy(c => c)
-                .ToListAsync();
-
-            return View(new EventsIndexViewModel
-            {
-                Search = search,
-                City = city,
-                Genre = genre,
-                DateFrom = dateFrom,
-                Events = events,
-                Cities = cities,
-            });
+            return RedirectToAction("Index", "Home", new { search, city, genre, dateFrom });
         }
 
         public async Task<IActionResult> Details(int id)
@@ -96,7 +32,6 @@ namespace EventsApp.Controllers
 
             var ev = await _db.Events
                 .AsNoTracking()
-                .Include(e => e.Venue)
                 .Include(e => e.Organizer)
                 .Include(e => e.Images)
                 .Include(e => e.Likes)
@@ -125,10 +60,8 @@ namespace EventsApp.Controllers
                 Genre = ev.Genre,
                 ImageUrl = ev.ImageUrl,
                 IsApproved = ev.IsApproved,
-                VenueId = ev.VenueId,
-                VenueName = ev.Venue.Name,
-                VenueCity = ev.Venue.City,
-                VenueAddress = ev.Venue.Address,
+                Address = ev.Address,
+                City = ev.City,
                 OrganizerId = ev.OrganizerId,
                 OrganizerName = ev.Organizer.UserName ?? string.Empty,
                 ImageUrls = ev.Images.Select(i => i.ImageUrl).ToList(),
@@ -168,11 +101,10 @@ namespace EventsApp.Controllers
         }
 
         [Authorize(Roles = GlobalConstants.Roles.Admin + "," + GlobalConstants.Roles.Organizer)]
-        public async Task<IActionResult> Create()
+        public IActionResult Create()
         {
             var vm = new EventCreateEditViewModel
             {
-                Venues = await GetVenueOptionsAsync(),
                 CanEditApproval = User.IsInRole(GlobalConstants.Roles.Admin),
             };
             return View(vm);
@@ -191,19 +123,8 @@ namespace EventsApp.Controllers
                 ModelState.AddModelError(nameof(input.EndTime), "End time must be after start time.");
             }
 
-            var venue = await _db.Venues.FirstOrDefaultAsync(v => v.Id == input.VenueId);
-            if (venue == null)
-            {
-                ModelState.AddModelError(nameof(input.VenueId), "Select a valid venue.");
-            }
-            else if (!isAdmin && venue.OrganizerId != userId)
-            {
-                ModelState.AddModelError(nameof(input.VenueId), "You can only use your own venues.");
-            }
-
             if (!ModelState.IsValid)
             {
-                input.Venues = await GetVenueOptionsAsync();
                 input.CanEditApproval = isAdmin;
                 return View(input);
             }
@@ -212,7 +133,8 @@ namespace EventsApp.Controllers
             {
                 Title = input.Title,
                 Description = input.Description,
-                VenueId = input.VenueId,
+                City = input.City,
+                Address = input.Address,
                 OrganizerId = userId,
                 StartTime = input.StartTime,
                 EndTime = input.EndTime,
@@ -250,14 +172,14 @@ namespace EventsApp.Controllers
                 Id = ev.Id,
                 Title = ev.Title,
                 Description = ev.Description,
-                VenueId = ev.VenueId,
+                City = ev.City,
+                Address = ev.Address,
                 StartTime = ev.StartTime,
                 EndTime = ev.EndTime,
                 Genre = ev.Genre,
                 ImageUrl = ev.ImageUrl,
                 IsApproved = ev.IsApproved,
                 CanEditApproval = isAdmin,
-                Venues = await GetVenueOptionsAsync(),
             };
             return View(vm);
         }
@@ -286,26 +208,16 @@ namespace EventsApp.Controllers
                 ModelState.AddModelError(nameof(input.EndTime), "End time must be after start time.");
             }
 
-            var venue = await _db.Venues.FirstOrDefaultAsync(v => v.Id == input.VenueId);
-            if (venue == null)
-            {
-                ModelState.AddModelError(nameof(input.VenueId), "Select a valid venue.");
-            }
-            else if (!isAdmin && venue.OrganizerId != userId)
-            {
-                ModelState.AddModelError(nameof(input.VenueId), "You can only use your own venues.");
-            }
-
             if (!ModelState.IsValid)
             {
-                input.Venues = await GetVenueOptionsAsync();
                 input.CanEditApproval = isAdmin;
                 return View(input);
             }
 
             ev.Title = input.Title;
             ev.Description = input.Description;
-            ev.VenueId = input.VenueId;
+            ev.City = input.City;
+            ev.Address = input.Address;
             ev.StartTime = input.StartTime;
             ev.EndTime = input.EndTime;
             ev.Genre = input.Genre;
@@ -328,7 +240,6 @@ namespace EventsApp.Controllers
 
             var ev = await _db.Events
                 .AsNoTracking()
-                .Include(e => e.Venue)
                 .FirstOrDefaultAsync(e => e.Id == id);
             if (ev == null)
             {
@@ -365,7 +276,7 @@ namespace EventsApp.Controllers
             _db.Events.Remove(ev);
             await _db.SaveChangesAsync();
             TempData["StatusMessage"] = "Event deleted.";
-            return RedirectToAction(nameof(Index));
+            return RedirectToAction("Index", "Home");
         }
 
         [HttpPost]
@@ -484,7 +395,7 @@ namespace EventsApp.Controllers
 
                 if (!string.IsNullOrWhiteSpace(prefs.PreferredCity))
                 {
-                    query = query.Where(e => e.Venue.City == prefs.PreferredCity);
+                    query = query.Where(e => e.City == prefs.PreferredCity);
                 }
             }
 
@@ -495,8 +406,8 @@ namespace EventsApp.Controllers
                     Id = e.Id,
                     Title = e.Title,
                     ImageUrl = e.ImageUrl,
-                    VenueName = e.Venue.Name,
-                    VenueCity = e.Venue.City,
+                    Address = e.Address,
+                    City = e.City,
                     StartTime = e.StartTime,
                     Genre = e.Genre,
                     IsApproved = e.IsApproved,
@@ -504,32 +415,12 @@ namespace EventsApp.Controllers
                     OrganizerName = e.Organizer.UserName ?? string.Empty,
                     LikesCount = e.Likes.Count,
                     CommentsCount = e.Comments.Count,
+                    CurrentUserLiked = e.Likes.Any(l => l.UserId == userId),
                 })
                 .ToListAsync();
 
             ViewBag.HasPreferences = prefs != null;
             return View(events);
-        }
-
-        private async Task<IEnumerable<SelectListItem>> GetVenueOptionsAsync()
-        {
-            var userId = _userManager.GetUserId(User);
-            var isAdmin = User.IsInRole(GlobalConstants.Roles.Admin);
-
-            var venues = _db.Venues.AsNoTracking();
-            if (!isAdmin && userId != null)
-            {
-                venues = venues.Where(v => v.OrganizerId == userId);
-            }
-
-            return await venues
-                .OrderBy(v => v.Name)
-                .Select(v => new SelectListItem
-                {
-                    Value = v.Id.ToString(),
-                    Text = v.Name + " — " + v.City,
-                })
-                .ToListAsync();
         }
     }
 }
