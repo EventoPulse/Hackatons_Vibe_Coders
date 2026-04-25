@@ -25,7 +25,9 @@
       "Bash(curl -sk -o /dev/null -w \"Search empty: %{http_code}\\\\n\" --max-time 3 \"https://localhost:7180/Search\")",
       "Bash(sqlcmd -S \"\\(localdb\\)\\\\MSSQLLocalDB\" -d EventsApp -Q \"SELECT UserName, Email, EmailConfirmed FROM AspNetUsers WHERE UserName='admin' OR Email LIKE '%admin%';\" -W)",
       "Bash(rm -f /tmp/cj.txt)",
-      "Bash(curl -sk -c /tmp/cj.txt -b /tmp/cj.txt \"https://localhost:7180/Identity/Account/Login\" -o /tmp/login.html)"
+      "Bash(curl -sk -c /tmp/cj.txt -b /tmp/cj.txt \"https://localhost:7180/Identity/Account/Login\" -o /tmp/login.html)",
+      "Bash(dotnet add *)",
+      "Bash(sqlcmd -S \"\\(localdb\\)\\\\MSSQLLocalDB\" -d EventsApp -Q \"SELECT name FROM sys.tables WHERE name IN \\('Tickets','Transactions','UserTickets'\\) ORDER BY name;\" -h -1)"
     ],
     "additionalDirectories": [
       "\\tmp"

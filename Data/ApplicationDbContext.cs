@@ -33,6 +33,12 @@ namespace EventsApp.Data
 
         public DbSet<UserPreferences> UserPreferences { get; set; } = null!;
 
+        public DbSet<Ticket> Tickets { get; set; } = null!;
+
+        public DbSet<Transaction> Transactions { get; set; } = null!;
+
+        public DbSet<UserTicket> UserTickets { get; set; } = null!;
+
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
@@ -161,6 +167,42 @@ namespace EventsApp.Data
                       .WithMany(e => e.Images)
                       .HasForeignKey(ei => ei.EventId)
                       .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            builder.Entity<Ticket>(entity =>
+            {
+                entity.HasOne(t => t.Event)
+                      .WithMany(e => e.Tickets)
+                      .HasForeignKey(t => t.EventId)
+                      .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            builder.Entity<Transaction>(entity =>
+            {
+                entity.HasOne(t => t.User)
+                      .WithMany()
+                      .HasForeignKey(t => t.UserId)
+                      .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            builder.Entity<UserTicket>(entity =>
+            {
+                entity.HasOne(ut => ut.Ticket)
+                      .WithMany(t => t.UserTickets)
+                      .HasForeignKey(ut => ut.TicketId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(ut => ut.Transaction)
+                      .WithMany(t => t.UserTickets)
+                      .HasForeignKey(ut => ut.TransactionId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(ut => ut.UsedByOrganizer)
+                      .WithMany()
+                      .HasForeignKey(ut => ut.UsedByOrganizerId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasIndex(ut => ut.QrCode).IsUnique();
             });
         }
     }

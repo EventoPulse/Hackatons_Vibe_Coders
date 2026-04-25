@@ -15,6 +15,7 @@ namespace EventsApp.Models
             this.Comments = new HashSet<EventComment>();
             this.Likes = new HashSet<EventLike>();
             this.Images = new HashSet<EventImage>();
+            this.Tickets = new HashSet<Ticket>();
         }
 
         [Key]
@@ -65,5 +66,7 @@ namespace EventsApp.Models
         public ICollection<EventLike> Likes { get; set; }
 
         public ICollection<EventImage> Images { get; set; }
+
+        public ICollection<Ticket> Tickets { get; set; }
     }
 }

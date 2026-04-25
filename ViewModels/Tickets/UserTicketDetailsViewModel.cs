@@ -1,0 +1,25 @@
+namespace EventsApp.ViewModels.Tickets
+{
+    public class UserTicketDetailsViewModel
+    {
+        public Guid Id { get; set; }
+        public Guid TicketId { get; set; }
+        public Guid TransactionId { get; set; }
+        public string TicketName { get; set; } = null!;
+        public string EventTitle { get; set; } = null!;
+        public int EventId { get; set; }
+        public string VenueName { get; set; } = null!;
+        public string VenueCity { get; set; } = null!;
+        public string VenueAddress { get; set; } = null!;
+        public DateTime StartTime { get; set; }
+        public decimal Price { get; set; }
+        public string TransactionStatus { get; set; } = null!;
+        public string QrCode { get; set; } = null!;
+        public bool IsUsed { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public DateTime? UsedAt { get; set; }
+        public string? UsedByOrganizerName { get; set; }
+        public string OwnerUserName { get; set; } = null!;
+        public string OwnerEmail { get; set; } = null!;
+    }
+}

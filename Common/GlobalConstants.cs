@@ -66,5 +66,24 @@ namespace EventsApp.Common
             public const int MinAgeLower = 0;
             public const int MinAgeUpper = 120;
         }
+
+        public static class Ticket
+        {
+            public const int NameMinLength = 1;
+            public const int NameMaxLength = 100;
+            public const int DescriptionMaxLength = 1000;
+            public const int ImageUrlMaxLength = 500;
+            public const int QrCodeMaxLength = 200;
+            public const int TransactionStatusMaxLength = 50;
+        }
+
+        public static class TransactionStatuses
+        {
+            public const string Pending = "Pending";
+            public const string Paid = "Paid";
+            public const string Failed = "Failed";
+            public const string Cancelled = "Cancelled";
+            public const string Refunded = "Refunded";
+        }
     }
 }
