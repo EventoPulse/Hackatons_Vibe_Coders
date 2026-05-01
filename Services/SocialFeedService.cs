@@ -72,6 +72,20 @@ namespace EventsApp.Services
                 || followedIds.Count > 0
                 || activitySignals.Count > 0;
 
+            var currentUser = userId == null
+                ? null
+                : await _db.Users
+                    .AsNoTracking()
+                    .Where(u => u.Id == userId)
+                    .Select(u => new
+                    {
+                        DisplayName = u.OrganizerData != null && u.OrganizerData.Approved
+                            ? u.OrganizerData.OrganizationName
+                            : u.UserName ?? u.Email ?? string.Empty,
+                        u.ProfileImageUrl,
+                    })
+                    .FirstOrDefaultAsync(cancellationToken);
+
             var candidateEvents = await QueryEventCards(_db.Events
                     .AsNoTracking()
                     .Where(e => e.IsApproved && e.StartTime >= now)
@@ -183,6 +197,8 @@ namespace EventsApp.Services
                 SuggestedProfiles = suggestedProfiles,
                 HasPersonalSignals = hasPersonalSignals,
                 PreferredCity = prefs?.PreferredCity,
+                CurrentUserDisplayName = currentUser?.DisplayName,
+                CurrentUserProfileImageUrl = currentUser?.ProfileImageUrl,
             };
         }
 

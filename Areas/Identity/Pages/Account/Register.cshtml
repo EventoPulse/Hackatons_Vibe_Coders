@@ -9,7 +9,7 @@
         <div class="auth-zine-copy">
             <span class="auth-zine-stamp auth-zine-stamp-red" data-i18n="register.stamp">Нов профил</span>
             <h1 data-i18n-html="register.h1">Започни своя <span>дневник</span>.</h1>
-            <p data-i18n="register.p">Създай GrooveOn акаунт, за да запазваш вечери, да купуваш билети и да следиш любимите си организатори.</p>
+            <p data-i18n="register.p">Създай Evento акаунт, за да запазваш вечери, да купуваш билети и да следиш любимите си организатори.</p>
         </div>
 
         <div class="auth-zine-card">
@@ -18,13 +18,13 @@
 
                 <div class="auth-zine-grid">
                     <div class="auth-zine-field">
-                        <label asp-for="Input.FirstName"></label>
+                        <label asp-for="Input.FirstName" data-i18n="register.firstname.label"></label>
                         <input asp-for="Input.FirstName" autocomplete="given-name"
                                placeholder="Ивана" data-i18n-placeholder="register.firstname.placeholder" />
                         <span asp-validation-for="Input.FirstName"></span>
                     </div>
                     <div class="auth-zine-field">
-                        <label asp-for="Input.LastName"></label>
+                        <label asp-for="Input.LastName" data-i18n="register.lastname.label"></label>
                         <input asp-for="Input.LastName" autocomplete="family-name"
                                placeholder="Петрова" data-i18n-placeholder="register.lastname.placeholder" />
                         <span asp-validation-for="Input.LastName"></span>
@@ -32,26 +32,26 @@
                 </div>
 
                 <div class="auth-zine-field">
-                    <label asp-for="Input.UserName"></label>
+                    <label asp-for="Input.UserName" data-i18n="register.username.label"></label>
                     <input asp-for="Input.UserName" autocomplete="username" placeholder="ivana.petrova" />
                     <span asp-validation-for="Input.UserName"></span>
                 </div>
 
                 <div class="auth-zine-field">
-                    <label asp-for="Input.Email"></label>
-                    <input asp-for="Input.Email" autocomplete="email" placeholder="you@grooveon.app" />
+                    <label asp-for="Input.Email" data-i18n="register.email.label"></label>
+                    <input asp-for="Input.Email" autocomplete="email" placeholder="you@evento.app" />
                     <span asp-validation-for="Input.Email"></span>
                 </div>
 
                 <div class="auth-zine-grid">
                     <div class="auth-zine-field">
-                        <label asp-for="Input.Password"></label>
+                        <label asp-for="Input.Password" data-i18n="register.password.label"></label>
                         <input asp-for="Input.Password" autocomplete="new-password"
                                placeholder="поне 5 символа" data-i18n-placeholder="register.password.placeholder" />
                         <span asp-validation-for="Input.Password"></span>
                     </div>
                     <div class="auth-zine-field">
-                        <label asp-for="Input.ConfirmPassword"></label>
+                        <label asp-for="Input.ConfirmPassword" data-i18n="register.confirm.label"></label>
                         <input asp-for="Input.ConfirmPassword" autocomplete="new-password"
                                placeholder="повтори паролата" data-i18n-placeholder="register.confirm.placeholder" />
                         <span asp-validation-for="Input.ConfirmPassword"></span>

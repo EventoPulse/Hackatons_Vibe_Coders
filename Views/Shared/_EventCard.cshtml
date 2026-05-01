@@ -11,7 +11,7 @@
     var shareUrl = Url.Action("Details", "Events", new { id = Model.Id }, Context.Request.Scheme) ?? string.Empty;
 }
 
-<div class="card h-100 shadow-sm event-card social-event-card">
+<div class="card h-100 shadow-sm event-card social-event-card" data-event-id="@Model.Id">
     @if (!string.IsNullOrWhiteSpace(Model.ImageUrl))
     {
         <img src="@Model.ImageUrl" class="card-img-top card-img-top-fixed" alt="@Model.Title" />
@@ -24,10 +24,10 @@
     }
     <div class="card-body d-flex flex-column">
         <div class="mb-2">
-            <span class="badge bg-secondary event-genre-badge">@Model.Genre.GetDisplayName()</span>
+            <span class="badge bg-secondary event-genre-badge" data-i18n="genre.@Model.Genre">@Model.Genre.GetDisplayName()</span>
             @if (!Model.IsApproved)
             {
-                <span class="badge bg-warning text-dark event-genre-badge">Pending</span>
+                <span class="badge bg-warning text-dark event-genre-badge" data-i18n="event.status.pending">Pending</span>
             }
         </div>
 
@@ -91,21 +91,21 @@
                           asp-route-returnUrl="@returnUrl" method="post" class="d-inline">
                         @Html.AntiForgeryToken()
                         <button class="btn btn-sm @goingClass" type="submit">
-                            <i class="bi bi-check2-circle"></i> Going @Model.GoingCount
+                            <i class="bi bi-check2-circle"></i> <span data-i18n="event.action.going">Going</span> @Model.GoingCount
                         </button>
                     </form>
                     <form asp-controller="Events" asp-action="Attendance" asp-route-id="@Model.Id" asp-route-status="@EventAttendanceStatus.Interested"
                           asp-route-returnUrl="@returnUrl" method="post" class="d-inline">
                         @Html.AntiForgeryToken()
                         <button class="btn btn-sm @interestedClass" type="submit">
-                            <i class="bi bi-star"></i> Interested @Model.InterestedCount
+                            <i class="bi bi-star"></i> <span data-i18n="event.action.interested">Interested</span> @Model.InterestedCount
                         </button>
                     </form>
                 </div>
             }
 
             <div class="social-card-actions__manage">
-                <a asp-controller="Events" asp-action="Details" asp-route-id="@Model.Id" class="btn btn-sm btn-outline-primary">Details</a>
+                <a asp-controller="Events" asp-action="Details" asp-route-id="@Model.Id" class="btn btn-sm btn-outline-primary" data-i18n="event.action.details">Details</a>
                 @if (canManage)
                 {
                     <a asp-controller="Events" asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-sm btn-outline-secondary" title="Edit">

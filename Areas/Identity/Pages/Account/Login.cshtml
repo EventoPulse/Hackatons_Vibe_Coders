@@ -9,7 +9,7 @@
         <div class="auth-zine-copy">
             <span class="auth-zine-stamp auth-zine-stamp-teal" data-i18n="login.stamp">Вход</span>
             <h1 data-i18n-html="login.h1">Влез <span>вътре</span>.</h1>
-            <p data-i18n="login.p">Добре дошъл отново в GrooveOn. Влез, за да следиш събития, билети и любимите си сцени.</p>
+            <p data-i18n="login.p">Добре дошъл отново в Evento. Влез, за да следиш събития, билети и любимите си сцени.</p>
         </div>
 
         <div class="auth-zine-card">
@@ -17,14 +17,14 @@
                 <div asp-validation-summary="ModelOnly" class="auth-zine-validation" role="alert"></div>
 
                 <div class="auth-zine-field">
-                    <label asp-for="Input.EmailOrUserName"></label>
-                    <input asp-for="Input.EmailOrUserName" autocomplete="username" placeholder="you@grooveon.app"
+                    <label asp-for="Input.EmailOrUserName" data-i18n="login.email.label"></label>
+                    <input asp-for="Input.EmailOrUserName" autocomplete="username" placeholder="you@evento.app"
                            data-i18n-placeholder="login.email.placeholder" />
                     <span asp-validation-for="Input.EmailOrUserName"></span>
                 </div>
 
                 <div class="auth-zine-field">
-                    <label asp-for="Input.Password"></label>
+                    <label asp-for="Input.Password" data-i18n="login.password.label"></label>
                     <input asp-for="Input.Password" autocomplete="current-password"
                            placeholder="парола" data-i18n-placeholder="login.password.placeholder" />
                     <span asp-validation-for="Input.Password"></span>

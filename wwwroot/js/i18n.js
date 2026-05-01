@@ -12,6 +12,19 @@
         'nav.validate':    { bg: 'Валидиране',      en: 'Validate' },
         'nav.organizer':   { bg: 'Организатор',    en: 'Organizer' },
         'nav.admin':       { bg: 'Админ',           en: 'Admin' },
+        'nav.messages':    { bg: 'Съобщения',       en: 'Messages' },
+        'auth.login':      { bg: 'Вход',            en: 'Login' },
+        'auth.register':   { bg: 'Регистрация',     en: 'Register' },
+        'auth.logout':     { bg: 'Изход',           en: 'Logout' },
+        'account.overview':{ bg: 'Преглед',         en: 'Overview' },
+        'profile.public':  { bg: 'Публичен профил', en: 'Public profile' },
+        'post.create':     { bg: 'Нова публикация', en: 'Create post' },
+        'story.create':    { bg: 'Стори',           en: 'Story' },
+        'story.empty':     { bg: 'Добави стори',    en: 'Add story' },
+        'story.caption':   { bg: 'Кратък текст',    en: 'Caption' },
+        'story.post':      { bg: 'Публикувай',      en: 'Post story' },
+        'organizer.dashboard': { bg: 'Организаторско табло', en: 'Organizer dashboard' },
+        'organizer.public.pages': { bg: 'Публични организаторски страници', en: 'Public organizer pages' },
 
         // HOME — MARQUEE
         'marquee.live':    { bg: '★ Живи нощи',          en: '★ Live Nights' },
@@ -21,15 +34,15 @@
         'marquee.nearme':  { bg: '★ Около мен',           en: '★ Near Me' },
 
         // HOME — HERO
-        'home.stamp': { bg: 'GrooveOn', en: 'GrooveOn' },
+        'home.stamp': { bg: 'Evento', en: 'Evento' },
         'home.live':  { bg: 'на живо',  en: 'live' },
         'home.hero.h1': {
             bg: 'Дневник за най-<span>шумните</span> нощи в България.',
             en: 'The diary of the <span>loudest</span> nights in Bulgaria.'
         },
         'home.hero.p': {
-            bg: 'GrooveOn е част скрапбук, част карта, част бюро за събития. Организаторите движат сцената, слушателите намират точната вечер, а всеки град получава своите карфици.',
-            en: 'GrooveOn is part scrapbook, part map, part event bureau. Organizers drive the scene, listeners find the right night, and every city gets its own pins.'
+            bg: 'Evento е част скрапбук, част карта, част бюро за събития. Организаторите движат сцената, слушателите намират точната вечер, а всеки град получава своите карфици.',
+            en: 'Evento is part scrapbook, part map, part event bureau. Organizers drive the scene, listeners find the right night, and every city gets its own pins.'
         },
 
         // HOME — SEARCH
@@ -73,11 +86,62 @@
         'filter.allcities':   { bg: 'Всички градове',       en: 'All cities' },
         'filter.allgenres':   { bg: 'Всички жанрове',       en: 'All genres' },
 
+        // HOME — TRENDING
+        'home.trending.stamp':       { bg: 'Най-нашумели', en: 'Trending' },
+        'home.trending.title':       { bg: 'Събития, които хората следят', en: 'Events people are watching' },
+        'home.trending.tab.trend':   { bg: 'Тренд', en: 'Trending' },
+        'home.trending.tab.weekend': { bg: 'Този уикенд', en: 'This weekend' },
+        'home.trending.tab.nearby':  { bg: 'Наблизо', en: 'Nearby' },
+        'home.trending.new':         { bg: 'ново', en: 'new' },
+        'home.trending.reactions':   { bg: 'реакции', en: 'reactions' },
+
+        // EVENT CARDS
+        'event.status.pending':      { bg: 'Чака одобрение', en: 'Pending' },
+        'event.action.going':        { bg: 'Отивам', en: 'Going' },
+        'event.action.interested':   { bg: 'Интересува ме', en: 'Interested' },
+        'event.action.details':      { bg: 'Детайли', en: 'Details' },
+        'genre.Other':               { bg: 'Друго', en: 'Other' },
+        'genre.Rock':                { bg: 'Рок', en: 'Rock' },
+        'genre.Pop':                 { bg: 'Поп', en: 'Pop' },
+        'genre.HipHop':              { bg: 'Хип-хоп', en: 'Hip-hop' },
+        'genre.Electronic':          { bg: 'Електронна', en: 'Electronic' },
+        'genre.Jazz':                { bg: 'Джаз', en: 'Jazz' },
+        'genre.Classical':           { bg: 'Класическа', en: 'Classical' },
+        'genre.Folk':                { bg: 'Фолк', en: 'Folk' },
+        'genre.Metal':               { bg: 'Метъл', en: 'Metal' },
+        'genre.Theater':             { bg: 'Театър', en: 'Theater' },
+        'genre.Standup':             { bg: 'Стендъп', en: 'Stand-up' },
+        'genre.Festival':            { bg: 'Фестивал', en: 'Festival' },
+        'genre.Exhibition':          { bg: 'Изложба', en: 'Exhibition' },
+        'genre.Sports':              { bg: 'Спорт', en: 'Sports' },
+        'genre.Conference':          { bg: 'Конференция', en: 'Conference' },
+        'genre.Workshop':            { bg: 'Работилница', en: 'Workshop' },
+
+        // PUBLIC PROFILE
+        'profile.type.organizer':     { bg: 'Организатор', en: 'Organizer' },
+        'profile.type.profile':       { bg: 'Профил', en: 'Profile' },
+        'profile.website':            { bg: 'Уебсайт', en: 'Website' },
+        'profile.followers':          { bg: 'последователи', en: 'followers' },
+        'profile.following':          { bg: 'следва', en: 'following' },
+        'profile.posts':              { bg: 'публикации', en: 'posts' },
+        'profile.events':             { bg: 'събития', en: 'events' },
+        'profile.follow':             { bg: 'Последвай', en: 'Follow' },
+        'profile.unfollow':           { bg: 'Спри следването', en: 'Unfollow' },
+        'profile.message':            { bg: 'Съобщение', en: 'Message' },
+        'profile.edit':               { bg: 'Редактирай профила', en: 'Edit profile' },
+        'profile.events.kicker':      { bg: 'Събития', en: 'Events' },
+        'profile.events.title':       { bg: 'Предстоящи и минали <span>събития</span>.', en: 'Upcoming and past <span>events</span>.' },
+        'profile.posts.kicker':       { bg: 'Публикации', en: 'Posts' },
+        'profile.posts.title':        { bg: 'Последни <span>публикации</span>.', en: 'Latest <span>posts</span>.' },
+        'profile.no.posts':           { bg: 'Все още няма публикации.', en: 'No posts yet.' },
+
         // LOGIN
         'login.stamp':               { bg: 'Вход',          en: 'Login' },
         'login.h1':                  { bg: 'Влез <span>вътре</span>.', en: 'Sign <span>in</span>.' },
-        'login.p':                   { bg: 'Добре дошъл отново в GrooveOn. Влез, за да следиш събития, билети и любимите си сцени.', en: 'Welcome back to GrooveOn. Sign in to track events, tickets and your favourite venues.' },
-        'login.email.placeholder':   { bg: 'you@grooveon.app', en: 'you@grooveon.app' },
+        'login.p':                   { bg: 'Добре дошъл отново в Evento. Влез, за да следиш събития, билети и любимите си сцени.', en: 'Welcome back to Evento. Sign in to track events, tickets and your favourite venues.' },
+        'login.email.label':         { bg: 'Имейл или потребителско име', en: 'Email or username' },
+        'login.password.label':      { bg: 'Парола',         en: 'Password' },
+        'login.email.placeholder':   { bg: 'you@evento.app', en: 'you@evento.app' },
         'login.password.placeholder':{ bg: 'парола',         en: 'password' },
         'login.remember':            { bg: 'Запомни ме',     en: 'Remember me' },
         'login.btn':                 { bg: 'Вход',           en: 'Sign In' },
@@ -87,7 +151,13 @@
         // REGISTER
         'register.stamp':                { bg: 'Нов профил',       en: 'New Account' },
         'register.h1':                   { bg: 'Започни своя <span>дневник</span>.', en: 'Start your <span>diary</span>.' },
-        'register.p':                    { bg: 'Създай GrooveOn акаунт, за да запазваш вечери, да купуваш билети и да следиш любимите си организатори.', en: 'Create a GrooveOn account to save nights, buy tickets and follow your favourite organizers.' },
+        'register.p':                    { bg: 'Създай Evento акаунт, за да запазваш вечери, да купуваш билети и да следиш любимите си организатори.', en: 'Create an Evento account to save nights, buy tickets and follow your favourite organizers.' },
+        'register.firstname.label':      { bg: 'Име',              en: 'First name' },
+        'register.lastname.label':       { bg: 'Фамилия',          en: 'Last name' },
+        'register.username.label':       { bg: 'Потребителско име', en: 'Username' },
+        'register.email.label':          { bg: 'Имейл',            en: 'Email' },
+        'register.password.label':       { bg: 'Парола',           en: 'Password' },
+        'register.confirm.label':        { bg: 'Потвърди паролата', en: 'Confirm password' },
         'register.firstname.placeholder':{ bg: 'Ивана',            en: 'Jane' },
         'register.lastname.placeholder': { bg: 'Петрова',          en: 'Doe' },
         'register.password.placeholder': { bg: 'поне 5 символа',   en: 'at least 5 characters' },
@@ -189,7 +259,7 @@
         'Редакция на събитие': 'Edit Event',
         'Изтриване на събитие': 'Delete Event',
         'Създай нова вечер.': 'Create a new night.',
-        'Добави основните детайли за събитието, за да го публикуваш в каталога на GrooveOn.': 'Add the main event details to publish it in the GrooveOn catalog.',
+        'Добави основните детайли за събитието, за да го публикуваш в каталога на Evento.': 'Add the main event details to publish it in the Evento catalog.',
         'Промени детайлите, датите и визуалното представяне на публикацията.': 'Change the event details, dates, and visuals.',
         'Към началото': 'Back to Home',
         'Към детайлите': 'Back to Details',
@@ -315,6 +385,10 @@
 
     var SKIP_TAGS = { SCRIPT: 1, STYLE: 1, NOSCRIPT: 1, TEXTAREA: 1, CODE: 1, PRE: 1, INPUT: 1, SELECT: 1 };
 
+    function shouldSkipElement(el) {
+        return !el || SKIP_TAGS[el.tagName] || !!(el.closest && el.closest('[data-no-i18n], .gm-style'));
+    }
+
     function translateTextNode(node, dict) {
         var original = node.textContent;
         var trimmed = original.trim();
@@ -326,7 +400,7 @@
     }
 
     function walkAndTranslate(el, dict) {
-        if (!el || SKIP_TAGS[el.tagName]) return;
+        if (shouldSkipElement(el)) return;
         var child = el.firstChild;
         while (child) {
             if (child.nodeType === 3) {
@@ -340,10 +414,12 @@
 
     function translateAttributes(root, dict) {
         root.querySelectorAll('[placeholder]').forEach(function (el) {
+            if (shouldSkipElement(el)) return;
             var t = dict[el.getAttribute('placeholder')];
             if (t) el.setAttribute('placeholder', t);
         });
         root.querySelectorAll('[aria-label]').forEach(function (el) {
+            if (shouldSkipElement(el)) return;
             var t = dict[el.getAttribute('aria-label')];
             if (t) el.setAttribute('aria-label', t);
         });
@@ -401,6 +477,7 @@
                 mutations.forEach(function (m) {
                     m.addedNodes.forEach(function (node) {
                         if (node.nodeType !== 1) return;
+                        if (shouldSkipElement(node)) return;
                         // Translate keyed elements in newly added subtree
                         node.querySelectorAll('[data-i18n]').forEach(function (el) {
                             var entry = KEYED[el.getAttribute('data-i18n')];

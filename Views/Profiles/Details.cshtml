@@ -18,7 +18,7 @@
             }
         </div>
         <div class="social-profile-hero__body">
-            <span class="groove-stamp @(Model.IsOrganizer ? "groove-stamp-teal" : "groove-stamp-red")">
+            <span class="groove-stamp @(Model.IsOrganizer ? "groove-stamp-teal" : "groove-stamp-red")" data-i18n="@(Model.IsOrganizer ? "profile.type.organizer" : "profile.type.profile")">
                 @(Model.IsOrganizer ? "Organizer" : "Profile")
             </span>
             <h1>@Model.DisplayName</h1>
@@ -33,14 +33,14 @@
             @if (!string.IsNullOrWhiteSpace(Model.Website))
             {
                 <a href="@Model.Website" target="_blank" rel="noopener" class="groove-link">
-                    <i class="bi bi-box-arrow-up-right"></i> Website
+                    <i class="bi bi-box-arrow-up-right"></i> <span data-i18n="profile.website">Website</span>
                 </a>
             }
             <div class="social-profile-stats">
-                <a asp-action="Followers" asp-route-id="@Model.Id"><strong>@Model.FollowersCount</strong><span>followers</span></a>
-                <a asp-action="Following" asp-route-id="@Model.Id"><strong>@Model.FollowingCount</strong><span>following</span></a>
-                <span><strong>@Model.PostsCount</strong><span>posts</span></span>
-                <span><strong>@Model.EventsCount</strong><span>events</span></span>
+                <a asp-action="Followers" asp-route-id="@Model.Id"><strong>@Model.FollowersCount</strong><span data-i18n="profile.followers">followers</span></a>
+                <a asp-action="Following" asp-route-id="@Model.Id"><strong>@Model.FollowingCount</strong><span data-i18n="profile.following">following</span></a>
+                <span><strong>@Model.PostsCount</strong><span data-i18n="profile.posts">posts</span></span>
+                <span><strong>@Model.EventsCount</strong><span data-i18n="profile.events">events</span></span>
             </div>
             <div class="groove-cta-row">
                 @if (User.Identity?.IsAuthenticated == true && !Model.IsCurrentUser)
@@ -50,7 +50,7 @@
                         <form asp-action="Unfollow" asp-route-id="@Model.Id" asp-route-returnUrl="@returnUrl" method="post">
                             @Html.AntiForgeryToken()
                             <button class="groove-button groove-button-paper" type="submit">
-                                <i class="bi bi-person-dash"></i> Unfollow
+                                <i class="bi bi-person-dash"></i> <span data-i18n="profile.unfollow">Unfollow</span>
                             </button>
                         </form>
                     }
@@ -59,7 +59,7 @@
                         <form asp-action="Follow" asp-route-id="@Model.Id" asp-route-returnUrl="@returnUrl" method="post">
                             @Html.AntiForgeryToken()
                             <button class="groove-button groove-button-dark" type="submit">
-                                <i class="bi bi-person-plus"></i> Follow
+                                <i class="bi bi-person-plus"></i> <span data-i18n="profile.follow">Follow</span>
                             </button>
                         </form>
                     }
@@ -68,14 +68,14 @@
                         @Html.AntiForgeryToken()
                         <input type="hidden" name="userId" value="@Model.Id" />
                         <button class="groove-button groove-button-paper" type="submit">
-                            <i class="bi bi-chat-dots"></i> Message
+                            <i class="bi bi-chat-dots"></i> <span data-i18n="profile.message">Message</span>
                         </button>
                     </form>
                 }
                 else if (Model.IsCurrentUser)
                 {
                     <a asp-controller="Account" asp-action="EditProfile" class="groove-button groove-button-dark">
-                        <i class="bi bi-person-gear"></i> Edit profile
+                        <i class="bi bi-person-gear"></i> <span data-i18n="profile.edit">Edit profile</span>
                     </a>
                 }
             </div>
@@ -87,8 +87,8 @@
         <section class="groove-page-section">
             <div class="groove-section-bar">
                 <div>
-                    <span class="groove-kicker">Events</span>
-                    <h2>Upcoming and past <span>events</span>.</h2>
+                    <span class="groove-kicker" data-i18n="profile.events.kicker">Events</span>
+                    <h2 data-i18n-html="profile.events.title">Upcoming and past <span>events</span>.</h2>
                 </div>
             </div>
             <div class="social-card-grid">
@@ -103,8 +103,8 @@
     <section class="groove-page-section">
         <div class="groove-section-bar">
             <div>
-                <span class="groove-kicker">Posts</span>
-                <h2>Latest <span>posts</span>.</h2>
+                <span class="groove-kicker" data-i18n="profile.posts.kicker">Posts</span>
+                <h2 data-i18n-html="profile.posts.title">Latest <span>posts</span>.</h2>
             </div>
         </div>
         @if (Model.Posts.Any())
@@ -120,7 +120,7 @@
         {
             <div class="social-empty-panel">
                 <i class="bi bi-journal-text"></i>
-                <span>No posts yet.</span>
+                <span data-i18n="profile.no.posts">No posts yet.</span>
             </div>
         }
     </section>

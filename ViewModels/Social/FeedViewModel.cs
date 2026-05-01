@@ -13,5 +13,7 @@ namespace EventsApp.ViewModels.Social
         public IReadOnlyList<ProfileSummaryViewModel> SuggestedProfiles { get; set; } = Array.Empty<ProfileSummaryViewModel>();
         public bool HasPersonalSignals { get; set; }
         public string? PreferredCity { get; set; }
+        public string? CurrentUserDisplayName { get; set; }
+        public string? CurrentUserProfileImageUrl { get; set; }
     }
 }

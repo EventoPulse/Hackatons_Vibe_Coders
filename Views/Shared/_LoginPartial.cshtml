@@ -22,35 +22,35 @@
             <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="accountMenu">
                 <li>
                     <a class="dropdown-item" asp-controller="Account" asp-action="Index">
-                        <i class="bi bi-columns-gap"></i> Overview
+                        <i class="bi bi-columns-gap"></i> <span data-i18n="account.overview">Overview</span>
                     </a>
                 </li>
                 @if (!string.IsNullOrWhiteSpace(currentUserId))
                 {
                     <li>
                         <a class="dropdown-item" asp-controller="Profiles" asp-action="Details" asp-route-id="@currentUserId">
-                            <i class="bi bi-person-lines-fill"></i> Public profile
+                            <i class="bi bi-person-lines-fill"></i> <span data-i18n="profile.public">Public profile</span>
                         </a>
                     </li>
                 }
                 <li>
                     <a class="dropdown-item" asp-controller="Posts" asp-action="Create">
-                        <i class="bi bi-plus-square"></i> Create post
+                        <i class="bi bi-plus-square"></i> <span data-i18n="post.create">Create post</span>
                     </a>
                 </li>
                 <li>
                     <a class="dropdown-item" asp-controller="Stories" asp-action="Create">
-                        <i class="bi bi-camera"></i> Story
+                        <i class="bi bi-camera"></i> <span data-i18n="story.create">Story</span>
                     </a>
                 </li>
                 <li>
                     <a class="dropdown-item" asp-controller="Events" asp-action="Recommended">
-                        <i class="bi bi-stars"></i> Recommended
+                        <i class="bi bi-stars"></i> <span data-i18n="nav.recommended">Recommended</span>
                     </a>
                 </li>
                 <li>
                     <a class="dropdown-item" asp-controller="Tickets" asp-action="MyTickets">
-                        <i class="bi bi-ticket-perforated"></i> My tickets
+                        <i class="bi bi-ticket-perforated"></i> <span data-i18n="nav.mytickets">My tickets</span>
                     </a>
                 </li>
                 @if (User.IsInRole(EventsApp.Common.GlobalConstants.Roles.Organizer) || User.IsInRole(EventsApp.Common.GlobalConstants.Roles.Admin))
@@ -58,17 +58,17 @@
                     <li><hr class="dropdown-divider" /></li>
                     <li>
                         <a class="dropdown-item" asp-controller="Organizer" asp-action="Dashboard">
-                            <i class="bi bi-speedometer2"></i> Organizer dashboard
+                            <i class="bi bi-speedometer2"></i> <span data-i18n="organizer.dashboard">Organizer dashboard</span>
                         </a>
                     </li>
                     <li>
                         <a class="dropdown-item" asp-controller="Organizer" asp-action="Profiles">
-                            <i class="bi bi-person-badge"></i> Public organizer pages
+                            <i class="bi bi-person-badge"></i> <span data-i18n="organizer.public.pages">Public organizer pages</span>
                         </a>
                     </li>
                     <li>
                         <a class="dropdown-item" asp-controller="Tickets" asp-action="Validate">
-                            <i class="bi bi-qr-code-scan"></i> Validate tickets
+                            <i class="bi bi-qr-code-scan"></i> <span data-i18n="nav.validate">Validate tickets</span>
                         </a>
                     </li>
                 }
@@ -76,7 +76,7 @@
                 {
                     <li>
                         <a class="dropdown-item" asp-controller="Admin" asp-action="Index">
-                            <i class="bi bi-shield-check"></i> Admin
+                        <i class="bi bi-shield-check"></i> <span data-i18n="nav.admin">Admin</span>
                         </a>
                     </li>
                 }
@@ -84,8 +84,8 @@
                 <li>
                     <form asp-area="Identity" asp-page="/Account/Logout"
                           asp-route-returnUrl="@Url.Action("Index", "Home", new { area = "" })" method="post">
-                        <button type="submit" class="dropdown-item notranslate">
-                            <i class="bi bi-box-arrow-right"></i> Logout
+                        <button type="submit" class="dropdown-item">
+                            <i class="bi bi-box-arrow-right"></i> <span data-i18n="auth.logout">Logout</span>
                         </button>
                     </form>
                 </li>
@@ -96,12 +96,12 @@
     {
         <li class="nav-item">
             <a class="nav-link site-register-link" asp-area="Identity" asp-page="/Account/Register">
-                <i class="bi bi-person-plus"></i> Регистрация
+                <i class="bi bi-person-plus"></i> <span data-i18n="auth.register">Регистрация</span>
             </a>
         </li>
         <li class="nav-item">
             <a class="nav-link" asp-area="Identity" asp-page="/Account/Login">
-                <i class="bi bi-box-arrow-in-right"></i> Вход
+                <i class="bi bi-box-arrow-in-right"></i> <span data-i18n="auth.login">Вход</span>
             </a>
         </li>
     }

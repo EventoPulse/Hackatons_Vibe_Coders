@@ -27,6 +27,11 @@
     };
     var dataJson = JsonSerializer.Serialize(dataPayload, mapJsonOptions);
     var visibleCityCount = Model.MapMarkers.Select(p => p.City).Distinct().Count();
+    var trendingEvents = Model.Events
+        .OrderByDescending(e => e.GoingCount * 2 + e.InterestedCount + e.LikesCount + e.CommentsCount + e.SavesCount)
+        .ThenBy(e => e.StartTime)
+        .Take(4)
+        .ToList();
 }
 
 @section Scripts {
@@ -46,12 +51,12 @@
     <section class="groove-hero">
         <div class="groove-hero__copy">
             <div class="groove-stamp-row">
-                <span class="groove-stamp groove-stamp-teal" data-i18n="home.stamp">GrooveOn</span>
+                <span class="groove-stamp groove-stamp-teal" data-i18n="home.stamp">Evento</span>
                 <span class="groove-hand-note" data-i18n="home.live">на живо</span>
             </div>
             <h1 data-i18n-html="home.hero.h1">Дневник за най-<span>шумните</span> нощи в България.</h1>
             <p data-i18n="home.hero.p">
-                GrooveOn е част скрапбук, част карта, част бюро за събития. Организаторите движат сцената,
+                Evento е част скрапбук, част карта, част бюро за събития. Организаторите движат сцената,
                 слушателите намират точната вечер, а всеки град получава своите карфици.
             </p>
 
@@ -71,6 +76,16 @@
                 </button>
                 <div class="groove-smart-search__status"><span id="home-search-status"></span></div>
             </form>
+
+            <div class="modern-search-chips" aria-label="Quick event filters">
+                <a asp-action="Index" asp-route-dateFrom="@DateTime.UtcNow.ToString("yyyy-MM-dd")">Today</a>
+                <a asp-action="Index" asp-route-dateFrom="@DateTime.UtcNow.AddDays(2).ToString("yyyy-MM-dd")">This weekend</a>
+                <a asp-action="Index" asp-route-search="concert">Concerts</a>
+                <a asp-action="Index" asp-route-search="theatre">Theatre</a>
+                <a asp-action="Index" asp-route-search="festival">Festivals</a>
+                <a asp-action="Index" asp-route-search="free">Free events</a>
+                <a asp-action="Index" asp-route-search="family">Family</a>
+            </div>
 
             <div class="groove-hero__actions">
                 <a href="#event-map" class="groove-button groove-button-dark" data-i18n="home.viewmap">Виж картата</a>
@@ -95,7 +110,17 @@
         </div>
     </section>
 
-    <section id="event-map" class="groove-section groove-map-section">
+    <section id="event-map" class="groove-section groove-map-section home-results-section">
+        <div class="home-results-heading">
+            <div>
+                <span class="groove-stamp groove-stamp-teal">Smart search result area</span>
+                <h2>Results for your next event</h2>
+            </div>
+            <div class="home-results-tools">
+                <button type="button"><i class="bi bi-calendar3"></i> Date</button>
+                <button type="button"><i class="bi bi-crosshair"></i> Distance</button>
+            </div>
+        </div>
         <div class="groove-map-copy">
             <span class="groove-stamp groove-stamp-teal" data-i18n="home.map.stamp">Картата</span>
             <h2><span id="home-event-count">@Model.MapMarkers.Count</span> <span data-i18n="home.map.pins">карфици,</span> <span>@visibleCityCount <span data-i18n="home.map.cities">града</span></span>.</h2>
@@ -111,9 +136,58 @@
         <div class="groove-map-frame">
             <span class="groove-map-badge groove-map-badge-left" data-i18n="@(hasRealMapPins ? "home.map.live" : "home.map.empty")">@(hasRealMapPins ? "жива карта" : "празна карта")</span>
             <span class="groove-map-badge groove-map-badge-right">google maps</span>
-            <div id="events-map"></div>
+            <div id="events-map" class="notranslate" translate="no" data-no-i18n="true">
+                <div class="map-loading-state">
+                    <i class="bi bi-map"></i>
+                    <span>Loading map...</span>
+                </div>
+            </div>
             <div id="home-no-results" class="alert alert-warning mt-2" style="display:none;" data-i18n="home.noresults">Няма събития, отговарящи на търсенето.</div>
         </div>
+        <aside class="home-results-list">
+            <div class="home-results-list__head">
+                <span class="groove-stamp groove-stamp-teal" data-i18n="home.trending.stamp">Най-нашумели</span>
+                <h3 data-i18n="home.trending.title">Събития, които хората следят</h3>
+            </div>
+            <div class="home-results-list__toolbar">
+                <button type="button" class="is-active" data-i18n="home.trending.tab.trend">Тренд</button>
+                <button type="button" data-i18n="home.trending.tab.weekend">Този уикенд</button>
+                <button type="button" data-i18n="home.trending.tab.nearby">Наблизо</button>
+            </div>
+            @foreach (var ev in trendingEvents)
+            {
+                var heat = ev.GoingCount * 2 + ev.InterestedCount + ev.LikesCount + ev.CommentsCount + ev.SavesCount;
+
+                <article class="home-result-row home-result-row--trending" data-show-on-map="@ev.Id" tabindex="0">
+                    <span class="home-result-row__media">
+                        @if (!string.IsNullOrWhiteSpace(ev.ImageUrl))
+                        {
+                            <img src="@ev.ImageUrl" alt="@ev.Title" />
+                        }
+                        else
+                        {
+                            <span><i class="bi bi-calendar-event"></i></span>
+                        }
+                    </span>
+                    <div class="home-result-row__body">
+                        <a asp-controller="Events" asp-action="Details" asp-route-id="@ev.Id">@ev.Title</a>
+                        <small>@ev.City · @ev.StartTime.ToString("dd.MM HH:mm")</small>
+                        <span class="home-result-row__meta">
+                            <i class="bi bi-fire"></i>
+                            @if (heat == 0)
+                            {
+                                <span data-i18n="home.trending.new">ново</span>
+                            }
+                            else
+                            {
+                                <span>@heat</span> <span data-i18n="home.trending.reactions">реакции</span>
+                            }
+                        </span>
+                    </div>
+                    <span class="home-result-row__heat">#@(trendingEvents.IndexOf(ev) + 1)</span>
+                </article>
+            }
+        </aside>
     </section>
 
     <section class="groove-section">
@@ -141,7 +215,7 @@
                 <option value="" data-i18n="filter.allgenres">Всички жанрове</option>
                 @foreach (var g in Enum.GetValues<EventGenre>())
                 {
-                    <option value="@((int)g)" selected="@(Model.Genre == g)">@g.GetDisplayName()</option>
+                    <option value="@((int)g)" selected="@(Model.Genre == g)" data-i18n="genre.@g">@g.GetDisplayName()</option>
                 }
             </select>
             <input type="date" name="dateFrom" value="@Model.DateFrom?.ToString("yyyy-MM-dd")" />
