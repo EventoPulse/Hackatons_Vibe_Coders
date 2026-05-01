@@ -55,7 +55,15 @@ namespace EventsApp.Controllers
                     OrganizerName = e.Organizer.UserName ?? string.Empty,
                     LikesCount = e.Likes.Count,
                     CommentsCount = e.Comments.Count,
+                    SavesCount = e.Saves.Count,
+                    GoingCount = e.Attendances.Count(a => a.Status == EventAttendanceStatus.Going),
+                    InterestedCount = e.Attendances.Count(a => a.Status == EventAttendanceStatus.Interested),
                     CurrentUserLiked = e.Likes.Any(l => l.UserId == userId),
+                    CurrentUserSaved = e.Saves.Any(s => s.UserId == userId),
+                    CurrentUserAttendanceStatus = e.Attendances
+                        .Where(a => a.UserId == userId)
+                        .Select(a => (EventAttendanceStatus?)a.Status)
+                        .FirstOrDefault(),
                 })
                 .ToListAsync();
 
@@ -77,6 +85,11 @@ namespace EventsApp.Controllers
                     FirstMediaType = p.Images.Select(i => i.MediaType).FirstOrDefault(),
                     LikesCount = p.Likes.Count,
                     CommentsCount = p.Comments.Count,
+                    SavesCount = p.Saves.Count,
+                    CurrentUserLiked = p.Likes.Any(l => l.UserId == userId),
+                    CurrentUserSaved = p.Saves.Any(s => s.UserId == userId),
+                    AuthorImageUrl = p.Organizer.ProfileImageUrl,
+                    AuthorIsOrganizer = p.Organizer.OrganizerData != null && p.Organizer.OrganizerData.Approved,
                 })
                 .ToListAsync();
 

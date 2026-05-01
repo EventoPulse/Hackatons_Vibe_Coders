@@ -15,6 +15,10 @@ namespace EventsApp.ViewModels.Posts
         public PostMediaType FirstMediaType { get; set; }
         public int LikesCount { get; set; }
         public int CommentsCount { get; set; }
+        public int SavesCount { get; set; }
         public bool CurrentUserLiked { get; set; }
+        public bool CurrentUserSaved { get; set; }
+        public string? AuthorImageUrl { get; set; }
+        public bool AuthorIsOrganizer { get; set; }
     }
 }

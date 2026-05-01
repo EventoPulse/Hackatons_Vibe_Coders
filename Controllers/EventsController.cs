@@ -20,19 +20,22 @@ namespace EventsApp.Controllers
         private readonly IMediaUploadService _mediaUploadService;
         private readonly IAiSearchService _ai;
         private readonly IGeocodingService _geocoder;
+        private readonly ISocialFeedService _socialFeed;
 
         public EventsController(
             ApplicationDbContext db,
             UserManager<ApplicationUser> userManager,
             IMediaUploadService mediaUploadService,
             IAiSearchService ai,
-            IGeocodingService geocoder)
+            IGeocodingService geocoder,
+            ISocialFeedService socialFeed)
         {
             _db = db;
             _userManager = userManager;
             _mediaUploadService = mediaUploadService;
             _ai = ai;
             _geocoder = geocoder;
+            _socialFeed = socialFeed;
         }
 
         public class GenerateDescriptionRequest
@@ -87,6 +90,8 @@ namespace EventsApp.Controllers
                 .Include(e => e.Organizer)
                 .Include(e => e.Images)
                 .Include(e => e.Likes)
+                .Include(e => e.Saves)
+                .Include(e => e.Attendances)
                 .Include(e => e.Tickets)
                 .Include(e => e.Comments)
                     .ThenInclude(c => c.User)
@@ -120,7 +125,17 @@ namespace EventsApp.Controllers
                 OrganizerName = ev.Organizer.UserName ?? string.Empty,
                 ImageUrls = ev.Images.Select(i => i.ImageUrl).ToList(),
                 LikesCount = ev.Likes.Count,
+                SavesCount = ev.Saves.Count,
+                GoingCount = ev.Attendances.Count(a => a.Status == EventAttendanceStatus.Going),
+                InterestedCount = ev.Attendances.Count(a => a.Status == EventAttendanceStatus.Interested),
                 CurrentUserLiked = userId != null && ev.Likes.Any(l => l.UserId == userId),
+                CurrentUserSaved = userId != null && ev.Saves.Any(s => s.UserId == userId),
+                CurrentUserAttendanceStatus = userId == null
+                    ? null
+                    : ev.Attendances
+                        .Where(a => a.UserId == userId)
+                        .Select(a => (EventAttendanceStatus?)a.Status)
+                        .FirstOrDefault(),
                 Comments = ev.Comments
                     .OrderByDescending(c => c.CreatedAt)
                     .Select(c => new EventCommentViewModel
@@ -150,6 +165,11 @@ namespace EventsApp.Controllers
                     })
                     .ToList(),
             };
+
+            if (userId != null)
+            {
+                await _socialFeed.TrackActivityAsync(userId, UserActivityType.EventViewed, eventId: id);
+            }
 
             return View(vm);
         }
@@ -457,7 +477,93 @@ namespace EventsApp.Controllers
             {
                 _db.EventLikes.Add(new EventLike { EventId = id, UserId = userId });
                 await _db.SaveChangesAsync();
+                await _socialFeed.TrackActivityAsync(userId, UserActivityType.EventLiked, eventId: id);
             }
+            if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
+            {
+                return Redirect(returnUrl);
+            }
+            return RedirectToAction(nameof(Details), new { id });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize]
+        public async Task<IActionResult> Save(int id, string? returnUrl)
+        {
+            var userId = _userManager.GetUserId(User)!;
+            var exists = await _db.EventSaves.AnyAsync(s => s.EventId == id && s.UserId == userId);
+            if (!exists && await _db.Events.AnyAsync(e => e.Id == id))
+            {
+                _db.EventSaves.Add(new EventSave { EventId = id, UserId = userId });
+                await _db.SaveChangesAsync();
+                await _socialFeed.TrackActivityAsync(userId, UserActivityType.EventSaved, eventId: id);
+            }
+
+            if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
+            {
+                return Redirect(returnUrl);
+            }
+            return RedirectToAction(nameof(Details), new { id });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize]
+        public async Task<IActionResult> Unsave(int id, string? returnUrl)
+        {
+            var userId = _userManager.GetUserId(User)!;
+            var save = await _db.EventSaves.FirstOrDefaultAsync(s => s.EventId == id && s.UserId == userId);
+            if (save != null)
+            {
+                _db.EventSaves.Remove(save);
+                await _db.SaveChangesAsync();
+            }
+
+            if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
+            {
+                return Redirect(returnUrl);
+            }
+            return RedirectToAction(nameof(Details), new { id });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize]
+        public async Task<IActionResult> Attendance(int id, EventAttendanceStatus status, string? returnUrl)
+        {
+            if (!await _db.Events.AnyAsync(e => e.Id == id))
+            {
+                return NotFound();
+            }
+
+            var userId = _userManager.GetUserId(User)!;
+            var attendance = await _db.EventAttendances.FirstOrDefaultAsync(a => a.EventId == id && a.UserId == userId);
+            if (attendance == null)
+            {
+                _db.EventAttendances.Add(new EventAttendance
+                {
+                    EventId = id,
+                    UserId = userId,
+                    Status = status,
+                });
+            }
+            else if (attendance.Status == status)
+            {
+                _db.EventAttendances.Remove(attendance);
+            }
+            else
+            {
+                attendance.Status = status;
+                attendance.UpdatedAt = DateTime.UtcNow;
+            }
+
+            await _db.SaveChangesAsync();
+            await _socialFeed.TrackActivityAsync(
+                userId,
+                status == EventAttendanceStatus.Going ? UserActivityType.EventGoing : UserActivityType.EventInterested,
+                eventId: id);
+
             if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
             {
                 return Redirect(returnUrl);
@@ -582,7 +688,15 @@ namespace EventsApp.Controllers
                     OrganizerName = e.Organizer.UserName ?? string.Empty,
                     LikesCount = e.Likes.Count,
                     CommentsCount = e.Comments.Count,
+                    SavesCount = e.Saves.Count,
+                    GoingCount = e.Attendances.Count(a => a.Status == EventAttendanceStatus.Going),
+                    InterestedCount = e.Attendances.Count(a => a.Status == EventAttendanceStatus.Interested),
                     CurrentUserLiked = e.Likes.Any(l => l.UserId == userId),
+                    CurrentUserSaved = e.Saves.Any(s => s.UserId == userId),
+                    CurrentUserAttendanceStatus = e.Attendances
+                        .Where(a => a.UserId == userId)
+                        .Select(a => (EventAttendanceStatus?)a.Status)
+                        .FirstOrDefault(),
                 })
                 .ToListAsync();
 

@@ -37,6 +37,7 @@ builder.Services.AddDefaultIdentity<ApplicationUser>(options =>
 
 builder.Services.AddSingleton<IMediaUploadService, MediaUploadService>();
 builder.Services.AddSingleton<ITicketDocumentService, TicketDocumentService>();
+builder.Services.AddScoped<ISocialFeedService, SocialFeedService>();
 
 builder.Services.Configure<AiOptions>(builder.Configuration.GetSection(AiOptions.SectionName));
 builder.Services.Configure<SirmaAiOptions>(builder.Configuration.GetSection(SirmaAiOptions.SectionName));

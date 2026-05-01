@@ -5,11 +5,13 @@
     var canManage = User.IsInRole(GlobalConstants.Roles.Admin)
         || (!string.IsNullOrWhiteSpace(currentUserId) && Model.OrganizerId == currentUserId);
     var likeAction = Model.CurrentUserLiked ? "Unlike" : "Like";
-    var likeTitle = Model.CurrentUserLiked ? "Премахни харесването" : "Харесай";
-    var preview = Model.Content.Length > 200 ? Model.Content[..200] + "..." : Model.Content;
+    var saveAction = Model.CurrentUserSaved ? "Unsave" : "Save";
+    var preview = Model.Content.Length > 220 ? Model.Content[..220] + "..." : Model.Content;
+    var shareUrl = Url.Action("Details", "Posts", new { id = Model.Id }, Context.Request.Scheme) ?? string.Empty;
+    var initial = string.IsNullOrWhiteSpace(Model.OrganizerName) ? "?" : Model.OrganizerName[..1].ToUpperInvariant();
 }
 
-<div class="card h-100 shadow-sm post-card">
+<div class="card h-100 shadow-sm post-card social-post-card">
     @if (!string.IsNullOrWhiteSpace(Model.FirstMediaUrl))
     {
         if (Model.FirstMediaType == EventsApp.Models.PostMediaType.Video)
@@ -20,14 +22,32 @@
         }
         else
         {
-            <img src="@Model.FirstMediaUrl" class="card-img-top card-img-top-fixed" alt="Изображение към публикация" />
+            <img src="@Model.FirstMediaUrl" class="card-img-top card-img-top-fixed" alt="Post media" />
         }
     }
+
     <div class="card-body d-flex flex-column">
-        <div class="d-flex justify-content-between align-items-start mb-2">
-            <strong>@Model.OrganizerName</strong>
+        <div class="social-post-card__author">
+            <a asp-controller="Profiles" asp-action="Details" asp-route-id="@Model.OrganizerId" class="social-author-link">
+                @if (!string.IsNullOrWhiteSpace(Model.AuthorImageUrl))
+                {
+                    <img src="@Model.AuthorImageUrl" alt="@Model.OrganizerName" class="social-avatar-xs" />
+                }
+                else
+                {
+                    <span class="social-avatar-xs social-avatar-xs--fallback">@initial</span>
+                }
+                <span>
+                    <strong>@Model.OrganizerName</strong>
+                    @if (Model.AuthorIsOrganizer)
+                    {
+                        <small><i class="bi bi-patch-check-fill"></i> Organizer</small>
+                    }
+                </span>
+            </a>
             <small class="text-muted">@Model.CreatedAt.ToString("dd.MM.yyyy HH:mm")</small>
         </div>
+
         @if (Model.EventId.HasValue)
         {
             <div class="mb-2">
@@ -36,9 +56,11 @@
                 </a>
             </div>
         }
+
         <p class="card-text post-body flex-grow-1">@preview</p>
-        <div class="d-flex justify-content-between align-items-center gap-2 mt-auto">
-            <div class="d-flex align-items-center gap-2">
+
+        <div class="social-card-actions mt-auto">
+            <div class="social-card-actions__primary">
                 @if (User.Identity?.IsAuthenticated == true)
                 {
                     var btnClass = Model.CurrentUserLiked ? "btn-danger" : "btn-outline-danger";
@@ -46,31 +68,43 @@
                     <form asp-controller="Posts" asp-action="@likeAction" asp-route-id="@Model.Id"
                           asp-route-returnUrl="@returnUrl" method="post" class="d-inline">
                         @Html.AntiForgeryToken()
-                        <button class="btn btn-sm @btnClass" type="submit" title="@likeTitle">
+                        <button class="btn btn-sm @btnClass" type="submit" title="Like">
                             <i class="bi @iconClass"></i> @Model.LikesCount
+                        </button>
+                    </form>
+
+                    var saveClass = Model.CurrentUserSaved ? "btn-dark" : "btn-outline-dark";
+                    var saveIcon = Model.CurrentUserSaved ? "bi-bookmark-fill" : "bi-bookmark";
+                    <form asp-controller="Posts" asp-action="@saveAction" asp-route-id="@Model.Id"
+                          asp-route-returnUrl="@returnUrl" method="post" class="d-inline">
+                        @Html.AntiForgeryToken()
+                        <button class="btn btn-sm @saveClass" type="submit" title="Save">
+                            <i class="bi @saveIcon"></i> @Model.SavesCount
                         </button>
                     </form>
                 }
                 else
                 {
                     <span class="small text-muted"><i class="bi bi-heart"></i> @Model.LikesCount</span>
+                    <span class="small text-muted"><i class="bi bi-bookmark"></i> @Model.SavesCount</span>
                 }
-                <a asp-controller="Posts"
-                   asp-action="Details"
-                   asp-route-id="@Model.Id"
-                   asp-fragment="comments"
-                   class="small text-muted text-decoration-none">
+
+                <a asp-controller="Posts" asp-action="Details" asp-route-id="@Model.Id" asp-fragment="comments" class="btn btn-sm btn-outline-secondary" title="Comments">
                     <i class="bi bi-chat"></i> @Model.CommentsCount
                 </a>
+                <button class="btn btn-sm btn-outline-secondary social-share-button" type="button" data-share-url="@shareUrl" data-share-title="Post by @Model.OrganizerName" title="Share">
+                    <i class="bi bi-share"></i>
+                </button>
             </div>
-            <div class="d-flex flex-wrap justify-content-end gap-1">
-                <a asp-controller="Posts" asp-action="Details" asp-route-id="@Model.Id" class="btn btn-sm btn-outline-primary">Отвори</a>
+
+            <div class="social-card-actions__manage">
+                <a asp-controller="Posts" asp-action="Details" asp-route-id="@Model.Id" class="btn btn-sm btn-outline-primary">Open</a>
                 @if (canManage)
                 {
-                    <a asp-controller="Posts" asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-sm btn-outline-secondary" title="Редактирай">
+                    <a asp-controller="Posts" asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-sm btn-outline-secondary" title="Edit">
                         <i class="bi bi-pencil"></i>
                     </a>
-                    <a asp-controller="Posts" asp-action="Delete" asp-route-id="@Model.Id" class="btn btn-sm btn-outline-danger" title="Изтрий">
+                    <a asp-controller="Posts" asp-action="Delete" asp-route-id="@Model.Id" class="btn btn-sm btn-outline-danger" title="Delete">
                         <i class="bi bi-trash"></i>
                     </a>
                 }

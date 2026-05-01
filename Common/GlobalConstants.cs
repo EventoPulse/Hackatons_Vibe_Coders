@@ -49,6 +49,15 @@ namespace EventsApp.Common
             public const int ImageUrlMaxLength = 500;
         }
 
+        public static class Social
+        {
+            public const int StoryMediaUrlMaxLength = 500;
+            public const int StoryCaptionMaxLength = 280;
+            public const int MessageContentMinLength = 1;
+            public const int MessageContentMaxLength = 2000;
+            public const int ActivityValueMaxLength = 128;
+        }
+
         public static class Comment
         {
             public const int ContentMinLength = 1;

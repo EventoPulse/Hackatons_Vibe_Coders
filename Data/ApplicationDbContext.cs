@@ -23,13 +23,29 @@ namespace EventsApp.Data
 
         public DbSet<PostLike> PostLikes { get; set; } = null!;
 
+        public DbSet<PostSave> PostSaves { get; set; } = null!;
+
         public DbSet<EventComment> EventComments { get; set; } = null!;
 
         public DbSet<EventLike> EventLikes { get; set; } = null!;
 
+        public DbSet<EventSave> EventSaves { get; set; } = null!;
+
+        public DbSet<EventAttendance> EventAttendances { get; set; } = null!;
+
         public DbSet<EventImage> EventImages { get; set; } = null!;
 
         public DbSet<UserPreferences> UserPreferences { get; set; } = null!;
+
+        public DbSet<Follow> Follows { get; set; } = null!;
+
+        public DbSet<Story> Stories { get; set; } = null!;
+
+        public DbSet<Conversation> Conversations { get; set; } = null!;
+
+        public DbSet<Message> Messages { get; set; } = null!;
+
+        public DbSet<UserActivity> UserActivities { get; set; } = null!;
 
         public DbSet<Ticket> Tickets { get; set; } = null!;
 
@@ -118,6 +134,21 @@ namespace EventsApp.Data
                 entity.HasIndex(pl => new { pl.PostId, pl.UserId }).IsUnique();
             });
 
+            builder.Entity<PostSave>(entity =>
+            {
+                entity.HasOne(ps => ps.Post)
+                      .WithMany(p => p.Saves)
+                      .HasForeignKey(ps => ps.PostId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(ps => ps.User)
+                      .WithMany(u => u.PostSaves)
+                      .HasForeignKey(ps => ps.UserId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasIndex(ps => new { ps.PostId, ps.UserId }).IsUnique();
+            });
+
             builder.Entity<EventComment>(entity =>
             {
                 entity.HasOne(ec => ec.Event)
@@ -146,12 +177,120 @@ namespace EventsApp.Data
                 entity.HasIndex(el => new { el.EventId, el.UserId }).IsUnique();
             });
 
+            builder.Entity<EventSave>(entity =>
+            {
+                entity.HasOne(es => es.Event)
+                      .WithMany(e => e.Saves)
+                      .HasForeignKey(es => es.EventId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(es => es.User)
+                      .WithMany(u => u.EventSaves)
+                      .HasForeignKey(es => es.UserId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasIndex(es => new { es.EventId, es.UserId }).IsUnique();
+            });
+
+            builder.Entity<EventAttendance>(entity =>
+            {
+                entity.HasOne(ea => ea.Event)
+                      .WithMany(e => e.Attendances)
+                      .HasForeignKey(ea => ea.EventId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(ea => ea.User)
+                      .WithMany(u => u.EventAttendances)
+                      .HasForeignKey(ea => ea.UserId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasIndex(ea => new { ea.EventId, ea.UserId }).IsUnique();
+            });
+
             builder.Entity<EventImage>(entity =>
             {
                 entity.HasOne(ei => ei.Event)
                       .WithMany(e => e.Images)
                       .HasForeignKey(ei => ei.EventId)
                       .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            builder.Entity<Follow>(entity =>
+            {
+                entity.HasOne(f => f.Follower)
+                      .WithMany(u => u.Following)
+                      .HasForeignKey(f => f.FollowerId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(f => f.Following)
+                      .WithMany(u => u.Followers)
+                      .HasForeignKey(f => f.FollowingId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasIndex(f => new { f.FollowerId, f.FollowingId }).IsUnique();
+            });
+
+            builder.Entity<Story>(entity =>
+            {
+                entity.HasOne(s => s.Author)
+                      .WithMany(u => u.Stories)
+                      .HasForeignKey(s => s.AuthorId)
+                      .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            builder.Entity<Conversation>(entity =>
+            {
+                entity.HasOne(c => c.ParticipantOne)
+                      .WithMany()
+                      .HasForeignKey(c => c.ParticipantOneId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(c => c.ParticipantTwo)
+                      .WithMany()
+                      .HasForeignKey(c => c.ParticipantTwoId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasIndex(c => new { c.ParticipantOneId, c.ParticipantTwoId }).IsUnique();
+            });
+
+            builder.Entity<Message>(entity =>
+            {
+                entity.HasOne(m => m.Conversation)
+                      .WithMany(c => c.Messages)
+                      .HasForeignKey(m => m.ConversationId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(m => m.Sender)
+                      .WithMany(u => u.SentMessages)
+                      .HasForeignKey(m => m.SenderId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasIndex(m => new { m.ConversationId, m.CreatedAt });
+            });
+
+            builder.Entity<UserActivity>(entity =>
+            {
+                entity.HasOne(a => a.User)
+                      .WithMany(u => u.UserActivities)
+                      .HasForeignKey(a => a.UserId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(a => a.Event)
+                      .WithMany(e => e.UserActivities)
+                      .HasForeignKey(a => a.EventId)
+                      .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasOne(a => a.Post)
+                      .WithMany(p => p.UserActivities)
+                      .HasForeignKey(a => a.PostId)
+                      .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasOne(a => a.TargetUser)
+                      .WithMany()
+                      .HasForeignKey(a => a.TargetUserId)
+                      .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasIndex(a => new { a.UserId, a.ActivityType, a.CreatedAt });
             });
 
             builder.Entity<Ticket>(entity =>

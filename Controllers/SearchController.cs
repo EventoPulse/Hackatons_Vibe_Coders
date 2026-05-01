@@ -149,7 +149,17 @@ namespace EventsApp.Controllers
                 OrganizerName = e.Organizer.UserName ?? string.Empty,
                 LikesCount = e.Likes.Count,
                 CommentsCount = e.Comments.Count,
+                SavesCount = e.Saves.Count,
+                GoingCount = e.Attendances.Count(a => a.Status == EventAttendanceStatus.Going),
+                InterestedCount = e.Attendances.Count(a => a.Status == EventAttendanceStatus.Interested),
                 CurrentUserLiked = userId != null && e.Likes.Any(l => l.UserId == userId),
+                CurrentUserSaved = userId != null && e.Saves.Any(s => s.UserId == userId),
+                CurrentUserAttendanceStatus = userId == null
+                    ? null
+                    : e.Attendances
+                        .Where(a => a.UserId == userId)
+                        .Select(a => (EventAttendanceStatus?)a.Status)
+                        .FirstOrDefault(),
                 Latitude = e.Latitude,
                 Longitude = e.Longitude,
             });
@@ -182,7 +192,11 @@ namespace EventsApp.Controllers
                 FirstMediaType = p.Images.Select(i => i.MediaType).FirstOrDefault(),
                 LikesCount = p.Likes.Count,
                 CommentsCount = p.Comments.Count,
+                SavesCount = p.Saves.Count,
                 CurrentUserLiked = userId != null && p.Likes.Any(l => l.UserId == userId),
+                CurrentUserSaved = userId != null && p.Saves.Any(s => s.UserId == userId),
+                AuthorImageUrl = p.Organizer.ProfileImageUrl,
+                AuthorIsOrganizer = p.Organizer.OrganizerData != null && p.Organizer.OrganizerData.Approved,
             });
         }
 

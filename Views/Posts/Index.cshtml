@@ -1,43 +1,197 @@
-@model IReadOnlyList<PostCardViewModel>
+@model FeedViewModel
 @{
-    ViewData["Title"] = "Поток";
-    var hasPosts = Model.Count > 0;
+    ViewData["Title"] = "Feed";
     var returnUrl = $"{Context.Request.Path}{Context.Request.QueryString}";
     var isSignedIn = User.Identity?.IsAuthenticated == true;
 }
 
-<section class="groove-feed-page">
-    <div class="groove-feed-hero">
+<section class="groove-feed-page social-feed-page">
+    <div class="social-feed-hero">
         <div>
-            <span class="groove-stamp groove-stamp-teal">Потокът</span>
-            <h1>Живият <span>дневник</span>.</h1>
-            <p>Какво казват организаторите и слушателите точно сега.</p>
+            <span class="groove-stamp groove-stamp-teal">Evento Social</span>
+            <h1>Discover events, people and organizers.</h1>
+            <p>
+                A personalized feed with fresh events, organizer posts, stories and activity from people you follow.
+            </p>
         </div>
-        @if (User.IsInRole(GlobalConstants.Roles.Organizer) || User.IsInRole(GlobalConstants.Roles.Admin))
-        {
-            <a asp-action="Create" class="groove-button groove-button-dark">
-                <i class="bi bi-plus-lg"></i> Нова публикация
-            </a>
-        }
+        <div class="social-feed-hero__actions">
+            @if (isSignedIn)
+            {
+                <a asp-action="Create" class="groove-button groove-button-dark">
+                    <i class="bi bi-plus-lg"></i> Create post
+                </a>
+                <a asp-controller="Stories" asp-action="Create" class="groove-button groove-button-paper">
+                    <i class="bi bi-camera"></i> Story
+                </a>
+            }
+        </div>
     </div>
 
-    @if (hasPosts)
-    {
-        <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-3">
-            @foreach (var post in Model)
-            {
-                <div class="col"><partial name="_PostCard" model="post" /></div>
-            }
-        </div>
-    }
-    else
-    {
-        <div class="groove-empty-state">
-            <p>Все още няма публикации в потока. Когато организаторите публикуват, те ще се появят тук.</p>
-            @if (User.IsInRole(GlobalConstants.Roles.Organizer) || User.IsInRole(GlobalConstants.Roles.Admin))
-            {
-                <a asp-action="Create" class="groove-link">Бъди първият с публикация</a>
-            }
-        </div>
-    }
+    <section class="social-stories-strip" aria-label="Active stories">
+        @if (isSignedIn)
+        {
+            <article class="social-story-card social-story-card--create">
+                <form asp-controller="Stories" asp-action="Create" asp-route-returnUrl="@returnUrl" method="post" enctype="multipart/form-data">
+                    @Html.AntiForgeryToken()
+                    <div class="social-story-card__plus"><i class="bi bi-plus-lg"></i></div>
+                    <input type="url" name="MediaUrl" placeholder="Image/video URL" />
+                    <input type="text" name="Caption" placeholder="Caption" maxlength="280" />
+                    <button type="submit">Post story</button>
+                </form>
+            </article>
+        }
+
+        @foreach (var story in Model.Stories)
+        {
+            <article class="social-story-card">
+                <a asp-controller="Profiles" asp-action="Details" asp-route-id="@story.AuthorId" class="social-story-card__media">
+                    @if (story.MediaType == PostMediaType.Video)
+                    {
+                        <video muted loop playsinline preload="metadata">
+                            <source src="@story.MediaUrl" />
+                        </video>
+                    }
+                    else
+                    {
+                        <img src="@story.MediaUrl" alt="@story.AuthorName story" />
+                    }
+                </a>
+                <div class="social-story-card__meta">
+                    <strong>@story.AuthorName</strong>
+                    @if (!string.IsNullOrWhiteSpace(story.Caption))
+                    {
+                        <span>@story.Caption</span>
+                    }
+                </div>
+            </article>
+        }
+
+        @if (!Model.Stories.Any() && !isSignedIn)
+        {
+            <div class="social-empty-inline">Sign in to follow people and see active stories.</div>
+        }
+    </section>
+
+    <div class="social-feed-shell">
+        <main class="social-feed-main">
+            <section class="social-feed-section">
+                <div class="social-section-heading">
+                    <div>
+                        <span class="groove-kicker">Recommended for you</span>
+                        <h2>Based on your interests.</h2>
+                    </div>
+                    @if (!Model.HasPersonalSignals && isSignedIn)
+                    {
+                        <a asp-controller="Preferences" asp-action="Edit" class="groove-link">Tune interests</a>
+                    }
+                </div>
+                @if (Model.RecommendedEvents.Any())
+                {
+                    <div class="social-card-grid">
+                        @foreach (var ev in Model.RecommendedEvents)
+                        {
+                            <partial name="_EventCard" model="ev" />
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="groove-empty-card">
+                        <i class="bi bi-stars"></i>
+                        <h2 class="groove-panel-title">No recommendations yet.</h2>
+                        <p class="groove-panel-intro">Like, save and open events to shape your feed.</p>
+                    </div>
+                }
+            </section>
+
+            <section class="social-feed-section">
+                <div class="social-section-heading">
+                    <div>
+                        <span class="groove-kicker">Trending events</span>
+                        <h2>What is picking up speed.</h2>
+                    </div>
+                    <a asp-controller="Home" asp-action="Index" class="groove-link">Explore all</a>
+                </div>
+                <div class="social-card-grid">
+                    @foreach (var ev in Model.TrendingEvents)
+                    {
+                        <partial name="_EventCard" model="ev" />
+                    }
+                </div>
+            </section>
+
+            <section class="social-feed-section">
+                <div class="social-section-heading">
+                    <div>
+                        <span class="groove-kicker">Friends activity</span>
+                        <h2>Posts from people you follow.</h2>
+                    </div>
+                </div>
+                @if (Model.FriendsActivity.Any())
+                {
+                    <div class="social-post-list">
+                        @foreach (var post in Model.FriendsActivity)
+                        {
+                            <partial name="_PostCard" model="post" />
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="social-empty-panel">
+                        <i class="bi bi-people"></i>
+                        <span>Follow users or organizers to fill this section.</span>
+                    </div>
+                }
+            </section>
+
+            <section class="social-feed-section">
+                <div class="social-section-heading">
+                    <div>
+                        <span class="groove-kicker">Posts from organizers</span>
+                        <h2>Updates, lineups and behind the scenes.</h2>
+                    </div>
+                </div>
+                <div class="social-post-list">
+                    @foreach (var post in Model.OrganizerPosts)
+                    {
+                        <partial name="_PostCard" model="post" />
+                    }
+                </div>
+            </section>
+        </main>
+
+        <aside class="social-feed-aside">
+            <section class="social-side-panel">
+                <span class="groove-kicker">Suggested profiles</span>
+                @foreach (var profile in Model.SuggestedProfiles)
+                {
+                    var profileInitial = string.IsNullOrWhiteSpace(profile.DisplayName) ? "?" : profile.DisplayName[..1].ToUpperInvariant();
+                    <article class="social-profile-row">
+                        <a asp-controller="Profiles" asp-action="Details" asp-route-id="@profile.Id" class="social-profile-row__main">
+                            @if (!string.IsNullOrWhiteSpace(profile.ProfileImageUrl))
+                            {
+                                <img src="@profile.ProfileImageUrl" alt="@profile.DisplayName" />
+                            }
+                            else
+                            {
+                                <span>@profileInitial</span>
+                            }
+                            <div>
+                                <strong>@profile.DisplayName</strong>
+                                <small>@(profile.IsOrganizer ? "Organizer" : "User") · @profile.FollowersCount followers</small>
+                            </div>
+                        </a>
+                        @if (isSignedIn)
+                        {
+                            <form asp-controller="Profiles" asp-action="Follow" asp-route-id="@profile.Id" asp-route-returnUrl="@returnUrl" method="post">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-sm btn-outline-primary">Follow</button>
+                            </form>
+                        }
+                    </article>
+                }
+            </section>
+        </aside>
+    </div>
 </section>

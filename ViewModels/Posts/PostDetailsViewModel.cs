@@ -12,7 +12,11 @@ namespace EventsApp.ViewModels.Posts
         public string? EventTitle { get; set; }
         public IReadOnlyList<PostMediaItemViewModel> Media { get; set; } = Array.Empty<PostMediaItemViewModel>();
         public int LikesCount { get; set; }
+        public int SavesCount { get; set; }
         public bool CurrentUserLiked { get; set; }
+        public bool CurrentUserSaved { get; set; }
+        public string? OrganizerImageUrl { get; set; }
+        public bool OrganizerIsOrganizer { get; set; }
         public IReadOnlyList<PostCommentViewModel> Comments { get; set; } = Array.Empty<PostCommentViewModel>();
         public bool CanEdit { get; set; }
         public bool CanDelete { get; set; }

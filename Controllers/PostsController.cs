@@ -18,42 +18,25 @@ namespace EventsApp.Controllers
         private readonly ApplicationDbContext _db;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly IMediaUploadService _mediaUpload;
+        private readonly ISocialFeedService _socialFeed;
 
         public PostsController(
             ApplicationDbContext db,
             UserManager<ApplicationUser> userManager,
-            IMediaUploadService mediaUpload)
+            IMediaUploadService mediaUpload,
+            ISocialFeedService socialFeed)
         {
             _db = db;
             _userManager = userManager;
             _mediaUpload = mediaUpload;
+            _socialFeed = socialFeed;
         }
 
         public async Task<IActionResult> Index()
         {
             var userId = _userManager.GetUserId(User);
-
-            var posts = await _db.Posts
-                .AsNoTracking()
-                .OrderByDescending(p => p.CreatedAt)
-                .Select(p => new PostCardViewModel
-                {
-                    Id = p.Id,
-                    OrganizerId = p.OrganizerId,
-                    OrganizerName = p.Organizer.UserName ?? string.Empty,
-                    Content = p.Content,
-                    CreatedAt = p.CreatedAt,
-                    EventId = p.EventId,
-                    EventTitle = p.Event != null ? p.Event.Title : null,
-                    FirstMediaUrl = p.Images.Select(i => i.ImageUrl).FirstOrDefault(),
-                    FirstMediaType = p.Images.Select(i => i.MediaType).FirstOrDefault(),
-                    LikesCount = p.Likes.Count,
-                    CommentsCount = p.Comments.Count,
-                    CurrentUserLiked = userId != null && p.Likes.Any(l => l.UserId == userId),
-                })
-                .ToListAsync();
-
-            return View(posts);
+            var feed = await _socialFeed.BuildFeedAsync(userId);
+            return View(feed);
         }
 
         public async Task<IActionResult> Details(int id)
@@ -64,9 +47,11 @@ namespace EventsApp.Controllers
             var post = await _db.Posts
                 .AsNoTracking()
                 .Include(p => p.Organizer)
+                    .ThenInclude(o => o.OrganizerData)
                 .Include(p => p.Event)
                 .Include(p => p.Images)
                 .Include(p => p.Likes)
+                .Include(p => p.Saves)
                 .Include(p => p.Comments)
                     .ThenInclude(c => c.User)
                 .FirstOrDefaultAsync(p => p.Id == id);
@@ -77,17 +62,23 @@ namespace EventsApp.Controllers
             {
                 Id = post.Id,
                 OrganizerId = post.OrganizerId,
-                OrganizerName = post.Organizer?.UserName ?? string.Empty,
+                OrganizerName = post.Organizer?.OrganizerData?.Approved == true
+                    ? post.Organizer.OrganizerData.OrganizationName
+                    : post.Organizer?.UserName ?? string.Empty,
                 Content = post.Content,
                 CreatedAt = post.CreatedAt,
                 UpdatedAt = post.UpdatedAt,
                 EventId = post.EventId,
                 EventTitle = post.Event?.Title,
+                OrganizerImageUrl = post.Organizer?.ProfileImageUrl,
+                OrganizerIsOrganizer = post.Organizer?.OrganizerData?.Approved ?? false,
                 Media = post.Images
                     .Select(i => new PostMediaItemViewModel { Url = i.ImageUrl, MediaType = i.MediaType })
                     .ToList(),
                 LikesCount = post.Likes.Count,
+                SavesCount = post.Saves.Count,
                 CurrentUserLiked = userId != null && post.Likes.Any(l => l.UserId == userId),
+                CurrentUserSaved = userId != null && post.Saves.Any(s => s.UserId == userId),
                 Comments = post.Comments
                     .OrderByDescending(c => c.CreatedAt)
                     .Select(c => new PostCommentViewModel
@@ -105,7 +96,7 @@ namespace EventsApp.Controllers
             });
         }
 
-        [Authorize(Roles = GlobalConstants.Roles.Admin + "," + GlobalConstants.Roles.Organizer)]
+        [Authorize]
         public async Task<IActionResult> Create()
         {
             return View(new PostCreateEditViewModel
@@ -117,7 +108,7 @@ namespace EventsApp.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         [RequestSizeLimit(UploadSizeLimit)]
-        [Authorize(Roles = GlobalConstants.Roles.Admin + "," + GlobalConstants.Roles.Organizer)]
+        [Authorize]
         public async Task<IActionResult> Create(PostCreateEditViewModel input)
         {
             if (!ModelState.IsValid)
@@ -154,7 +145,7 @@ namespace EventsApp.Controllers
             return RedirectToAction(nameof(Details), new { id = post.Id });
         }
 
-        [Authorize(Roles = GlobalConstants.Roles.Admin + "," + GlobalConstants.Roles.Organizer)]
+        [Authorize]
         public async Task<IActionResult> Edit(int id)
         {
             var userId = _userManager.GetUserId(User)!;
@@ -180,7 +171,7 @@ namespace EventsApp.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         [RequestSizeLimit(UploadSizeLimit)]
-        [Authorize(Roles = GlobalConstants.Roles.Admin + "," + GlobalConstants.Roles.Organizer)]
+        [Authorize]
         public async Task<IActionResult> Edit(int id, PostCreateEditViewModel input)
         {
             var userId = _userManager.GetUserId(User)!;
@@ -229,7 +220,7 @@ namespace EventsApp.Controllers
             return RedirectToAction(nameof(Details), new { id = post.Id });
         }
 
-        [Authorize(Roles = GlobalConstants.Roles.Admin + "," + GlobalConstants.Roles.Organizer)]
+        [Authorize]
         public async Task<IActionResult> Delete(int id)
         {
             var userId = _userManager.GetUserId(User)!;
@@ -244,7 +235,7 @@ namespace EventsApp.Controllers
 
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
-        [Authorize(Roles = GlobalConstants.Roles.Admin + "," + GlobalConstants.Roles.Organizer)]
+        [Authorize]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
             var userId = _userManager.GetUserId(User)!;
@@ -271,6 +262,7 @@ namespace EventsApp.Controllers
             {
                 _db.PostLikes.Add(new PostLike { PostId = id, UserId = userId });
                 await _db.SaveChangesAsync();
+                await _socialFeed.TrackActivityAsync(userId, UserActivityType.PostLiked, postId: id);
             }
             return SafeRedirect(returnUrl) ?? RedirectToAction(nameof(Details), new { id });
         }
@@ -287,6 +279,39 @@ namespace EventsApp.Controllers
                 _db.PostLikes.Remove(like);
                 await _db.SaveChangesAsync();
             }
+            return SafeRedirect(returnUrl) ?? RedirectToAction(nameof(Details), new { id });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize]
+        public async Task<IActionResult> Save(int id, string? returnUrl)
+        {
+            var userId = _userManager.GetUserId(User)!;
+            var exists = await _db.PostSaves.AnyAsync(s => s.PostId == id && s.UserId == userId);
+            if (!exists && await _db.Posts.AnyAsync(p => p.Id == id))
+            {
+                _db.PostSaves.Add(new PostSave { PostId = id, UserId = userId });
+                await _db.SaveChangesAsync();
+                await _socialFeed.TrackActivityAsync(userId, UserActivityType.PostSaved, postId: id);
+            }
+
+            return SafeRedirect(returnUrl) ?? RedirectToAction(nameof(Details), new { id });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize]
+        public async Task<IActionResult> Unsave(int id, string? returnUrl)
+        {
+            var userId = _userManager.GetUserId(User)!;
+            var save = await _db.PostSaves.FirstOrDefaultAsync(s => s.PostId == id && s.UserId == userId);
+            if (save != null)
+            {
+                _db.PostSaves.Remove(save);
+                await _db.SaveChangesAsync();
+            }
+
             return SafeRedirect(returnUrl) ?? RedirectToAction(nameof(Details), new { id });
         }
 
@@ -357,11 +382,21 @@ namespace EventsApp.Controllers
                 return new MediaUploadResult
                 {
                     Url = input.ImageUrl,
-                    MediaType = PostMediaType.Image,
+                    MediaType = LooksLikeVideoUrl(input.ImageUrl) ? PostMediaType.Video : PostMediaType.Image,
                 };
             }
 
             return null;
+        }
+
+        private static bool LooksLikeVideoUrl(string url)
+        {
+            var path = url.Split('?', '#')[0];
+            var ext = Path.GetExtension(path);
+            return ext.Equals(".mp4", StringComparison.OrdinalIgnoreCase)
+                || ext.Equals(".webm", StringComparison.OrdinalIgnoreCase)
+                || ext.Equals(".mov", StringComparison.OrdinalIgnoreCase)
+                || ext.Equals(".m4v", StringComparison.OrdinalIgnoreCase);
         }
 
         private IActionResult? SafeRedirect(string? returnUrl)
@@ -379,8 +414,10 @@ namespace EventsApp.Controllers
             var isAdmin = User.IsInRole(GlobalConstants.Roles.Admin);
 
             var query = _db.Events.AsNoTracking();
-            if (!isAdmin && userId != null)
+            if (!isAdmin && User.IsInRole(GlobalConstants.Roles.Organizer) && userId != null)
                 query = query.Where(e => e.OrganizerId == userId);
+            else if (!isAdmin)
+                query = query.Where(e => e.IsApproved);
 
             return await query
                 .OrderByDescending(e => e.StartTime)

@@ -1,0 +1,50 @@
+@model IReadOnlyList<ConversationListItemViewModel>
+@{
+    ViewData["Title"] = "Messages";
+}
+
+<section class="groove-app-page social-messages-page">
+    <div class="groove-page-hero">
+        <div class="groove-page-hero__copy">
+            <span class="groove-stamp groove-stamp-teal">Messages</span>
+            <h1>Direct <span>messages</span>.</h1>
+            <p>Chat with people and organizers. Messages refresh with normal page requests for now.</p>
+        </div>
+    </div>
+
+    <div class="social-message-list">
+        @if (!Model.Any())
+        {
+            <div class="social-empty-panel">
+                <i class="bi bi-chat-dots"></i>
+                <span>No conversations yet. Open a profile and start a message.</span>
+            </div>
+        }
+        else
+        {
+            @foreach (var conversation in Model)
+            {
+                var initial = string.IsNullOrWhiteSpace(conversation.OtherUserName) ? "?" : conversation.OtherUserName[..1].ToUpperInvariant();
+                <a asp-action="Details" asp-route-id="@conversation.Id" class="social-conversation-row">
+                    @if (!string.IsNullOrWhiteSpace(conversation.OtherUserImageUrl))
+                    {
+                        <img src="@conversation.OtherUserImageUrl" alt="@conversation.OtherUserName" />
+                    }
+                    else
+                    {
+                        <span class="social-conversation-row__fallback">@initial</span>
+                    }
+                    <div>
+                        <strong>@conversation.OtherUserName</strong>
+                        <small>@(conversation.LastMessage ?? "No messages yet")</small>
+                    </div>
+                    <time>@conversation.UpdatedAt.ToString("dd.MM HH:mm")</time>
+                    @if (conversation.UnseenCount > 0)
+                    {
+                        <b>@conversation.UnseenCount</b>
+                    }
+                </a>
+            }
+        }
+    </div>
+</section>

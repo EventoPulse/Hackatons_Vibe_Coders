@@ -16,7 +16,12 @@ namespace EventsApp.ViewModels.Events
         public string OrganizerName { get; set; } = null!;
         public int LikesCount { get; set; }
         public int CommentsCount { get; set; }
+        public int SavesCount { get; set; }
+        public int GoingCount { get; set; }
+        public int InterestedCount { get; set; }
         public bool CurrentUserLiked { get; set; }
+        public bool CurrentUserSaved { get; set; }
+        public EventAttendanceStatus? CurrentUserAttendanceStatus { get; set; }
         public double? Latitude { get; set; }
         public double? Longitude { get; set; }
     }

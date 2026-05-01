@@ -1,0 +1,56 @@
+@model StoryCreateViewModel
+@{
+    ViewData["Title"] = "Create story";
+}
+
+<section class="groove-app-page groove-form-shell">
+    <div class="groove-page-hero">
+        <div class="groove-page-hero__copy">
+            <span class="groove-stamp groove-stamp-teal">Stories</span>
+            <h1>Create a <span>24h story</span>.</h1>
+            <p>Share a quick image or video moment at the top of the feed.</p>
+        </div>
+        <div class="groove-page-actions">
+            <a asp-controller="Posts" asp-action="Index" class="groove-button groove-button-paper">
+                <i class="bi bi-arrow-left"></i> Back to feed
+            </a>
+        </div>
+    </div>
+
+    <div class="groove-form-panel">
+        <form asp-action="Create" method="post" enctype="multipart/form-data">
+            @Html.AntiForgeryToken()
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+            <div class="mb-3">
+                <label asp-for="MediaFile" class="form-label"></label>
+                <input asp-for="MediaFile" class="form-control" type="file"
+                       accept="image/jpeg,image/png,image/gif,image/webp,video/mp4,video/webm,video/quicktime" />
+                <span asp-validation-for="MediaFile" class="text-danger small"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="MediaUrl" class="form-label"></label>
+                <input asp-for="MediaUrl" class="form-control" placeholder="https://..." />
+                <span asp-validation-for="MediaUrl" class="text-danger small"></span>
+            </div>
+
+            <div class="mb-4">
+                <label asp-for="Caption" class="form-label"></label>
+                <input asp-for="Caption" class="form-control" maxlength="280" />
+                <span asp-validation-for="Caption" class="text-danger small"></span>
+            </div>
+
+            <div class="groove-form-actions">
+                <button type="submit" class="groove-button groove-button-dark">
+                    <i class="bi bi-camera"></i> Publish story
+                </button>
+                <a asp-controller="Posts" asp-action="Index" class="groove-button groove-button-paper">Cancel</a>
+            </div>
+        </form>
+    </div>
+</section>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

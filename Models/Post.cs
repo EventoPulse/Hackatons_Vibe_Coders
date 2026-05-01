@@ -13,6 +13,8 @@ namespace EventsApp.Models
             this.Images = new HashSet<PostImage>();
             this.Comments = new HashSet<PostComment>();
             this.Likes = new HashSet<PostLike>();
+            this.Saves = new HashSet<PostSave>();
+            this.UserActivities = new HashSet<UserActivity>();
         }
 
         [Key]
@@ -44,5 +46,9 @@ namespace EventsApp.Models
         public ICollection<PostComment> Comments { get; set; }
 
         public ICollection<PostLike> Likes { get; set; }
+
+        public ICollection<PostSave> Saves { get; set; }
+
+        public ICollection<UserActivity> UserActivities { get; set; }
     }
 }

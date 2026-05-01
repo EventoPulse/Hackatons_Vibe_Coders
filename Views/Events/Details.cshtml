@@ -1,29 +1,30 @@
 @model EventDetailsViewModel
 @{
     ViewData["Title"] = Model.Title;
+    var shareUrl = Url.Action("Details", "Events", new { id = Model.Id }, Context.Request.Scheme) ?? string.Empty;
 }
 
 <section class="groove-app-page">
     <div class="groove-page-actions mb-4">
         <a asp-controller="Home" asp-action="Index" class="groove-button groove-button-paper">
-            <i class="bi bi-arrow-left"></i> Назад
+            <i class="bi bi-arrow-left"></i> Back
         </a>
         @if (Model.CanEdit)
         {
             <a asp-action="Edit" asp-route-id="@Model.Id" class="groove-button groove-button-paper">
-                <i class="bi bi-pencil"></i> Редакция
+                <i class="bi bi-pencil"></i> Edit
             </a>
         }
         @if (Model.CanDelete)
         {
             <a asp-action="Delete" asp-route-id="@Model.Id" class="groove-button groove-button-paper">
-                <i class="bi bi-trash"></i> Изтрий
+                <i class="bi bi-trash"></i> Delete
             </a>
         }
         @if (Model.CanManageTickets)
         {
             <a asp-controller="Tickets" asp-action="Manage" asp-route-id="@Model.Id" class="groove-button groove-button-dark">
-                <i class="bi bi-ticket-perforated"></i> Управление на билети
+                <i class="bi bi-ticket-perforated"></i> Tickets
             </a>
         }
     </div>
@@ -31,22 +32,22 @@
     @if (!Model.IsApproved)
     {
         <div class="groove-alert groove-alert-warning mb-4">
-            <strong>Събитието още не е одобрено.</strong>
+            <strong>This event is waiting for approval.</strong>
         </div>
     }
 
     <div class="groove-split">
-        <div class="groove-paper-card">
+        <article class="groove-paper-card">
             @if (!string.IsNullOrWhiteSpace(Model.ImageUrl))
             {
-                <img src="@Model.ImageUrl" class="img-fluid rounded mb-3" alt="@Model.Title" style="max-height:380px;width:100%;object-fit:cover;" />
+                <img src="@Model.ImageUrl" class="img-fluid rounded mb-3" alt="@Model.Title" style="max-height:420px;width:100%;object-fit:cover;" />
             }
             @if (Model.ImageUrls.Count > 0)
             {
                 <div class="d-flex gap-2 flex-wrap mb-3">
                     @foreach (var url in Model.ImageUrls)
                     {
-                        <img src="@url" class="rounded" style="height:80px;width:80px;object-fit:cover;" alt="Изображение от събитието" />
+                        <img src="@url" class="rounded" style="height:80px;width:80px;object-fit:cover;" alt="Event image" />
                     }
                 </div>
             }
@@ -56,57 +57,73 @@
             {
                 <p class="groove-panel-intro mt-3">@Model.Description</p>
             }
-        </div>
+        </article>
 
-        <div class="groove-info-card">
+        <aside class="groove-info-card">
             <dl class="groove-data-list">
-                <dt>Локация</dt>
+                <dt>Location</dt>
                 <dd>@Model.Address, @Model.City</dd>
-
-                <dt>Начало</dt>
+                <dt>Start</dt>
                 <dd>@Model.StartTime.ToString("dd.MM.yyyy HH:mm")</dd>
-
-                <dt>Край</dt>
+                <dt>End</dt>
                 <dd>@Model.EndTime.ToString("dd.MM.yyyy HH:mm")</dd>
-
-                <dt>Организатор</dt>
-                <dd>@Model.OrganizerName</dd>
-
-                <dt>Харесвания</dt>
-                <dd>@Model.LikesCount</dd>
+                <dt>Organizer</dt>
+                <dd><a asp-controller="Profiles" asp-action="Details" asp-route-id="@Model.OrganizerId">@Model.OrganizerName</a></dd>
+                <dt>Social</dt>
+                <dd>@Model.LikesCount likes · @Model.SavesCount saves</dd>
+                <dt>Going</dt>
+                <dd>@Model.GoingCount going · @Model.InterestedCount interested</dd>
             </dl>
+
+            <div class="groove-form-actions">
+                <button class="groove-button groove-button-paper social-share-button" type="button" data-share-url="@shareUrl" data-share-title="@Model.Title">
+                    <i class="bi bi-share"></i> Share
+                </button>
+            </div>
 
             @if (User.Identity?.IsAuthenticated == true)
             {
                 <hr />
-                @if (Model.CurrentUserLiked)
-                {
-                    <form asp-action="Unlike" asp-route-id="@Model.Id" method="post">
+                <div class="groove-form-actions">
+                    <form asp-action="@(Model.CurrentUserLiked ? "Unlike" : "Like")" asp-route-id="@Model.Id" method="post">
                         @Html.AntiForgeryToken()
-                        <button class="groove-button groove-button-dark w-100"><i class="bi bi-heart-fill"></i> Премахни харесването</button>
+                        <button class="groove-button @(Model.CurrentUserLiked ? "groove-button-dark" : "groove-button-paper")" type="submit">
+                            <i class="bi @(Model.CurrentUserLiked ? "bi-heart-fill" : "bi-heart")"></i> @(Model.CurrentUserLiked ? "Unlike" : "Like")
+                        </button>
                     </form>
-                }
-                else
-                {
-                    <form asp-action="Like" asp-route-id="@Model.Id" method="post">
+                    <form asp-action="@(Model.CurrentUserSaved ? "Unsave" : "Save")" asp-route-id="@Model.Id" method="post">
                         @Html.AntiForgeryToken()
-                        <button class="groove-button groove-button-paper w-100"><i class="bi bi-heart"></i> Харесай</button>
+                        <button class="groove-button groove-button-paper" type="submit">
+                            <i class="bi @(Model.CurrentUserSaved ? "bi-bookmark-fill" : "bi-bookmark")"></i> @(Model.CurrentUserSaved ? "Unsave" : "Save")
+                        </button>
                     </form>
-                }
+                    <form asp-action="Attendance" asp-route-id="@Model.Id" asp-route-status="@EventAttendanceStatus.Going" method="post">
+                        @Html.AntiForgeryToken()
+                        <button class="groove-button @(Model.CurrentUserAttendanceStatus == EventAttendanceStatus.Going ? "groove-button-dark" : "groove-button-paper")" type="submit">
+                            <i class="bi bi-check2-circle"></i> Going
+                        </button>
+                    </form>
+                    <form asp-action="Attendance" asp-route-id="@Model.Id" asp-route-status="@EventAttendanceStatus.Interested" method="post">
+                        @Html.AntiForgeryToken()
+                        <button class="groove-button @(Model.CurrentUserAttendanceStatus == EventAttendanceStatus.Interested ? "groove-button-dark" : "groove-button-paper")" type="submit">
+                            <i class="bi bi-star"></i> Interested
+                        </button>
+                    </form>
+                </div>
             }
-        </div>
+        </aside>
     </div>
 
     <section class="groove-page-section">
         <div class="groove-section-bar">
             <div>
-                <span class="groove-kicker">Продажби</span>
-                <h2>Налични <span>билети</span>.</h2>
+                <span class="groove-kicker">Tickets</span>
+                <h2>Available <span>tickets</span>.</h2>
             </div>
             @if (Model.CanManageTickets)
             {
                 <a asp-controller="Tickets" asp-action="Create" asp-route-id="@Model.Id" class="groove-button groove-button-paper">
-                    <i class="bi bi-plus-lg"></i> Добави билет
+                    <i class="bi bi-plus-lg"></i> Add ticket
                 </a>
             }
         </div>
@@ -115,15 +132,7 @@
         {
             <div class="groove-empty-card">
                 <i class="bi bi-ticket-perforated"></i>
-                <h2 class="groove-panel-title">Все още няма <span>билети</span>.</h2>
-                @if (Model.CanManageTickets)
-                {
-                    <div class="groove-form-actions justify-content-center mt-3">
-                        <a asp-controller="Tickets" asp-action="Create" asp-route-id="@Model.Id" class="groove-button groove-button-dark">
-                            <i class="bi bi-plus-lg"></i> Добави първи билет
-                        </a>
-                    </div>
-                }
+                <h2 class="groove-panel-title">No tickets yet.</h2>
             </div>
         }
         else
@@ -132,26 +141,23 @@
                 @foreach (var t in Model.Tickets)
                 {
                     var ticketStatusClass = t.SoldOut ? "groove-status-badge-danger" : "groove-status-badge-success";
-                    var ticketStatusText = t.SoldOut ? "Разпродаден" : $"{t.QuantityRemaining} останали";
-                    var ticketActionText = t.Price.IsFreeTicket() ? "Вземи безплатно" : "Купи";
+                    var ticketStatusText = t.SoldOut ? "Sold out" : $"{t.QuantityRemaining} left";
+                    var ticketActionText = t.Price.IsFreeTicket() ? "Get free" : "Buy";
 
                     <article class="groove-ticket-card">
                         <div class="d-flex justify-content-between align-items-start gap-2">
                             <h3>@t.Name</h3>
                             <span class="groove-status-badge @ticketStatusClass">@ticketStatusText</span>
                         </div>
-
                         @if (!string.IsNullOrWhiteSpace(t.Description))
                         {
                             <p>@t.Description</p>
                         }
-
                         <div class="groove-ticket-footer">
                             <span class="groove-price">@t.Price.ToTicketPriceDisplay()</span>
-
                             @if (User.Identity?.IsAuthenticated == true)
                             {
-                                @if (!t.SoldOut)
+                                if (!t.SoldOut)
                                 {
                                     <form asp-controller="Tickets" asp-action="Buy" asp-route-id="@t.Id" method="post">
                                         @Html.AntiForgeryToken()
@@ -162,28 +168,27 @@
                                 }
                                 else
                                 {
-                                    <button class="groove-button groove-button-paper" disabled>Разпродаден</button>
+                                    <button class="groove-button groove-button-paper" disabled>Sold out</button>
                                 }
                             }
                             else
                             {
                                 <a asp-area="Identity" asp-page="/Account/Login" class="groove-button groove-button-paper">
-                                    <i class="bi bi-box-arrow-in-right"></i> Влез за покупка
+                                    <i class="bi bi-box-arrow-in-right"></i> Sign in
                                 </a>
                             }
                         </div>
                     </article>
                 }
             </div>
-            <p class="groove-muted-copy"><i class="bi bi-info-circle"></i> Плащането е демонстрационно, а интеграцията може да бъде разширена по-късно.</p>
         }
     </section>
 
     <section class="groove-page-section">
         <div class="groove-section-bar">
             <div>
-                <span class="groove-kicker">Разговор</span>
-                <h2 id="comments">Коментари <span>(@Model.Comments.Count)</span>.</h2>
+                <span class="groove-kicker">Conversation</span>
+                <h2 id="comments">Comments <span>(@Model.Comments.Count)</span>.</h2>
             </div>
         </div>
 
@@ -192,8 +197,8 @@
             <form asp-action="AddComment" asp-route-id="@Model.Id" method="post" class="mb-4">
                 @Html.AntiForgeryToken()
                 <div class="input-group">
-                    <input type="text" name="content" class="form-control" placeholder="Напиши коментар..." maxlength="1000" required />
-                    <button class="btn btn-primary" type="submit"><i class="bi bi-send"></i> Изпрати</button>
+                    <input type="text" name="content" class="form-control" placeholder="Write a comment..." maxlength="1000" required />
+                    <button class="btn btn-primary" type="submit"><i class="bi bi-send"></i> Send</button>
                 </div>
             </form>
         }
@@ -202,7 +207,7 @@
         {
             <div class="groove-empty-card">
                 <i class="bi bi-chat-square-text"></i>
-                <h2 class="groove-panel-title">Още няма <span>коментари</span>.</h2>
+                <h2 class="groove-panel-title">No comments yet.</h2>
             </div>
         }
         else
@@ -222,7 +227,7 @@
                                 <form asp-action="DeleteComment" method="post" class="ms-2">
                                     @Html.AntiForgeryToken()
                                     <input type="hidden" name="commentId" value="@c.Id" />
-                                    <button class="groove-button groove-button-paper"><i class="bi bi-trash"></i> Изтрий</button>
+                                    <button class="groove-button groove-button-paper"><i class="bi bi-trash"></i> Delete</button>
                                 </form>
                             }
                         </article>

@@ -1,0 +1,50 @@
+@model ConversationDetailsViewModel
+@{
+    ViewData["Title"] = Model.OtherUserName;
+    var initial = string.IsNullOrWhiteSpace(Model.OtherUserName) ? "?" : Model.OtherUserName[..1].ToUpperInvariant();
+}
+
+<section class="groove-app-page social-messages-page">
+    <div class="social-chat-shell">
+        <header class="social-chat-header">
+            <a asp-action="Index" class="btn btn-sm btn-outline-secondary" title="Back">
+                <i class="bi bi-arrow-left"></i>
+            </a>
+            <a asp-controller="Profiles" asp-action="Details" asp-route-id="@Model.OtherUserId" class="social-author-link">
+                @if (!string.IsNullOrWhiteSpace(Model.OtherUserImageUrl))
+                {
+                    <img src="@Model.OtherUserImageUrl" alt="@Model.OtherUserName" class="social-avatar-xs" />
+                }
+                else
+                {
+                    <span class="social-avatar-xs social-avatar-xs--fallback">@initial</span>
+                }
+                <strong>@Model.OtherUserName</strong>
+            </a>
+        </header>
+
+        <div class="social-chat-thread">
+            @foreach (var message in Model.Messages)
+            {
+                <article class="social-message-bubble @(message.IsMine ? "is-mine" : "")">
+                    <p>@message.Content</p>
+                    <small>
+                        @message.CreatedAt.ToString("dd.MM.yyyy HH:mm")
+                        @if (message.IsMine && message.SeenAt.HasValue)
+                        {
+                            <span> · seen</span>
+                        }
+                    </small>
+                </article>
+            }
+        </div>
+
+        <form asp-action="Send" asp-route-id="@Model.Id" method="post" class="social-chat-compose">
+            @Html.AntiForgeryToken()
+            <input type="text" name="content" maxlength="2000" placeholder="Write a message..." required />
+            <button type="submit" class="groove-button groove-button-dark">
+                <i class="bi bi-send"></i> Send
+            </button>
+        </form>
+    </div>
+</section>

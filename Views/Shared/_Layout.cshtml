@@ -88,10 +88,14 @@
                     }
                     <ul class="navbar-nav me-auto mb-2 mb-md-0">
                         <li class="nav-item">
-                            <a class="nav-link" asp-controller="Home" asp-action="Index">Начало</a>
+                            <a class="nav-link" asp-controller="Home" asp-action="Index">
+                                <i class="bi bi-compass"></i> Explore / Events
+                            </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" asp-controller="Posts" asp-action="Index">Поток</a>
+                            <a class="nav-link" asp-controller="Posts" asp-action="Index">
+                                <i class="bi bi-collection"></i> Feed
+                            </a>
                         </li>
                         @if (isStaff)
                         {
@@ -101,6 +105,21 @@
                         }
                         @if (isAuthed)
                         {
+                            <li class="nav-item">
+                                <a class="nav-link" asp-controller="Posts" asp-action="Create">
+                                    <i class="bi bi-plus-square"></i> Create Post
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" asp-controller="Messages" asp-action="Index">
+                                    <i class="bi bi-chat-dots"></i> Messages
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" asp-controller="Account" asp-action="Index">
+                                    <i class="bi bi-person-circle"></i> Profile
+                                </a>
+                            </li>
                             <li class="nav-item">
                                 <a class="nav-link" asp-controller="Events" asp-action="Recommended">
                                     <i class="bi bi-stars"></i> Препоръчани

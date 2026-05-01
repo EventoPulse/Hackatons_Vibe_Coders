@@ -5,10 +5,13 @@
     var canManage = User.IsInRole(GlobalConstants.Roles.Admin)
         || (!string.IsNullOrWhiteSpace(currentUserId) && Model.OrganizerId == currentUserId);
     var likeAction = Model.CurrentUserLiked ? "Unlike" : "Like";
-    var likeTitle = Model.CurrentUserLiked ? "Премахни харесването" : "Харесай";
+    var saveAction = Model.CurrentUserSaved ? "Unsave" : "Save";
+    var likeTitle = Model.CurrentUserLiked ? "Unlike" : "Like";
+    var saveTitle = Model.CurrentUserSaved ? "Remove from saved" : "Save";
+    var shareUrl = Url.Action("Details", "Events", new { id = Model.Id }, Context.Request.Scheme) ?? string.Empty;
 }
 
-<div class="card h-100 shadow-sm event-card">
+<div class="card h-100 shadow-sm event-card social-event-card">
     @if (!string.IsNullOrWhiteSpace(Model.ImageUrl))
     {
         <img src="@Model.ImageUrl" class="card-img-top card-img-top-fixed" alt="@Model.Title" />
@@ -24,18 +27,23 @@
             <span class="badge bg-secondary event-genre-badge">@Model.Genre.GetDisplayName()</span>
             @if (!Model.IsApproved)
             {
-                <span class="badge bg-warning text-dark event-genre-badge">Чака</span>
+                <span class="badge bg-warning text-dark event-genre-badge">Pending</span>
             }
         </div>
+
         <h5 class="card-title">@Model.Title</h5>
+        <a asp-controller="Profiles" asp-action="Details" asp-route-id="@Model.OrganizerId" class="small text-muted text-decoration-none mb-2">
+            <i class="bi bi-person-badge"></i> @Model.OrganizerName
+        </a>
         <p class="card-text text-muted mb-1">
             <i class="bi bi-geo-alt"></i> @Model.Address, @Model.City
         </p>
         <p class="card-text text-muted small mb-2">
             <i class="bi bi-clock"></i> @Model.StartTime.ToString("dd.MM.yyyy HH:mm")
         </p>
-        <div class="d-flex justify-content-between align-items-center gap-2 mt-auto">
-            <div class="d-flex align-items-center gap-2">
+
+        <div class="social-card-actions mt-auto">
+            <div class="social-card-actions__primary">
                 @if (User.Identity?.IsAuthenticated == true)
                 {
                     var btnClass = Model.CurrentUserLiked ? "btn-danger" : "btn-outline-danger";
@@ -47,24 +55,66 @@
                             <i class="bi @iconClass"></i> @Model.LikesCount
                         </button>
                     </form>
+
+                    var saveClass = Model.CurrentUserSaved ? "btn-dark" : "btn-outline-dark";
+                    var saveIcon = Model.CurrentUserSaved ? "bi-bookmark-fill" : "bi-bookmark";
+                    <form asp-controller="Events" asp-action="@saveAction" asp-route-id="@Model.Id"
+                          asp-route-returnUrl="@returnUrl" method="post" class="d-inline">
+                        @Html.AntiForgeryToken()
+                        <button class="btn btn-sm @saveClass" type="submit" title="@saveTitle">
+                            <i class="bi @saveIcon"></i> @Model.SavesCount
+                        </button>
+                    </form>
                 }
                 else
                 {
                     <span class="small text-muted"><i class="bi bi-heart"></i> @Model.LikesCount</span>
+                    <span class="small text-muted"><i class="bi bi-bookmark"></i> @Model.SavesCount</span>
                 }
-                <span class="small text-muted"><i class="bi bi-chat"></i> @Model.CommentsCount</span>
+
+                <a asp-controller="Events" asp-action="Details" asp-route-id="@Model.Id" asp-fragment="comments" class="btn btn-sm btn-outline-secondary" title="Comments">
+                    <i class="bi bi-chat"></i> @Model.CommentsCount
+                </a>
+                <button class="btn btn-sm btn-outline-secondary social-share-button" type="button" data-share-url="@shareUrl" data-share-title="@Model.Title" title="Share">
+                    <i class="bi bi-share"></i>
+                </button>
             </div>
-            <div class="d-flex flex-wrap justify-content-end gap-1">
-                <a asp-controller="Events" asp-action="Details" asp-route-id="@Model.Id" class="btn btn-sm btn-outline-primary">Детайли</a>
+
+            @if (User.Identity?.IsAuthenticated == true)
+            {
+                <div class="social-card-actions__secondary">
+                    @{
+                        var goingClass = Model.CurrentUserAttendanceStatus == EventAttendanceStatus.Going ? "btn-success" : "btn-outline-success";
+                        var interestedClass = Model.CurrentUserAttendanceStatus == EventAttendanceStatus.Interested ? "btn-warning" : "btn-outline-warning";
+                    }
+                    <form asp-controller="Events" asp-action="Attendance" asp-route-id="@Model.Id" asp-route-status="@EventAttendanceStatus.Going"
+                          asp-route-returnUrl="@returnUrl" method="post" class="d-inline">
+                        @Html.AntiForgeryToken()
+                        <button class="btn btn-sm @goingClass" type="submit">
+                            <i class="bi bi-check2-circle"></i> Going @Model.GoingCount
+                        </button>
+                    </form>
+                    <form asp-controller="Events" asp-action="Attendance" asp-route-id="@Model.Id" asp-route-status="@EventAttendanceStatus.Interested"
+                          asp-route-returnUrl="@returnUrl" method="post" class="d-inline">
+                        @Html.AntiForgeryToken()
+                        <button class="btn btn-sm @interestedClass" type="submit">
+                            <i class="bi bi-star"></i> Interested @Model.InterestedCount
+                        </button>
+                    </form>
+                </div>
+            }
+
+            <div class="social-card-actions__manage">
+                <a asp-controller="Events" asp-action="Details" asp-route-id="@Model.Id" class="btn btn-sm btn-outline-primary">Details</a>
                 @if (canManage)
                 {
-                    <a asp-controller="Events" asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-sm btn-outline-secondary" title="Редактирай">
+                    <a asp-controller="Events" asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-sm btn-outline-secondary" title="Edit">
                         <i class="bi bi-pencil"></i>
                     </a>
-                    <a asp-controller="Tickets" asp-action="Manage" asp-route-id="@Model.Id" class="btn btn-sm btn-outline-success" title="Управление на билети">
+                    <a asp-controller="Tickets" asp-action="Manage" asp-route-id="@Model.Id" class="btn btn-sm btn-outline-success" title="Tickets">
                         <i class="bi bi-ticket-perforated"></i>
                     </a>
-                    <a asp-controller="Events" asp-action="Delete" asp-route-id="@Model.Id" class="btn btn-sm btn-outline-danger" title="Изтрий">
+                    <a asp-controller="Events" asp-action="Delete" asp-route-id="@Model.Id" class="btn btn-sm btn-outline-danger" title="Delete">
                         <i class="bi bi-trash"></i>
                     </a>
                 }

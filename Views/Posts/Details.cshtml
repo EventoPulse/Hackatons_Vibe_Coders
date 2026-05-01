@@ -1,101 +1,112 @@
 @model PostDetailsViewModel
 @{
-    ViewData["Title"] = "Публикация";
+    ViewData["Title"] = "Post";
+    var shareUrl = Url.Action("Details", "Posts", new { id = Model.Id }, Context.Request.Scheme) ?? string.Empty;
+    var authorInitial = string.IsNullOrWhiteSpace(Model.OrganizerName) ? "?" : Model.OrganizerName[..1].ToUpperInvariant();
 }
 
 <section class="groove-app-page">
     <div class="groove-page-actions mb-4">
         <a asp-action="Index" class="groove-button groove-button-paper">
-            <i class="bi bi-arrow-left"></i> Назад
+            <i class="bi bi-arrow-left"></i> Back
         </a>
         @if (Model.CanEdit)
         {
             <a asp-action="Edit" asp-route-id="@Model.Id" class="groove-button groove-button-paper">
-                <i class="bi bi-pencil"></i> Редакция
+                <i class="bi bi-pencil"></i> Edit
             </a>
         }
         @if (Model.CanDelete)
         {
             <a asp-action="Delete" asp-route-id="@Model.Id" class="groove-button groove-button-paper">
-                <i class="bi bi-trash"></i> Изтрий
+                <i class="bi bi-trash"></i> Delete
             </a>
         }
     </div>
 
-    <div class="groove-paper-card">
-        <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
-            <div>
-                <span class="groove-kicker">@Model.OrganizerName</span>
-                <h1 class="groove-panel-title">Записка от <span>потока</span>.</h1>
-                <p class="groove-list-meta mt-2">
-                    @Model.CreatedAt.ToString("dd.MM.yyyy HH:mm")
-                    @if (Model.UpdatedAt.HasValue)
+    <article class="groove-paper-card social-post-detail">
+        <div class="social-post-card__author">
+            <a asp-controller="Profiles" asp-action="Details" asp-route-id="@Model.OrganizerId" class="social-author-link">
+                @if (!string.IsNullOrWhiteSpace(Model.OrganizerImageUrl))
+                {
+                    <img src="@Model.OrganizerImageUrl" alt="@Model.OrganizerName" class="social-avatar-xs" />
+                }
+                else
+                {
+                    <span class="social-avatar-xs social-avatar-xs--fallback">@authorInitial</span>
+                }
+                <span>
+                    <strong>@Model.OrganizerName</strong>
+                    @if (Model.OrganizerIsOrganizer)
                     {
-                        <text> · редактирано @Model.UpdatedAt.Value.ToString("dd.MM.yyyy HH:mm")</text>
+                        <small><i class="bi bi-patch-check-fill"></i> Organizer</small>
                     }
-                </p>
-            </div>
-
-            @if (Model.EventId.HasValue)
-            {
-                <a asp-controller="Events" asp-action="Details" asp-route-id="@Model.EventId" class="groove-link">
-                    <i class="bi bi-link-45deg"></i> @Model.EventTitle
-                </a>
-            }
+                </span>
+            </a>
+            <small class="text-muted">@Model.CreatedAt.ToString("dd.MM.yyyy HH:mm")</small>
         </div>
+
+        @if (Model.EventId.HasValue)
+        {
+            <a asp-controller="Events" asp-action="Details" asp-route-id="@Model.EventId" class="groove-link mt-3">
+                <i class="bi bi-link-45deg"></i> @Model.EventTitle
+            </a>
+        }
 
         <p class="groove-panel-intro mt-4" style="white-space:pre-wrap;">@Model.Content</p>
 
         @if (Model.Media.Count > 0)
         {
-            <div class="d-flex flex-wrap gap-2 mt-4 mb-3">
+            <div class="social-detail-media">
                 @foreach (var item in Model.Media)
                 {
                     if (item.MediaType == EventsApp.Models.PostMediaType.Video)
                     {
-                        <video controls class="rounded shadow-sm" style="max-height:360px;max-width:100%;">
+                        <video controls>
                             <source src="@item.Url" />
                         </video>
                     }
                     else
                     {
-                        <img src="@item.Url" class="rounded img-thumbnail" style="max-height:360px;max-width:100%;object-fit:cover;" alt="Медия към публикацията" />
+                        <img src="@item.Url" alt="Post media" />
                     }
                 }
             </div>
         }
 
         <div class="groove-inline-actions mt-4">
-            <span class="groove-badge"><i class="bi bi-heart-fill groove-inline-icon"></i> @Model.LikesCount харесвания</span>
-            <span class="groove-badge"><i class="bi bi-chat"></i> @Model.Comments.Count коментара</span>
+            <span class="groove-badge"><i class="bi bi-heart-fill groove-inline-icon"></i> @Model.LikesCount likes</span>
+            <span class="groove-badge"><i class="bi bi-chat"></i> @Model.Comments.Count comments</span>
+            <span class="groove-badge"><i class="bi bi-bookmark"></i> @Model.SavesCount saves</span>
+            <button class="groove-button groove-button-paper social-share-button" type="button" data-share-url="@shareUrl" data-share-title="Post by @Model.OrganizerName">
+                <i class="bi bi-share"></i> Share
+            </button>
         </div>
 
         @if (User.Identity?.IsAuthenticated == true)
         {
-            <div class="mt-3">
-                @if (Model.CurrentUserLiked)
-                {
-                    <form asp-action="Unlike" asp-route-id="@Model.Id" method="post" class="d-inline">
-                        @Html.AntiForgeryToken()
-                        <button class="groove-button groove-button-dark"><i class="bi bi-heart-fill"></i> Премахни харесването</button>
-                    </form>
-                }
-                else
-                {
-                    <form asp-action="Like" asp-route-id="@Model.Id" method="post" class="d-inline">
-                        @Html.AntiForgeryToken()
-                        <button class="groove-button groove-button-paper"><i class="bi bi-heart"></i> Харесай</button>
-                    </form>
-                }
+            <div class="groove-form-actions">
+                <form asp-action="@(Model.CurrentUserLiked ? "Unlike" : "Like")" asp-route-id="@Model.Id" method="post">
+                    @Html.AntiForgeryToken()
+                    <button class="groove-button @(Model.CurrentUserLiked ? "groove-button-dark" : "groove-button-paper")" type="submit">
+                        <i class="bi @(Model.CurrentUserLiked ? "bi-heart-fill" : "bi-heart")"></i> @(Model.CurrentUserLiked ? "Unlike" : "Like")
+                    </button>
+                </form>
+                <form asp-action="@(Model.CurrentUserSaved ? "Unsave" : "Save")" asp-route-id="@Model.Id" method="post">
+                    @Html.AntiForgeryToken()
+                    <button class="groove-button groove-button-paper" type="submit">
+                        <i class="bi @(Model.CurrentUserSaved ? "bi-bookmark-fill" : "bi-bookmark")"></i> @(Model.CurrentUserSaved ? "Unsave" : "Save")
+                    </button>
+                </form>
             </div>
         }
-    </div>
+    </article>
 
     <section class="groove-page-section">
         <div class="groove-section-bar">
             <div>
-                <span class="groove-kicker">Коментари</span>
-                <h2 id="comments">Разговорът <span>(@Model.Comments.Count)</span>.</h2>
+                <span class="groove-kicker">Comments</span>
+                <h2 id="comments">Conversation <span>(@Model.Comments.Count)</span>.</h2>
             </div>
         </div>
 
@@ -104,8 +115,8 @@
             <form asp-action="AddComment" asp-route-id="@Model.Id" method="post" class="mb-4">
                 @Html.AntiForgeryToken()
                 <div class="input-group">
-                    <input type="text" name="content" class="form-control" placeholder="Напиши коментар..." maxlength="1000" required />
-                    <button class="btn btn-primary" type="submit"><i class="bi bi-send"></i> Изпрати</button>
+                    <input type="text" name="content" class="form-control" placeholder="Write a comment..." maxlength="1000" required />
+                    <button class="btn btn-primary" type="submit"><i class="bi bi-send"></i> Send</button>
                 </div>
             </form>
         }
@@ -114,7 +125,7 @@
         {
             <div class="groove-empty-card">
                 <i class="bi bi-chat-square-text"></i>
-                <h2 class="groove-panel-title">Още няма <span>коментари</span>.</h2>
+                <h2 class="groove-panel-title">No comments yet.</h2>
             </div>
         }
         else
@@ -134,7 +145,7 @@
                                 <form asp-action="DeleteComment" method="post" class="ms-2">
                                     @Html.AntiForgeryToken()
                                     <input type="hidden" name="commentId" value="@c.Id" />
-                                    <button class="groove-button groove-button-paper"><i class="bi bi-trash"></i> Изтрий</button>
+                                    <button class="groove-button groove-button-paper"><i class="bi bi-trash"></i> Delete</button>
                                 </form>
                             }
                         </article>

@@ -21,7 +21,12 @@ namespace EventsApp.ViewModels.Events
         public string OrganizerName { get; set; } = null!;
         public IReadOnlyList<string> ImageUrls { get; set; } = Array.Empty<string>();
         public int LikesCount { get; set; }
+        public int SavesCount { get; set; }
+        public int GoingCount { get; set; }
+        public int InterestedCount { get; set; }
         public bool CurrentUserLiked { get; set; }
+        public bool CurrentUserSaved { get; set; }
+        public EventAttendanceStatus? CurrentUserAttendanceStatus { get; set; }
         public IReadOnlyList<EventCommentViewModel> Comments { get; set; } = Array.Empty<EventCommentViewModel>();
         public bool CanEdit { get; set; }
         public bool CanDelete { get; set; }
