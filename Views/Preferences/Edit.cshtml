@@ -1,107 +1,134 @@
 @model PreferencesViewModel
 @{
     var isWelcome = ViewBag.IsWelcome as bool? ?? false;
-    ViewData["Title"] = isWelcome ? "Добре дошъл в Evento" : "Редакция на предпочитания";
+    ViewData["Title"] = isWelcome ? "Кои събития обичаш?" : "Твоите предпочитания";
+
+    var genreEmoji = new Dictionary<EventGenre, string>
+    {
+        { EventGenre.Rock, "🎸" },
+        { EventGenre.Pop, "🎤" },
+        { EventGenre.HipHop, "🎧" },
+        { EventGenre.Electronic, "🎛️" },
+        { EventGenre.Jazz, "🎷" },
+        { EventGenre.Classical, "🎻" },
+        { EventGenre.Folk, "🪕" },
+        { EventGenre.Metal, "🤘" },
+        { EventGenre.Theater, "🎭" },
+        { EventGenre.Standup, "🎙️" },
+        { EventGenre.Festival, "🎪" },
+        { EventGenre.Exhibition, "🖼️" },
+        { EventGenre.Sports, "⚽" },
+        { EventGenre.Conference, "💼" },
+        { EventGenre.Workshop, "🛠️" },
+        { EventGenre.Other, "✨" },
+    };
+
+    var popularCities = new[] { "София", "Пловдив", "Варна", "Бургас", "Русе", "Стара Загора", "Велико Търново" };
 }
 
-<section class="evt-shell" style="max-width: 760px; margin: 0 auto;">
-    @if (isWelcome)
-    {
-        <div class="evt-welcome">
-            <h2><i class="bi bi-stars"></i> Добре дошъл в Evento!</h2>
-            <p>Кажи ни какво обичаш и ще ти покажем най-подходящите събития. Отнема само минута.</p>
-        </div>
-    }
+<section class="evt-onboarding">
+    <header class="evt-onboarding__head">
+        <span class="evt-onboarding__step">@(isWelcome ? "Стъпка 1 от 2" : "Предпочитания")</span>
+        <h1 class="evt-onboarding__title">
+            @(isWelcome ? "Кои събития обичаш?" : "Твоите предпочитания")
+        </h1>
+        <p class="evt-onboarding__lead">
+            @(isWelcome ? "Избери жанра, който те вдъхновява, и ще ти показваме най-доброто за теб." : "Подбери жанр и град — ще ти препоръчваме на база на тях.")
+        </p>
+    </header>
 
-    <div class="card" style="padding: 28px;">
-        @if (!isWelcome)
+    <form asp-action="Edit" method="post" class="evt-onboarding__form">
+        @Html.AntiForgeryToken()
+        @if (isWelcome)
         {
-            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom: 18px;">
-                <div>
-                    <h1 style="margin:0; font-size: 1.6rem;">Твоите предпочитания</h1>
-                    <p class="text-muted" style="margin:4px 0 0;">Жанр, град и радиус помагат за по-точни препоръки.</p>
-                </div>
-                <a asp-action="Index" class="btn btn-outline-secondary btn-sm">
-                    <i class="bi bi-arrow-left"></i> Обратно
-                </a>
-            </div>
+            <input type="hidden" name="welcome" value="1" />
         }
 
-        <form asp-action="Edit" method="post">
-            @Html.AntiForgeryToken()
+        <div class="evt-genre-grid" data-pref-grid>
+            @foreach (var g in Enum.GetValues<EventGenre>())
+            {
+                var selected = Model.PreferredGenre == g;
+                var emoji = genreEmoji.TryGetValue(g, out var em) ? em : "✨";
+                <button type="button" class="evt-genre-tile @(selected ? "is-selected" : "")"
+                        data-pref-value="@((int)g)" data-pref-label="@g.GetDisplayName()">
+                    <span class="evt-genre-tile__emoji">@emoji</span>
+                    <span class="evt-genre-tile__label">@g.GetDisplayName()</span>
+                    <span class="evt-genre-tile__check"><i class="bi bi-check-lg"></i></span>
+                </button>
+            }
+        </div>
+        <input type="hidden" asp-for="PreferredGenre" id="PreferredGenreHidden" />
+
+        <div class="evt-onboarding__city">
+            <label class="evt-onboarding__label">Град (по избор)</label>
+            <div class="evt-city-chips" data-pref-city>
+                @foreach (var c in popularCities)
+                {
+                    var selectedCity = string.Equals(Model.PreferredCity, c, StringComparison.OrdinalIgnoreCase);
+                    <button type="button" class="evt-city-chip @(selectedCity ? "is-selected" : "")" data-pref-value="@c">@c</button>
+                }
+            </div>
+            <input asp-for="PreferredCity" class="evt-onboarding__city-input" placeholder="…или въведи друг" autocomplete="off" />
+        </div>
+
+        <div asp-validation-summary="ModelOnly" class="alert alert-danger mt-3" role="alert"></div>
+
+        <div class="evt-onboarding__actions">
+            <button type="submit" class="evt-btn evt-btn-primary evt-onboarding__cta" data-pref-submit disabled>
+                <i class="bi bi-stars"></i>
+                @(isWelcome ? "Покажи моите събития" : "Запази")
+            </button>
             @if (isWelcome)
             {
-                <input type="hidden" name="welcome" value="1" />
+                <a href="/" class="evt-btn evt-btn-ghost">Пропусни засега</a>
             }
-            <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
-
-            <div class="mb-4">
-                <label class="form-label" style="font-weight:600;">Какъв тип събития предпочиташ?</label>
-                <div class="evt-pref-chips" data-pref-chip-group="genre">
-                    @foreach (var g in Enum.GetValues<EventGenre>())
-                    {
-                        var selected = Model.PreferredGenre == g;
-                        <button type="button" class="evt-pref-chip @(selected ? "is-selected" : "")"
-                                data-pref-value="@((int)g)">
-                            @g.GetDisplayName()
-                        </button>
-                    }
-                </div>
-                <select asp-for="PreferredGenre" asp-items="Html.GetEnumSelectList<EventGenre>()" class="form-select d-none" id="PreferredGenreSelect">
-                    <option value="">Без ограничение</option>
-                </select>
-            </div>
-
-            <div class="mb-3">
-                <label asp-for="PreferredCity" class="form-label" style="font-weight:600;">В кой град?</label>
-                <input asp-for="PreferredCity" class="form-control" placeholder="Например София" />
-                <span asp-validation-for="PreferredCity" class="text-danger small"></span>
-            </div>
-
-            <div class="row g-3">
-                <div class="col-sm-6">
-                    <label asp-for="MinAge" class="form-label" style="font-weight:600;">Минимална възраст</label>
-                    <input asp-for="MinAge" type="number" class="form-control" min="0" max="120" placeholder="Например 18" />
-                    <span asp-validation-for="MinAge" class="text-danger small"></span>
-                </div>
-                <div class="col-sm-6">
-                    <label asp-for="MaxDistanceKm" class="form-label" style="font-weight:600;">Максимално разстояние (km)</label>
-                    <input asp-for="MaxDistanceKm" type="number" class="form-control" min="0" max="10000" placeholder="Например 50" />
-                    <span asp-validation-for="MaxDistanceKm" class="text-danger small"></span>
-                </div>
-            </div>
-
-            <div style="display:flex; gap:10px; margin-top: 22px; align-items:center;">
-                <button type="submit" class="btn btn-primary">
-                    <i class="bi bi-check-lg"></i> @(isWelcome ? "Покажи моите събития" : "Запази")
-                </button>
-                @if (isWelcome)
-                {
-                    <a href="/" class="btn btn-outline-secondary">Пропусни засега</a>
-                }
-                else
-                {
-                    <a asp-action="Index" class="btn btn-outline-secondary">Отказ</a>
-                }
-            </div>
-        </form>
-    </div>
+            else
+            {
+                <a asp-action="Index" class="evt-btn evt-btn-ghost">Отказ</a>
+            }
+        </div>
+    </form>
 </section>
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <script>
         (function () {
-            var group = document.querySelector('[data-pref-chip-group="genre"]');
-            var select = document.getElementById('PreferredGenreSelect');
-            if (!group || !select) return;
-            group.addEventListener('click', function (e) {
-                var btn = e.target.closest('.evt-pref-chip');
-                if (!btn) return;
-                group.querySelectorAll('.evt-pref-chip').forEach(function (c) { c.classList.remove('is-selected'); });
-                btn.classList.add('is-selected');
-                select.value = btn.getAttribute('data-pref-value');
-            });
+            var grid = document.querySelector('[data-pref-grid]');
+            var hidden = document.getElementById('PreferredGenreHidden');
+            var submit = document.querySelector('[data-pref-submit]');
+            var cityWrap = document.querySelector('[data-pref-city]');
+            var cityInput = document.querySelector('.evt-onboarding__city-input');
+
+            function refreshSubmit() {
+                var ok = !!hidden.value;
+                submit.disabled = !ok;
+            }
+
+            if (grid && hidden && submit) {
+                if (hidden.value) refreshSubmit();
+                grid.addEventListener('click', function (e) {
+                    var btn = e.target.closest('.evt-genre-tile');
+                    if (!btn) return;
+                    grid.querySelectorAll('.evt-genre-tile').forEach(function (t) { t.classList.remove('is-selected'); });
+                    btn.classList.add('is-selected');
+                    hidden.value = btn.getAttribute('data-pref-value');
+                    refreshSubmit();
+                });
+            }
+
+            if (cityWrap && cityInput) {
+                cityWrap.addEventListener('click', function (e) {
+                    var btn = e.target.closest('.evt-city-chip');
+                    if (!btn) return;
+                    cityWrap.querySelectorAll('.evt-city-chip').forEach(function (c) { c.classList.remove('is-selected'); });
+                    btn.classList.add('is-selected');
+                    cityInput.value = btn.getAttribute('data-pref-value');
+                });
+                cityInput.addEventListener('input', function () {
+                    cityWrap.querySelectorAll('.evt-city-chip').forEach(function (c) { c.classList.remove('is-selected'); });
+                });
+            }
         })();
     </script>
 }
