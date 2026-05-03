@@ -143,6 +143,34 @@ namespace EventsApp.Controllers
                 .Distinct()
                 .CountAsync();
 
+            var memories = new List<MemoryItem>();
+            if (isCurrentUser)
+            {
+                var today = DateTime.UtcNow.Date;
+                for (var y = 1; y <= 5; y++)
+                {
+                    var rangeStart = today.AddYears(-y).AddDays(-3);
+                    var rangeEnd = today.AddYears(-y).AddDays(3);
+                    var found = await _db.EventAttendances
+                        .Where(a => a.UserId == id && a.Status == EventAttendanceStatus.Going)
+                        .Join(_db.Events, a => a.EventId, e => e.Id, (a, e) => e)
+                        .Where(e => e.StartTime >= rangeStart && e.StartTime <= rangeEnd)
+                        .OrderBy(e => e.StartTime)
+                        .Select(e => new MemoryItem
+                        {
+                            EventId = e.Id,
+                            Title = e.Title,
+                            City = e.City,
+                            ImageUrl = e.ImageUrl,
+                            EventDate = e.StartTime,
+                            YearsAgo = y,
+                        })
+                        .Take(3)
+                        .ToListAsync();
+                    memories.AddRange(found);
+                }
+            }
+
             var vm = new PublicProfileViewModel
             {
                 Id = user.Id,
@@ -168,6 +196,7 @@ namespace EventsApp.Controllers
                 IsCurrentUser = isCurrentUser,
                 Posts = posts,
                 Events = events,
+                Memories = memories,
             };
 
             return View(vm);

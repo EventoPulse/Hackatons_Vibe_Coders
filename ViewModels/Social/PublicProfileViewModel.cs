@@ -28,5 +28,16 @@ namespace EventsApp.ViewModels.Social
         public bool IsCurrentUser { get; set; }
         public IReadOnlyList<PostCardViewModel> Posts { get; set; } = Array.Empty<PostCardViewModel>();
         public IReadOnlyList<EventCardViewModel> Events { get; set; } = Array.Empty<EventCardViewModel>();
+        public IReadOnlyList<MemoryItem> Memories { get; set; } = Array.Empty<MemoryItem>();
+    }
+
+    public class MemoryItem
+    {
+        public int EventId { get; set; }
+        public string Title { get; set; } = null!;
+        public string City { get; set; } = null!;
+        public string? ImageUrl { get; set; }
+        public DateTime EventDate { get; set; }
+        public int YearsAgo { get; set; }
     }
 }
