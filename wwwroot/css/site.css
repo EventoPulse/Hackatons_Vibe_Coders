@@ -265,19 +265,23 @@ video.card-img-top-fixed {
 }
 
 .site-navbar .navbar-nav .nav-link.site-register-link {
-    background: linear-gradient(180deg, #d04a3a 0%, #b8362a 100%) !important;
+    background: #2456ff !important;
     color: #fff !important;
-    border: 2px solid #241d19 !important;
-    box-shadow: 2px 2px 0 #241d19 !important;
-    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.3);
+    border: none !important;
+    border-radius: 999px !important;
+    padding: 7px 16px !important;
+    font-weight: 600 !important;
+    box-shadow: 0 8px 18px -10px rgba(36, 86, 255, .55) !important;
+    text-shadow: none;
+    transition: background .12s, transform .12s !important;
 }
 
 .site-navbar .navbar-nav .nav-link.site-register-link:hover,
 .site-navbar .navbar-nav .nav-link.site-register-link:focus {
-    background: linear-gradient(180deg, #d65a4a 0%, #c63c2e 100%) !important;
+    background: #1f4be0 !important;
     color: #fff !important;
-    transform: translate(1px, 1px);
-    box-shadow: 1px 1px 0 #241d19 !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 10px 22px -10px rgba(36, 86, 255, .65) !important;
 }
 
 @media (max-width: 767.98px) {
@@ -5537,3 +5541,62 @@ h1, .h1 { font-weight: 800; }
 /* Misc legacy text colour cleanup */
 .text-muted { color: #5a6175 !important; }
 .bg-light { background: #f1f3f8 !important; }
+
+/* Clean modern look for the "Вход" / login nav link in the header */
+.site-navbar .navbar-nav .nav-link[href*="/Login"],
+.site-navbar .navbar-nav .nav-link[asp-page="/Account/Login"] {
+    border: 1px solid #e5e7ef !important;
+    border-radius: 999px !important;
+    padding: 7px 16px !important;
+    background: #fff !important;
+    color: #0d1424 !important;
+    font-weight: 600 !important;
+    box-shadow: none !important;
+    transition: background .12s, color .12s !important;
+}
+.site-navbar .navbar-nav .nav-link[href*="/Login"]:hover {
+    background: #0d1424 !important;
+    color: #fff !important;
+    border-color: #0d1424 !important;
+}
+
+.site-navbar .navbar-nav { gap: 8px; align-items: center; }
+
+/* ---- Fix event card title clipping & FREE-badge crowding ---- */
+.evt-card__heading {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+}
+.evt-card__title {
+    -webkit-line-clamp: 2;
+    overflow-wrap: anywhere;
+    word-break: normal;
+    hyphens: auto;
+    min-height: 2.5em;
+    width: 100%;
+}
+/* Move the price/FREE pill into its own row, smaller, aligned right */
+.evt-card__price {
+    align-self: flex-start;
+    font-size: 0.7rem;
+    padding: 3px 8px;
+    margin-top: -2px;
+    background: #ecfdf3;
+    border: none;
+    border-radius: 999px;
+    color: #057a55;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+}
+.evt-card__price--free { background: #ecfdf3; color: #057a55; border: none; }
+
+/* Slightly tighter card body so 4-col grids don't get cramped */
+.evt-card__body { padding: 14px 14px 12px; gap: 8px; }
+.evt-card__meta { font-size: 0.82rem; gap: 8px 10px; }
+.evt-card__title { font-size: 0.98rem; line-height: 1.25; }
+
+/* Make the bottom action row not wrap awkwardly on narrow cards */
+.evt-card__actions { flex-wrap: wrap; gap: 4px 6px; }
+.evt-card__cta { padding: 6px 12px; font-size: 0.78rem; }
+.evt-card__action { padding: 4px 6px; font-size: 0.8rem; }

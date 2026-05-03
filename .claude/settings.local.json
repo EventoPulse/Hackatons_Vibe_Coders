@@ -65,7 +65,8 @@
       "Bash(git push *)",
       "Bash(git merge *)",
       "Bash(git commit -m 'Merge social-design \\(keep modern home design, take new functionality\\) *)",
-      "Bash(git commit -m 'Site-wide design refresh + new-user preferences onboarding *)"
+      "Bash(git commit -m 'Site-wide design refresh + new-user preferences onboarding *)",
+      "Bash(git commit -m 'Modernise auth header buttons and fix event card title clipping *)"
     ],
     "additionalDirectories": [
       "\\tmp"
