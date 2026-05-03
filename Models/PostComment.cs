@@ -26,6 +26,18 @@ namespace EventsApp.Models
 
         public ApplicationUser User { get; set; } = null!;
 
+        public AuthorIdentityType AuthorType { get; set; } = AuthorIdentityType.User;
+
+        [ForeignKey(nameof(AuthorOrganizerProfile))]
+        public int? AuthorOrganizerProfileId { get; set; }
+
+        public OrganizerProfile? AuthorOrganizerProfile { get; set; }
+
+        [ForeignKey(nameof(BusinessWorkspace))]
+        public int? BusinessWorkspaceId { get; set; }
+
+        public BusinessWorkspace? BusinessWorkspace { get; set; }
+
         [Required]
         [MinLength(GlobalConstants.Comment.ContentMinLength)]
         [MaxLength(GlobalConstants.Comment.ContentMaxLength)]

@@ -33,6 +33,8 @@ namespace EventsApp.Models
         [Required]
         public DateTime UpdatedAt { get; set; }
 
+        // MVP guardrails live in PlatformPermissionService. Add ConversationStatus/IsBlocked
+        // columns here when message requests, blocking, and moderation reports get storage.
         public ICollection<Message> Messages { get; set; }
     }
 }

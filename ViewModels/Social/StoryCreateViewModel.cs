@@ -15,5 +15,9 @@ namespace EventsApp.ViewModels.Social
 
         [StringLength(GlobalConstants.Social.StoryCaptionMaxLength)]
         public string? Caption { get; set; }
+
+        public string? ActiveWorkspaceName { get; set; }
+
+        public string? ActivePageName { get; set; }
     }
 }

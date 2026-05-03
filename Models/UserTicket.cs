@@ -32,6 +32,10 @@ namespace EventsApp.Models
 
         public Seat? Seat { get; set; }
 
+        [Range(0, double.MaxValue)]
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal PricePaid { get; set; }
+
         [Required]
         [ForeignKey(nameof(Transaction))]
         public Guid TransactionId { get; set; }

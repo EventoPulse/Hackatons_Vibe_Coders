@@ -41,6 +41,9 @@ builder.Services.AddScoped<ISocialFeedService, SocialFeedService>();
 builder.Services.AddScoped<IRecurringEventService, RecurringEventService>();
 builder.Services.AddScoped<ILayoutService, LayoutService>();
 builder.Services.AddScoped<ISeatReservationService, SeatReservationService>();
+builder.Services.AddScoped<IPlatformPermissionService, PlatformPermissionService>();
+builder.Services.AddScoped<IBusinessContextService, BusinessContextService>();
+builder.Services.AddScoped<IActingIdentityService, ActingIdentityService>();
 
 builder.Services.Configure<AiOptions>(builder.Configuration.GetSection(AiOptions.SectionName));
 builder.Services.Configure<SirmaAiOptions>(builder.Configuration.GetSection(SirmaAiOptions.SectionName));

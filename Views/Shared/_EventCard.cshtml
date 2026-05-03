@@ -11,7 +11,8 @@
     var shareUrl = Url.Action("Details", "Events", new { id = Model.Id }, Context.Request.Scheme) ?? string.Empty;
 }
 
-<div class="card h-100 shadow-sm event-card social-event-card" data-event-id="@Model.Id">
+<div class="card h-100 shadow-sm event-card social-event-card event-card-modern" data-event-id="@Model.Id">
+    <div class="event-card-modern__media">
     @if (!string.IsNullOrWhiteSpace(Model.ImageUrl))
     {
         <img src="@Model.ImageUrl" class="card-img-top card-img-top-fixed" alt="@Model.Title" />
@@ -22,9 +23,17 @@
             <i class="bi bi-calendar-event" style="font-size: 2rem;"></i>
         </div>
     }
+        <div class="event-card-modern__date">
+            <strong>@Model.StartTime.ToString("dd")</strong>
+            <span>@Model.StartTime.ToString("MMM")</span>
+        </div>
+        <div class="event-card-modern__badges">
+            <span class="badge event-genre-badge" data-i18n="genre.@Model.Genre">@Model.Genre.GetDisplayName()</span>
+            <span class="badge event-city-badge"><i class="bi bi-geo-alt"></i> @Model.City</span>
+        </div>
+    </div>
     <div class="card-body d-flex flex-column">
         <div class="mb-2">
-            <span class="badge bg-secondary event-genre-badge" data-i18n="genre.@Model.Genre">@Model.Genre.GetDisplayName()</span>
             @if (!Model.IsApproved)
             {
                 <span class="badge bg-warning text-dark event-genre-badge" data-i18n="event.status.pending">Pending</span>
@@ -32,8 +41,8 @@
         </div>
 
         <h5 class="card-title">@Model.Title</h5>
-        <a asp-controller="Profiles" asp-action="Details" asp-route-id="@Model.OrganizerId" class="small text-muted text-decoration-none mb-2">
-            <i class="bi bi-person-badge"></i> @Model.OrganizerName
+        <a asp-controller="Profiles" asp-action="Details" asp-route-id="@Model.OrganizerId" class="event-card-modern__organizer">
+            <span><i class="bi bi-person-badge"></i></span> @Model.OrganizerName
         </a>
         <p class="card-text text-muted mb-1">
             <i class="bi bi-geo-alt"></i> @Model.Address, @Model.City
@@ -105,7 +114,7 @@
             }
 
             <div class="social-card-actions__manage">
-                <a asp-controller="Events" asp-action="Details" asp-route-id="@Model.Id" class="btn btn-sm btn-outline-primary" data-i18n="event.action.details">Details</a>
+                <a asp-controller="Events" asp-action="Details" asp-route-id="@Model.Id" class="btn btn-sm btn-primary" data-i18n="event.action.details">View</a>
                 @if (canManage)
                 {
                     <a asp-controller="Events" asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-sm btn-outline-secondary" title="Edit">

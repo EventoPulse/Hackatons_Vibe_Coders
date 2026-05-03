@@ -36,6 +36,10 @@ namespace EventsApp.Models
 
         public OrganizerProfile? OrganizerProfile { get; set; }
 
+        public int? BusinessWorkspaceId { get; set; }
+
+        public BusinessWorkspace? BusinessWorkspace { get; set; }
+
         [Required]
         [MinLength(GlobalConstants.Event.TitleMinLength)]
         [MaxLength(GlobalConstants.Event.TitleMaxLength)]

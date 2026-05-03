@@ -70,6 +70,10 @@ namespace EventsApp.ViewModels.Events
 
         public IEnumerable<SelectListItem> OrganizerProfiles { get; set; } = Array.Empty<SelectListItem>();
 
+        public string? ActiveWorkspaceName { get; set; }
+
+        public string? ActivePageName { get; set; }
+
         [Display(Name = "График на събитието")]
         public EventRecurrenceType RecurrenceType { get; set; } = EventRecurrenceType.None;
 

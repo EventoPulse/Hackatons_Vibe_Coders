@@ -12,5 +12,13 @@ namespace EventsApp.ViewModels.Events
         public IReadOnlyList<EventCardViewModel> Events { get; set; } = Array.Empty<EventCardViewModel>();
         public IReadOnlyList<EventMapMarkerViewModel> MapMarkers { get; set; } = Array.Empty<EventMapMarkerViewModel>();
         public IReadOnlyList<string> Cities { get; set; } = Array.Empty<string>();
+        public IReadOnlyList<EventCardViewModel> TonightEvents { get; set; } = Array.Empty<EventCardViewModel>();
+        public IReadOnlyList<EventCardViewModel> WeekendEvents { get; set; } = Array.Empty<EventCardViewModel>();
+        public IReadOnlyList<EventCardViewModel> TrendingEvents { get; set; } = Array.Empty<EventCardViewModel>();
+        public IReadOnlyList<EventCardViewModel> RecentlyViewedEvents { get; set; } = Array.Empty<EventCardViewModel>();
+        public IReadOnlyList<PopularOrganizerViewModel> PopularOrganizers { get; set; } = Array.Empty<PopularOrganizerViewModel>();
+        public IReadOnlyList<PopularCityViewModel> PopularCities { get; set; } = Array.Empty<PopularCityViewModel>();
+        public string? PreferredCity { get; set; }
+        public bool IsAuthenticated { get; set; }
     }
 }

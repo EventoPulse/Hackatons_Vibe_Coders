@@ -18,7 +18,7 @@ namespace EventsApp.Services.Geocoding
                 _http.BaseAddress = new Uri("https://nominatim.openstreetmap.org/");
             }
             _http.DefaultRequestHeaders.UserAgent.Clear();
-            _http.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("GrooveOn", "1.0"));
+            _http.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("Evento", "1.0"));
             _http.DefaultRequestHeaders.AcceptLanguage.Clear();
             _http.DefaultRequestHeaders.AcceptLanguage.Add(new StringWithQualityHeaderValue("bg"));
             _http.Timeout = TimeSpan.FromSeconds(8);

@@ -25,6 +25,9 @@ namespace EventsApp.Controllers
         private readonly ISocialFeedService _socialFeed;
         private readonly IRecurringEventService _recurringEvents;
         private readonly ILayoutService _layouts;
+        private readonly IPlatformPermissionService _permissions;
+        private readonly IBusinessContextService _businessContext;
+        private readonly IActingIdentityService _actingIdentity;
 
         public EventsController(
             ApplicationDbContext db,
@@ -34,7 +37,10 @@ namespace EventsApp.Controllers
             IGeocodingService geocoder,
             ISocialFeedService socialFeed,
             IRecurringEventService recurringEvents,
-            ILayoutService layouts)
+            ILayoutService layouts,
+            IPlatformPermissionService permissions,
+            IBusinessContextService businessContext,
+            IActingIdentityService actingIdentity)
         {
             _db = db;
             _userManager = userManager;
@@ -44,6 +50,9 @@ namespace EventsApp.Controllers
             _socialFeed = socialFeed;
             _recurringEvents = recurringEvents;
             _layouts = layouts;
+            _permissions = permissions;
+            _businessContext = businessContext;
+            _actingIdentity = actingIdentity;
         }
 
         public class GenerateDescriptionRequest
@@ -113,6 +122,8 @@ namespace EventsApp.Controllers
                 .Include(e => e.Tickets)
                 .Include(e => e.Comments)
                     .ThenInclude(c => c.User)
+                .Include(e => e.Comments)
+                    .ThenInclude(c => c.AuthorOrganizerProfile)
                 .FirstOrDefaultAsync(e => e.Id == id);
 
             if (ev == null)
@@ -162,6 +173,8 @@ namespace EventsApp.Controllers
                 InterestedCount = ev.Attendances.Count(a => a.Status == EventAttendanceStatus.Interested),
                 CurrentUserLiked = userId != null && ev.Likes.Any(l => l.UserId == userId),
                 CurrentUserSaved = userId != null && ev.Saves.Any(s => s.UserId == userId),
+                CurrentUserPinned = userId != null && await _db.Users.AnyAsync(u => u.Id == userId && u.PinnedEventId == ev.Id),
+                CurrentUserSharedToProfile = userId != null && await _db.UserProfileSharedEvents.AnyAsync(s => s.UserId == userId && s.EventId == ev.Id),
                 CurrentUserAttendanceStatus = userId == null
                     ? null
                     : ev.Attendances
@@ -174,7 +187,12 @@ namespace EventsApp.Controllers
                     {
                         Id = c.Id,
                         UserId = c.UserId,
-                        UserName = c.User.UserName ?? string.Empty,
+                        UserName = GetCommentDisplayName(c),
+                        AuthorImageUrl = c.AuthorType == AuthorIdentityType.OrganizerPage ? c.AuthorOrganizerProfile?.AvatarImageUrl : c.User.ProfileImageUrl,
+                        AuthorBadgeKey = GetAuthorBadgeKey(c.AuthorType),
+                        AuthorBadgeText = GetAuthorBadgeText(c.AuthorType, c.UserId == userId),
+                        AuthorProfileUserId = c.AuthorType == AuthorIdentityType.OrganizerPage ? null : c.UserId,
+                        IsOrganizerPageAuthor = c.AuthorType == AuthorIdentityType.OrganizerPage,
                         Content = c.Content,
                         CreatedAt = c.CreatedAt,
                         CanDelete = isAdmin || c.UserId == userId,
@@ -203,14 +221,31 @@ namespace EventsApp.Controllers
                 Tickets = ev.Tickets
                     .Where(t => t.IsActive)
                     .OrderBy(t => t.Price)
-                    .Select(t => new EventsApp.ViewModels.Tickets.EventTicketOptionViewModel
+                    .Select(t =>
                     {
-                        Id = t.Id,
-                        Name = t.Name,
-                        Description = t.Description,
-                        Price = t.Price,
-                        QuantityRemaining = t.QuantityRemaining,
-                        IsActive = t.IsActive,
+                        var remaining = t.QuantityRemaining;
+                        if (selectedOccurrence != null)
+                        {
+                            var soldForOccurrence = selectedOccurrence.UserTickets
+                                .Count(ut => ut.TicketId == t.Id && ut.Transaction.Status == GlobalConstants.TransactionStatuses.Paid);
+                            var occurrenceCapacity = selectedOccurrence.CapacityOverride ?? t.QuantityTotal;
+                            remaining = Math.Max(0, occurrenceCapacity - soldForOccurrence);
+                        }
+
+                        var maxPurchaseQuantity = ev.VenueLayoutId.HasValue && ev.TicketingMode != EventTicketingMode.GeneralAdmission
+                            ? Math.Min(remaining, 1)
+                            : Math.Min(remaining, 10);
+
+                        return new EventsApp.ViewModels.Tickets.EventTicketOptionViewModel
+                        {
+                            Id = t.Id,
+                            Name = t.Name,
+                            Description = t.Description,
+                            Price = t.Price,
+                            QuantityRemaining = remaining,
+                            MaxPurchaseQuantity = maxPurchaseQuantity,
+                            IsActive = t.IsActive,
+                        };
                     })
                     .ToList(),
             };
@@ -218,6 +253,11 @@ namespace EventsApp.Controllers
             if (vm.HasSeatLayout && ev.VenueLayoutId.HasValue)
             {
                 vm.SeatMap = await BuildSeatMapAsync(ev.VenueLayoutId.Value, ev.Id, selectedOccurrence?.Id);
+            }
+
+            if (User.Identity?.IsAuthenticated == true)
+            {
+                vm.ActingIdentities = await _actingIdentity.GetOptionsAsync(HttpContext, ev.OrganizerProfileId);
             }
 
             if (userId != null)
@@ -251,6 +291,7 @@ namespace EventsApp.Controllers
                 RecurrenceEndTime = TimeSpan.FromHours(22),
                 VenueLayouts = await GetVenueLayoutOptionsAsync(),
             };
+            await PopulateBusinessContextAsync(vm);
             return View(vm);
         }
 
@@ -269,7 +310,9 @@ namespace EventsApp.Controllers
                 return profileGate;
             }
 
-            var profile = await ResolveOrganizerProfileAsync(input.OrganizerProfileId);
+            var profile = isAdmin && input.OrganizerProfileId.HasValue
+                ? await _db.OrganizerProfiles.FirstOrDefaultAsync(p => p.Id == input.OrganizerProfileId.Value)
+                : await ResolveOrganizerProfileAsync(input.OrganizerProfileId);
             if (!isAdmin && profile == null)
             {
                 ModelState.AddModelError(nameof(input.OrganizerProfileId), "Избери активна публична организаторска страница.");
@@ -291,6 +334,7 @@ namespace EventsApp.Controllers
                 input.CityCoordinatesMap = GetAllBgCitiesMap();
                 input.OrganizerProfiles = await GetOrganizerProfileOptionsAsync();
                 input.VenueLayouts = await GetVenueLayoutOptionsAsync();
+                await PopulateBusinessContextAsync(input);
                 return View(input);
             }
 
@@ -317,6 +361,7 @@ namespace EventsApp.Controllers
                 Address = input.Address,
                 OrganizerId = userId,
                 OrganizerProfileId = isAdmin ? input.OrganizerProfileId : profile!.Id,
+                BusinessWorkspaceId = isAdmin ? profile?.BusinessWorkspaceId : profile!.BusinessWorkspaceId,
                 StartTime = eventStart,
                 EndTime = eventEnd,
                 Genre = input.Genre,
@@ -477,6 +522,7 @@ namespace EventsApp.Controllers
                 OrganizerProfiles = await GetOrganizerProfileOptionsAsync(),
                 VenueLayouts = await GetVenueLayoutOptionsAsync(),
             };
+            await PopulateBusinessContextAsync(vm);
             return View(vm);
         }
 
@@ -501,7 +547,9 @@ namespace EventsApp.Controllers
                 return Forbid();
             }
 
-            var profile = await ResolveOrganizerProfileAsync(input.OrganizerProfileId);
+            var profile = isAdmin && input.OrganizerProfileId.HasValue
+                ? await _db.OrganizerProfiles.FirstOrDefaultAsync(p => p.Id == input.OrganizerProfileId.Value)
+                : await ResolveOrganizerProfileAsync(input.OrganizerProfileId);
             if (!isAdmin && profile == null)
             {
                 ModelState.AddModelError(nameof(input.OrganizerProfileId), "Избери активна публична организаторска страница.");
@@ -520,6 +568,7 @@ namespace EventsApp.Controllers
                 input.CanEditApproval = isAdmin;
                 input.OrganizerProfiles = await GetOrganizerProfileOptionsAsync();
                 input.VenueLayouts = await GetVenueLayoutOptionsAsync();
+                await PopulateBusinessContextAsync(input);
                 return View(input);
             }
 
@@ -544,6 +593,7 @@ namespace EventsApp.Controllers
             ev.Title = input.Title;
             ev.Description = input.Description;
             ev.OrganizerProfileId = isAdmin ? input.OrganizerProfileId : profile!.Id;
+            ev.BusinessWorkspaceId = isAdmin ? profile?.BusinessWorkspaceId : profile!.BusinessWorkspaceId;
             ev.City = input.City;
             ev.Address = input.Address;
             ev.StartTime = eventStart;
@@ -810,8 +860,13 @@ namespace EventsApp.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize]
-        public async Task<IActionResult> AddComment(int id, string content)
+        public async Task<IActionResult> AddComment(int id, string content, string? actingIdentityKey)
         {
+            if (!await _permissions.CanCommentAsync(User))
+            {
+                return Forbid();
+            }
+
             if (string.IsNullOrWhiteSpace(content))
             {
                 TempData["StatusMessage"] = "Коментарът не може да е празен.";
@@ -824,16 +879,26 @@ namespace EventsApp.Controllers
                 content = content[..GlobalConstants.Comment.ContentMaxLength];
             }
 
-            if (!await _db.Events.AnyAsync(e => e.Id == id))
+            var ev = await _db.Events.AsNoTracking().FirstOrDefaultAsync(e => e.Id == id);
+            if (ev == null)
             {
                 return NotFound();
             }
 
             var userId = _userManager.GetUserId(User)!;
+            var identity = await _actingIdentity.ResolveAsync(HttpContext, actingIdentityKey, ev.OrganizerProfileId);
+            if (identity == null || !await _permissions.CanCommentAsIdentityAsync(User, identity.Type, identity.OrganizerProfileId))
+            {
+                return Forbid();
+            }
+
             _db.EventComments.Add(new EventComment
             {
                 EventId = id,
                 UserId = userId,
+                AuthorType = identity.Type,
+                AuthorOrganizerProfileId = identity.OrganizerProfileId,
+                BusinessWorkspaceId = identity.BusinessWorkspaceId,
                 Content = content,
             });
             await _db.SaveChangesAsync();
@@ -1215,10 +1280,17 @@ namespace EventsApp.Controllers
             var userId = _userManager.GetUserId(User);
             if (string.IsNullOrWhiteSpace(userId)) return null;
 
+            var context = await _businessContext.GetContextAsync(HttpContext);
+            if (context.Page != null)
+            {
+                return context.Page.Id;
+            }
+
             return await _db.OrganizerProfiles
                 .AsNoTracking()
                 .Where(p => p.OwnerId == userId && p.IsActive)
-                .OrderByDescending(p => p.IsDefault)
+                .OrderByDescending(p => p.IsDefaultForWorkspace)
+                .ThenByDescending(p => p.IsDefault)
                 .ThenBy(p => p.DisplayName)
                 .Select(p => (int?)p.Id)
                 .FirstOrDefaultAsync();
@@ -1235,10 +1307,58 @@ namespace EventsApp.Controllers
                 return await query.FirstOrDefaultAsync(p => p.Id == profileId.Value);
             }
 
+            var context = await _businessContext.GetContextAsync(HttpContext);
+            if (context.Page != null)
+            {
+                return context.Page;
+            }
+
             return await query
-                .OrderByDescending(p => p.IsDefault)
+                .OrderByDescending(p => p.IsDefaultForWorkspace)
+                .ThenByDescending(p => p.IsDefault)
                 .ThenBy(p => p.DisplayName)
                 .FirstOrDefaultAsync();
+        }
+
+        private async Task PopulateBusinessContextAsync(EventCreateEditViewModel vm)
+        {
+            var context = await _businessContext.GetContextAsync(HttpContext);
+            vm.ActiveWorkspaceName = context.Workspace?.DisplayName;
+            vm.ActivePageName = context.Page?.DisplayName;
+        }
+
+        private static string GetCommentDisplayName(EventComment comment)
+        {
+            return comment.AuthorType == AuthorIdentityType.OrganizerPage && comment.AuthorOrganizerProfile != null
+                ? comment.AuthorOrganizerProfile.DisplayName
+                : comment.User.UserName ?? string.Empty;
+        }
+
+        private static string GetAuthorBadgeKey(AuthorIdentityType type)
+        {
+            return type switch
+            {
+                AuthorIdentityType.OrganizerPage => "identity.page",
+                AuthorIdentityType.Admin => "identity.admin",
+                AuthorIdentityType.System => "identity.system",
+                _ => "identity.user",
+            };
+        }
+
+        private static string GetAuthorBadgeText(AuthorIdentityType type, bool isYou)
+        {
+            if (isYou)
+            {
+                return "You";
+            }
+
+            return type switch
+            {
+                AuthorIdentityType.OrganizerPage => "Organizer Page",
+                AuthorIdentityType.Admin => "Admin",
+                AuthorIdentityType.System => "System",
+                _ => "User",
+            };
         }
     }
 }

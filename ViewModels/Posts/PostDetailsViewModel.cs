@@ -1,3 +1,5 @@
+using EventsApp.ViewModels.Social;
+
 namespace EventsApp.ViewModels.Posts
 {
     public class PostDetailsViewModel
@@ -18,6 +20,7 @@ namespace EventsApp.ViewModels.Posts
         public string? OrganizerImageUrl { get; set; }
         public bool OrganizerIsOrganizer { get; set; }
         public IReadOnlyList<PostCommentViewModel> Comments { get; set; } = Array.Empty<PostCommentViewModel>();
+        public IReadOnlyList<ActingIdentityOptionViewModel> ActingIdentities { get; set; } = Array.Empty<ActingIdentityOptionViewModel>();
         public bool CanEdit { get; set; }
         public bool CanDelete { get; set; }
     }
@@ -27,6 +30,11 @@ namespace EventsApp.ViewModels.Posts
         public int Id { get; set; }
         public string UserId { get; set; } = null!;
         public string UserName { get; set; } = null!;
+        public string? AuthorImageUrl { get; set; }
+        public string AuthorBadgeKey { get; set; } = "identity.user";
+        public string AuthorBadgeText { get; set; } = "User";
+        public string? AuthorProfileUserId { get; set; }
+        public bool IsOrganizerPageAuthor { get; set; }
         public string Content { get; set; } = null!;
         public DateTime CreatedAt { get; set; }
         public bool CanDelete { get; set; }

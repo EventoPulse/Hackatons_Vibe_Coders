@@ -10,7 +10,10 @@ namespace EventsApp.Models
         {
             CreatedAt = DateTime.UtcNow;
             IsActive = true;
+            IsApproved = true;
             Events = new HashSet<Event>();
+            Posts = new HashSet<Post>();
+            Stories = new HashSet<Story>();
         }
 
         [Key]
@@ -21,6 +24,11 @@ namespace EventsApp.Models
         public string OwnerId { get; set; } = null!;
 
         public ApplicationUser Owner { get; set; } = null!;
+
+        [ForeignKey(nameof(BusinessWorkspace))]
+        public int? BusinessWorkspaceId { get; set; }
+
+        public BusinessWorkspace? BusinessWorkspace { get; set; }
 
         [Required]
         [MinLength(GlobalConstants.Organizer.OrganizationNameMinLength)]
@@ -65,11 +73,25 @@ namespace EventsApp.Models
 
         public bool IsDefault { get; set; }
 
+        public bool IsDefaultForWorkspace { get; set; }
+
         public bool IsActive { get; set; }
+
+        public bool IsApproved { get; set; }
+
+        public bool ShowOwnerProfilePublicly { get; set; }
+
+        public bool ShowLegalBusinessNamePublicly { get; set; }
+
+        public BusinessWorkspaceStatus Status { get; set; } = BusinessWorkspaceStatus.Active;
 
         [Required]
         public DateTime CreatedAt { get; set; }
 
         public ICollection<Event> Events { get; set; }
+
+        public ICollection<Post> Posts { get; set; }
+
+        public ICollection<Story> Stories { get; set; }
     }
 }

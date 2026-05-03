@@ -21,6 +21,16 @@ namespace EventsApp.Models
 
         public ApplicationUser Author { get; set; } = null!;
 
+        [ForeignKey(nameof(OrganizerProfile))]
+        public int? OrganizerProfileId { get; set; }
+
+        public OrganizerProfile? OrganizerProfile { get; set; }
+
+        [ForeignKey(nameof(BusinessWorkspace))]
+        public int? BusinessWorkspaceId { get; set; }
+
+        public BusinessWorkspace? BusinessWorkspace { get; set; }
+
         [Required]
         [MaxLength(GlobalConstants.Social.StoryMediaUrlMaxLength)]
         public string MediaUrl { get; set; } = null!;

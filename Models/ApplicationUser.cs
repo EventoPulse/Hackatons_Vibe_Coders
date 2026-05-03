@@ -28,6 +28,8 @@ namespace EventsApp.Models
             this.OrganizerProfiles = new HashSet<OrganizerProfile>();
             this.EventSeries = new HashSet<EventSeries>();
             this.VenueLayouts = new HashSet<VenueLayout>();
+            this.ProfileSharedEvents = new HashSet<UserProfileSharedEvent>();
+            this.BusinessWorkspaces = new HashSet<BusinessWorkspace>();
         }
 
         [Required]
@@ -44,6 +46,20 @@ namespace EventsApp.Models
 
         [MaxLength(GlobalConstants.User.BioMaxLength)]
         public string? Bio { get; set; }
+
+        [MaxLength(GlobalConstants.User.ProfileStatusMaxLength)]
+        public string? ProfileStatusText { get; set; }
+
+        [MaxLength(GlobalConstants.User.ProfileStatusEmojiMaxLength)]
+        public string? ProfileStatusEmoji { get; set; }
+
+        public DateTime? ProfileStatusUpdatedAt { get; set; }
+
+        public ProfileStatusVisibility ProfileStatusVisibility { get; set; } = ProfileStatusVisibility.Public;
+
+        public int? PinnedEventId { get; set; }
+
+        public Event? PinnedEvent { get; set; }
 
         public OrganizerData? OrganizerData { get; set; }
 
@@ -82,5 +98,9 @@ namespace EventsApp.Models
         public ICollection<EventSeries> EventSeries { get; set; }
 
         public ICollection<VenueLayout> VenueLayouts { get; set; }
+
+        public ICollection<UserProfileSharedEvent> ProfileSharedEvents { get; set; }
+
+        public ICollection<BusinessWorkspace> BusinessWorkspaces { get; set; }
     }
 }

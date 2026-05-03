@@ -1,6 +1,7 @@
 using EventsApp.Common;
 using EventsApp.Data;
 using EventsApp.Models;
+using EventsApp.Services;
 using EventsApp.ViewModels.Social;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -14,11 +15,19 @@ namespace EventsApp.Controllers
     {
         private readonly ApplicationDbContext _db;
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly IPlatformPermissionService _permissions;
+        private readonly IActingIdentityService _actingIdentity;
 
-        public MessagesController(ApplicationDbContext db, UserManager<ApplicationUser> userManager)
+        public MessagesController(
+            ApplicationDbContext db,
+            UserManager<ApplicationUser> userManager,
+            IPlatformPermissionService permissions,
+            IActingIdentityService actingIdentity)
         {
             _db = db;
             _userManager = userManager;
+            _permissions = permissions;
+            _actingIdentity = actingIdentity;
         }
 
         public async Task<IActionResult> Index()
@@ -67,6 +76,8 @@ namespace EventsApp.Controllers
                     .ThenInclude(u => u.OrganizerData)
                 .Include(c => c.Messages)
                     .ThenInclude(m => m.Sender)
+                .Include(c => c.Messages)
+                    .ThenInclude(m => m.AuthorOrganizerProfile)
                 .FirstOrDefaultAsync(c => c.Id == id && (c.ParticipantOneId == userId || c.ParticipantTwoId == userId));
 
             if (conversation == null)
@@ -102,13 +113,17 @@ namespace EventsApp.Controllers
                     {
                         Id = m.Id,
                         SenderId = m.SenderId,
-                        SenderName = m.SenderId == userId ? "You" : GetDisplayName(m.Sender),
+                        SenderName = GetMessageDisplayName(m, userId),
+                        SenderImageUrl = m.AuthorType == AuthorIdentityType.OrganizerPage ? m.AuthorOrganizerProfile?.AvatarImageUrl : m.Sender.ProfileImageUrl,
+                        SenderBadgeKey = GetAuthorBadgeKey(m.AuthorType),
+                        SenderBadgeText = GetAuthorBadgeText(m.AuthorType, m.SenderId == userId),
                         Content = m.Content,
                         CreatedAt = m.CreatedAt,
                         SeenAt = m.SeenAt,
                         IsMine = m.SenderId == userId,
                     })
                     .ToList(),
+                ActingIdentities = await _actingIdentity.GetOptionsAsync(HttpContext, null),
             };
 
             return View(vm);
@@ -127,6 +142,12 @@ namespace EventsApp.Controllers
             if (!await _db.Users.AnyAsync(u => u.Id == userId))
             {
                 return NotFound();
+            }
+
+            if (!await _permissions.CanMessageUserAsync(User, userId))
+            {
+                TempData["StatusMessage"] = "Messaging is limited to organizer questions, organizer replies, or mutual follows.";
+                return Forbid();
             }
 
             var (one, two) = SortParticipants(currentUserId, userId);
@@ -149,7 +170,7 @@ namespace EventsApp.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Send(int id, string content)
+        public async Task<IActionResult> Send(int id, string content, string? actingIdentityKey)
         {
             var userId = _userManager.GetUserId(User)!;
             var conversation = await _db.Conversations
@@ -158,6 +179,16 @@ namespace EventsApp.Controllers
             if (conversation == null)
             {
                 return NotFound();
+            }
+
+            var otherUserId = conversation.ParticipantOneId == userId
+                ? conversation.ParticipantTwoId
+                : conversation.ParticipantOneId;
+
+            if (!await _permissions.CanMessageUserAsync(User, otherUserId))
+            {
+                TempData["StatusMessage"] = "Messaging is limited to organizer questions, organizer replies, or mutual follows.";
+                return Forbid();
             }
 
             if (string.IsNullOrWhiteSpace(content))
@@ -173,10 +204,19 @@ namespace EventsApp.Controllers
             }
 
             var now = DateTime.UtcNow;
+            var identity = await _actingIdentity.ResolveAsync(HttpContext, actingIdentityKey, null, includePersonal: !User.IsInRole(GlobalConstants.Roles.Organizer));
+            if (identity == null || !await _permissions.CanMessageAsIdentityAsync(User, id, identity.Type, identity.OrganizerProfileId))
+            {
+                return Forbid();
+            }
+
             _db.Messages.Add(new Message
             {
                 ConversationId = id,
                 SenderId = userId,
+                AuthorType = identity.Type,
+                AuthorOrganizerProfileId = identity.OrganizerProfileId,
+                BusinessWorkspaceId = identity.BusinessWorkspaceId,
                 Content = content,
                 CreatedAt = now,
             });
@@ -201,6 +241,43 @@ namespace EventsApp.Controllers
 
             var name = string.Join(" ", new[] { user.FirstName, user.LastName }.Where(v => !string.IsNullOrWhiteSpace(v)));
             return string.IsNullOrWhiteSpace(name) ? user.UserName ?? string.Empty : name;
+        }
+
+        private static string GetMessageDisplayName(Message message, string currentUserId)
+        {
+            if (message.AuthorType == AuthorIdentityType.OrganizerPage && message.AuthorOrganizerProfile != null)
+            {
+                return message.AuthorOrganizerProfile.DisplayName;
+            }
+
+            return message.SenderId == currentUserId ? "You" : GetDisplayName(message.Sender);
+        }
+
+        private static string GetAuthorBadgeKey(AuthorIdentityType type)
+        {
+            return type switch
+            {
+                AuthorIdentityType.OrganizerPage => "identity.page",
+                AuthorIdentityType.Admin => "identity.admin",
+                AuthorIdentityType.System => "identity.system",
+                _ => "identity.user",
+            };
+        }
+
+        private static string GetAuthorBadgeText(AuthorIdentityType type, bool isYou)
+        {
+            if (isYou)
+            {
+                return "You";
+            }
+
+            return type switch
+            {
+                AuthorIdentityType.OrganizerPage => "Organizer Page",
+                AuthorIdentityType.Admin => "Admin",
+                AuthorIdentityType.System => "System",
+                _ => "User",
+            };
         }
     }
 }

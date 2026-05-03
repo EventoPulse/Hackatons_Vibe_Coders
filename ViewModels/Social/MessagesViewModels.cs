@@ -21,6 +21,9 @@ namespace EventsApp.ViewModels.Social
         public int Id { get; set; }
         public string SenderId { get; set; } = null!;
         public string SenderName { get; set; } = null!;
+        public string? SenderImageUrl { get; set; }
+        public string SenderBadgeKey { get; set; } = "identity.user";
+        public string SenderBadgeText { get; set; } = "User";
         public string Content { get; set; } = null!;
         public DateTime CreatedAt { get; set; }
         public DateTime? SeenAt { get; set; }
@@ -34,5 +37,6 @@ namespace EventsApp.ViewModels.Social
         public string OtherUserName { get; set; } = null!;
         public string? OtherUserImageUrl { get; set; }
         public IReadOnlyList<MessageBubbleViewModel> Messages { get; set; } = Array.Empty<MessageBubbleViewModel>();
+        public IReadOnlyList<ActingIdentityOptionViewModel> ActingIdentities { get; set; } = Array.Empty<ActingIdentityOptionViewModel>();
     }
 }

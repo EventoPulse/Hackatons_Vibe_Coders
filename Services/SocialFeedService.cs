@@ -127,6 +127,9 @@ namespace EventsApp.Services
             var friendPostsQuery = _db.Posts
                 .AsNoTracking()
                 .Where(p => followedIds.Contains(p.OrganizerId))
+                .Where(p => p.EventId != null
+                    || (p.OrganizerProfile != null && p.OrganizerProfile.IsActive && p.OrganizerProfile.IsApproved)
+                    || (p.Organizer.OrganizerData != null && p.Organizer.OrganizerData.Approved))
                 .OrderByDescending(p => p.CreatedAt)
                 .Take(8);
 
@@ -136,7 +139,9 @@ namespace EventsApp.Services
 
             var organizerPosts = await QueryPostCards(_db.Posts
                     .AsNoTracking()
-                    .Where(p => p.Organizer.OrganizerData != null && p.Organizer.OrganizerData.Approved)
+                    .Where(p => p.EventId != null
+                        || (p.OrganizerProfile != null && p.OrganizerProfile.IsActive && p.OrganizerProfile.IsApproved)
+                        || (p.Organizer.OrganizerData != null && p.Organizer.OrganizerData.Approved))
                     .OrderByDescending(p => p.CreatedAt)
                     .Take(12),
                 userId,
@@ -145,6 +150,8 @@ namespace EventsApp.Services
             var stories = await _db.Stories
                 .AsNoTracking()
                 .Where(s => s.ExpiresAt > now)
+                .Where(s => (s.OrganizerProfile != null && s.OrganizerProfile.IsActive && s.OrganizerProfile.IsApproved)
+                    || (s.Author.OrganizerData != null && s.Author.OrganizerData.Approved))
                 .OrderByDescending(s => followedIds.Contains(s.AuthorId))
                 .ThenByDescending(s => s.CreatedAt)
                 .Take(18)
@@ -152,10 +159,14 @@ namespace EventsApp.Services
                 {
                     Id = s.Id,
                     AuthorId = s.AuthorId,
-                    AuthorName = s.Author.OrganizerData != null && s.Author.OrganizerData.Approved
+                    AuthorName = s.OrganizerProfile != null
+                        ? s.OrganizerProfile.DisplayName
+                        : s.Author.OrganizerData != null && s.Author.OrganizerData.Approved
                         ? s.Author.OrganizerData.OrganizationName
                         : s.Author.UserName ?? string.Empty,
-                    AuthorImageUrl = s.Author.ProfileImageUrl,
+                    AuthorImageUrl = s.OrganizerProfile != null && !string.IsNullOrWhiteSpace(s.OrganizerProfile.AvatarImageUrl)
+                        ? s.OrganizerProfile.AvatarImageUrl
+                        : s.Author.ProfileImageUrl,
                     MediaUrl = s.MediaUrl,
                     MediaType = s.MediaType,
                     Caption = s.Caption,
@@ -236,7 +247,9 @@ namespace EventsApp.Services
                     Genre = e.Genre,
                     IsApproved = e.IsApproved,
                     OrganizerId = e.OrganizerId,
-                    OrganizerName = e.Organizer.OrganizerData != null && e.Organizer.OrganizerData.Approved
+                    OrganizerName = e.OrganizerProfile != null
+                        ? e.OrganizerProfile.DisplayName
+                        : e.Organizer.OrganizerData != null && e.Organizer.OrganizerData.Approved
                         ? e.Organizer.OrganizerData.OrganizationName
                         : e.Organizer.UserName ?? string.Empty,
                     LikesCount = e.Likes.Count,
@@ -265,11 +278,16 @@ namespace EventsApp.Services
                 {
                     Id = p.Id,
                     OrganizerId = p.OrganizerId,
-                    OrganizerName = p.Organizer.OrganizerData != null && p.Organizer.OrganizerData.Approved
+                    OrganizerName = p.OrganizerProfile != null
+                        ? p.OrganizerProfile.DisplayName
+                        : p.Organizer.OrganizerData != null && p.Organizer.OrganizerData.Approved
                         ? p.Organizer.OrganizerData.OrganizationName
                         : p.Organizer.UserName ?? string.Empty,
-                    AuthorImageUrl = p.Organizer.ProfileImageUrl,
-                    AuthorIsOrganizer = p.Organizer.OrganizerData != null && p.Organizer.OrganizerData.Approved,
+                    AuthorImageUrl = p.OrganizerProfile != null && !string.IsNullOrWhiteSpace(p.OrganizerProfile.AvatarImageUrl)
+                        ? p.OrganizerProfile.AvatarImageUrl
+                        : p.Organizer.ProfileImageUrl,
+                    AuthorIsOrganizer = (p.OrganizerProfile != null && p.OrganizerProfile.IsActive && p.OrganizerProfile.IsApproved)
+                        || (p.Organizer.OrganizerData != null && p.Organizer.OrganizerData.Approved),
                     Content = p.Content,
                     CreatedAt = p.CreatedAt,
                     EventId = p.EventId,

@@ -27,6 +27,14 @@
             @foreach (var message in Model.Messages)
             {
                 <article class="social-message-bubble @(message.IsMine ? "is-mine" : "")">
+                    <div class="d-flex align-items-center gap-2 mb-1">
+                        @if (!string.IsNullOrWhiteSpace(message.SenderImageUrl))
+                        {
+                            <img src="@message.SenderImageUrl" alt="@message.SenderName" class="social-avatar-xs" />
+                        }
+                        <strong class="small">@message.SenderName</strong>
+                        <span class="groove-badge" data-i18n="@message.SenderBadgeKey">@message.SenderBadgeText</span>
+                    </div>
                     <p>@message.Content</p>
                     <small>
                         @message.CreatedAt.ToString("dd.MM.yyyy HH:mm")
@@ -41,6 +49,27 @@
 
         <form asp-action="Send" asp-route-id="@Model.Id" method="post" class="social-chat-compose">
             @Html.AntiForgeryToken()
+            @if (Model.ActingIdentities.Count > 1)
+            {
+                <select name="actingIdentityKey" class="form-select form-select-sm" aria-label="Replying as">
+                    @foreach (var identity in Model.ActingIdentities)
+                    {
+                        if (identity.IsDefault)
+                        {
+                            <option value="@identity.Key" selected>@identity.Label</option>
+                        }
+                        else
+                        {
+                            <option value="@identity.Key">@identity.Label</option>
+                        }
+                    }
+                </select>
+            }
+            else if (Model.ActingIdentities.Count == 1)
+            {
+                <input type="hidden" name="actingIdentityKey" value="@Model.ActingIdentities[0].Key" />
+                <span class="small text-muted"><span data-i18n="identity.replying.as">Отговаряш като</span>: @Model.ActingIdentities[0].DisplayName</span>
+            }
             <input type="text" name="content" maxlength="2000" placeholder="Напиши съобщение..." data-i18n-placeholder="messages.placeholder" required />
             <button type="submit" class="groove-button groove-button-dark">
                 <i class="bi bi-send"></i> <span data-i18n="common.send">Изпрати</span>

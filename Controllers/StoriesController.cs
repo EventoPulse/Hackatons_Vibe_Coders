@@ -17,21 +17,44 @@ namespace EventsApp.Controllers
         private readonly ApplicationDbContext _db;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly IMediaUploadService _mediaUpload;
+        private readonly IPlatformPermissionService _permissions;
+        private readonly IBusinessContextService _businessContext;
 
         public StoriesController(
             ApplicationDbContext db,
             UserManager<ApplicationUser> userManager,
-            IMediaUploadService mediaUpload)
+            IMediaUploadService mediaUpload,
+            IPlatformPermissionService permissions,
+            IBusinessContextService businessContext)
         {
             _db = db;
             _userManager = userManager;
             _mediaUpload = mediaUpload;
+            _permissions = permissions;
+            _businessContext = businessContext;
         }
 
         [HttpGet]
-        public IActionResult Create()
+        public async Task<IActionResult> Create()
         {
-            return View(new StoryCreateViewModel());
+            if (!await _permissions.CanCreateStoryAsync(User))
+            {
+                TempData["StatusMessage"] = "Only approved organizers can publish stories.";
+                return Forbid();
+            }
+
+            var context = await _businessContext.GetContextAsync(HttpContext);
+            if (context.Page == null || context.Workspace == null)
+            {
+                TempData["StatusMessage"] = "Избери активна organizer page преди да публикуваш story.";
+                return RedirectToAction("Dashboard", "Organizer");
+            }
+
+            return View(new StoryCreateViewModel
+            {
+                ActiveWorkspaceName = context.Workspace.DisplayName,
+                ActivePageName = context.Page.DisplayName,
+            });
         }
 
         [HttpPost]
@@ -39,6 +62,22 @@ namespace EventsApp.Controllers
         [RequestSizeLimit(UploadSizeLimit)]
         public async Task<IActionResult> Create(StoryCreateViewModel input, string? returnUrl)
         {
+            if (!await _permissions.CanCreateStoryAsync(User))
+            {
+                TempData["StatusMessage"] = "Only approved organizers can publish stories.";
+                return Forbid();
+            }
+
+            var context = await _businessContext.GetContextAsync(HttpContext);
+            if (context.Page == null || context.Workspace == null)
+            {
+                ModelState.AddModelError(string.Empty, "Избери активна organizer page преди да публикуваш story.");
+            }
+            else if (!await _permissions.CanPublishAsIdentityAsync(User, AuthorIdentityType.OrganizerPage, context.Page.Id))
+            {
+                return Forbid();
+            }
+
             MediaUploadResult? media = null;
 
             if (input.MediaFile != null && input.MediaFile.Length > 0)
@@ -59,6 +98,8 @@ namespace EventsApp.Controllers
 
             if (!ModelState.IsValid || media == null)
             {
+                input.ActiveWorkspaceName = context.Workspace?.DisplayName;
+                input.ActivePageName = context.Page?.DisplayName;
                 return View(input);
             }
 
@@ -66,6 +107,8 @@ namespace EventsApp.Controllers
             _db.Stories.Add(new Story
             {
                 AuthorId = _userManager.GetUserId(User)!,
+                OrganizerProfileId = context.Page!.Id,
+                BusinessWorkspaceId = context.Workspace!.Id,
                 MediaUrl = media.Url,
                 MediaType = media.MediaType,
                 Caption = string.IsNullOrWhiteSpace(input.Caption) ? null : input.Caption.Trim(),

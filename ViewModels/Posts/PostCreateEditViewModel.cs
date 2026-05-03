@@ -23,6 +23,10 @@ namespace EventsApp.ViewModels.Posts
 
         public string? CurrentMediaUrl { get; set; }
 
+        public string? ActiveWorkspaceName { get; set; }
+
+        public string? ActivePageName { get; set; }
+
         public IEnumerable<SelectListItem> Events { get; set; } = Array.Empty<SelectListItem>();
     }
 }

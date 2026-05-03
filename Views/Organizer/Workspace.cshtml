@@ -1,0 +1,117 @@
+@model BusinessWorkspace
+@{
+    ViewData["Title"] = Model.Id == 0 ? "New workspace" : "Edit workspace";
+}
+
+<section class="groove-app-page groove-form-shell">
+    <div class="groove-page-hero">
+        <div class="groove-page-hero__copy">
+            <span class="groove-stamp groove-stamp-yellow" data-i18n="workspace.title">Business workspace</span>
+            <h1><span data-i18n="workspace.form.h1">Workspace details</span>.</h1>
+            <p data-i18n="workspace.form.desc">Store legal identity and safe payment status only. Do not enter bank card or bank account details here.</p>
+        </div>
+        <div class="groove-page-actions">
+            <a asp-action="Workspaces" class="groove-button groove-button-paper">
+                <i class="bi bi-arrow-left"></i> <span data-i18n="workspace.all">All workspaces</span>
+            </a>
+        </div>
+    </div>
+
+    <div class="groove-form-panel">
+        <form asp-action="Workspace" asp-route-id="@(Model.Id == 0 ? null : Model.Id)" method="post">
+            @Html.AntiForgeryToken()
+            <input asp-for="Id" type="hidden" />
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+            <div class="groove-form-grid">
+                <div class="mb-3">
+                    <label for="DisplayName" class="form-label" data-i18n="workspace.display.name">Display name</label>
+                    <input asp-for="DisplayName" class="form-control" />
+                    <span asp-validation-for="DisplayName" class="text-danger small"></span>
+                </div>
+                <div class="mb-3">
+                    <label for="LegalName" class="form-label" data-i18n="workspace.legal.name">Legal name</label>
+                    <input asp-for="LegalName" class="form-control" />
+                    <span asp-validation-for="LegalName" class="text-danger small"></span>
+                </div>
+            </div>
+
+            <div class="groove-form-grid">
+                <div class="mb-3">
+                    <label for="CompanyNumber" class="form-label" data-i18n="workspace.company.number">Company number</label>
+                    <input asp-for="CompanyNumber" class="form-control" />
+                </div>
+                <div class="mb-3">
+                    <label for="BillingEmail" class="form-label" data-i18n="workspace.billing.email">Billing email</label>
+                    <input asp-for="BillingEmail" class="form-control" />
+                </div>
+            </div>
+
+            <div class="groove-form-grid groove-form-grid-3">
+                <div class="mb-3">
+                    <label for="PhoneNumber" class="form-label" data-i18n="workspace.phone.number">Phone number</label>
+                    <input asp-for="PhoneNumber" class="form-control" />
+                </div>
+                <div class="mb-3">
+                    <label for="City" class="form-label" data-i18n="workspace.city">City</label>
+                    <input asp-for="City" class="form-control" />
+                </div>
+                <div class="mb-3">
+                    <label for="Country" class="form-label" data-i18n="workspace.country">Country</label>
+                    <input asp-for="Country" class="form-control" />
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label for="Address" class="form-label" data-i18n="workspace.address">Address</label>
+                <input asp-for="Address" class="form-control" />
+            </div>
+
+            <div class="groove-form-grid groove-form-grid-3">
+                <div class="mb-3">
+                    <label for="PaymentProvider" class="form-label" data-i18n="workspace.payment.provider">Payment provider</label>
+                    <select asp-for="PaymentProvider" asp-items="Html.GetEnumSelectList<PaymentProvider>()" class="form-select"></select>
+                </div>
+                <div class="mb-3">
+                    <label for="StripeConnectedAccountId" class="form-label" data-i18n="workspace.stripe.account">Stripe account ID</label>
+                    <input asp-for="StripeConnectedAccountId" class="form-control" />
+                </div>
+                <div class="mb-3">
+                    <label for="StripeOnboardingStatus" class="form-label" data-i18n="workspace.stripe.status">Stripe onboarding status</label>
+                    <select asp-for="StripeOnboardingStatus" asp-items="Html.GetEnumSelectList<StripeOnboardingStatus>()" class="form-select"></select>
+                </div>
+            </div>
+
+            <div class="groove-form-grid">
+                <label class="form-check">
+                    <input asp-for="IsDefault" class="form-check-input" />
+                    <span class="form-check-label" data-i18n="workspace.default">Default</span>
+                </label>
+                <label class="form-check">
+                    <input asp-for="ChargesEnabled" class="form-check-input" />
+                    <span class="form-check-label" data-i18n="workspace.charges">Charges enabled</span>
+                </label>
+                <label class="form-check">
+                    <input asp-for="PayoutsEnabled" class="form-check-input" />
+                    <span class="form-check-label" data-i18n="workspace.payouts">Payouts enabled</span>
+                </label>
+            </div>
+
+            <div class="groove-note my-3">
+                <strong data-i18n="workspace.safety">Payment safety</strong>
+                <span data-i18n="workspace.safety.desc">Only Stripe account id and status flags are stored here. Sensitive banking details stay outside Evento.</span>
+            </div>
+
+            <div class="groove-form-actions">
+                <button type="submit" class="groove-button groove-button-dark">
+                    <i class="bi bi-check-lg"></i> <span data-i18n="workspace.save">Save workspace</span>
+                </button>
+                <a asp-action="Workspaces" class="groove-button groove-button-paper" data-i18n="common.cancel">Cancel</a>
+            </div>
+        </form>
+    </div>
+</section>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

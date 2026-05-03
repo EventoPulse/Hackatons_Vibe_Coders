@@ -27,11 +27,13 @@
     };
     var dataJson = JsonSerializer.Serialize(dataPayload, mapJsonOptions);
     var visibleCityCount = Model.MapMarkers.Select(p => p.City).Distinct().Count();
-    var trendingEvents = Model.Events
-        .OrderByDescending(e => e.GoingCount * 2 + e.InterestedCount + e.LikesCount + e.CommentsCount + e.SavesCount)
-        .ThenBy(e => e.StartTime)
-        .Take(4)
-        .ToList();
+    var trendingEvents = Model.TrendingEvents.Count > 0
+        ? Model.TrendingEvents.Take(4).ToList()
+        : Model.Events
+            .OrderByDescending(e => e.GoingCount * 2 + e.InterestedCount + e.LikesCount + e.CommentsCount + e.SavesCount)
+            .ThenBy(e => e.StartTime)
+            .Take(4)
+            .ToList();
 }
 
 @section Scripts {
@@ -95,6 +97,21 @@
                     <a asp-controller="Events" asp-action="Recommended" class="groove-button groove-button-paper" data-i18n="nav.recommended">Препоръчани</a>
                 }
             </div>
+            <div class="groove-hero__actions">
+                <a href="#event-cards-grid" class="groove-button groove-button-dark" data-i18n="home.discover.events">Открий събития</a>
+                <a asp-controller="Account" asp-action="Apply" class="groove-button groove-button-paper" data-i18n="home.become.organizer">Стани организатор</a>
+            </div>
+            @if (User.Identity?.IsAuthenticated != true)
+            {
+                <div class="groove-note mt-3">
+                    <span data-i18n="home.login.cta">Влез, за да получаваш по-добри препоръки и да запазваш събития.</span>
+                    <a asp-controller="Account" asp-action="Login" class="groove-link" data-i18n="home.login.register">Вход / Регистрация</a>
+                </div>
+            }
+            else if (!string.IsNullOrWhiteSpace(Model.PreferredCity))
+            {
+                <p class="small text-muted mt-3"><span data-i18n="home.personal.city">Показваме ти повече събития около</span> @Model.PreferredCity.</p>
+            }
             <div class="groove-stats">
                 <span><strong>@Model.Events.Count</strong> <span data-i18n="home.stats.nights">записани нощи</span></span>
                 <span><strong>@visibleCityCount</strong> <span data-i18n="home.stats.cities">града</span></span>
@@ -109,6 +126,91 @@
             <img class="groove-cassette" src="@Url.Content("~/img/groove/cassette-doodle.png")" alt="" aria-hidden="true" />
         </div>
     </section>
+
+    <section class="groove-section home-discovery-strip">
+        <div class="groove-section-heading">
+            <div>
+                <span class="groove-stamp groove-stamp-yellow" data-i18n="home.quick.filters">Бързи филтри</span>
+                <h2 data-i18n="home.quick.filters.title">Намери точната вечер по-бързо.</h2>
+            </div>
+        </div>
+        <div class="modern-search-chips">
+            <a asp-action="Index" asp-route-dateFrom="@DateTime.UtcNow.ToString("yyyy-MM-dd")" data-i18n="home.tonight">Тази вечер</a>
+            <a asp-action="Index" asp-route-dateFrom="@DateTime.UtcNow.AddDays(((int)DayOfWeek.Saturday - (int)DateTime.UtcNow.DayOfWeek + 7) % 7).ToString("yyyy-MM-dd")" data-i18n="home.weekend">Този уикенд</a>
+            <a asp-action="Index" asp-route-search="free" data-i18n="home.free">Безплатни</a>
+            <a href="#event-map" data-i18n="home.near.me">Наблизо</a>
+            <a asp-action="Index" asp-route-search="popular" data-i18n="home.popular">Популярни</a>
+            <a asp-action="Index" asp-route-dateFrom="@DateTime.UtcNow.ToString("yyyy-MM-dd")" data-i18n="home.new">Нови</a>
+            <a asp-action="Index" asp-route-genre="@((int)EventGenre.Electronic)">Electronic</a>
+            <a asp-action="Index" asp-route-genre="@((int)EventGenre.HipHop)">Hip-Hop</a>
+            <a asp-action="Index" asp-route-genre="@((int)EventGenre.Jazz)">Live Music</a>
+            <a asp-action="Index" asp-route-genre="@((int)EventGenre.Folk)">Folk</a>
+            <a asp-action="Index" asp-route-genre="@((int)EventGenre.Festival)">Festivals</a>
+        </div>
+    </section>
+
+    <section class="groove-section home-discovery-grid">
+        <div class="home-discovery-panel">
+            <div class="groove-section-heading">
+                <div>
+                    <span class="groove-stamp groove-stamp-teal" data-i18n="home.tonight">Тази вечер</span>
+                    <h2 data-i18n="home.tonight.title">Какво се случва днес.</h2>
+                </div>
+            </div>
+            @if (Model.TonightEvents.Count == 0)
+            {
+                <div class="profile-empty-state"><i class="bi bi-moon-stars"></i><strong data-i18n="home.tonight.empty">Няма събития за тази вечер.</strong><a asp-action="Index" data-i18n="home.all.events">Разгледай всички събития</a></div>
+            }
+            else
+            {
+                <div class="row row-cols-1 row-cols-lg-2 g-3">
+                    @foreach (var ev in Model.TonightEvents.Take(4))
+                    {
+                        <div class="col"><partial name="_EventCard" model="ev" /></div>
+                    }
+                </div>
+            }
+        </div>
+        <div class="home-discovery-panel">
+            <div class="groove-section-heading">
+                <div>
+                    <span class="groove-stamp groove-stamp-red" data-i18n="home.weekend">Този уикенд</span>
+                    <h2 data-i18n="home.weekend.title">План за събота и неделя.</h2>
+                </div>
+            </div>
+            @if (Model.WeekendEvents.Count == 0)
+            {
+                <div class="profile-empty-state"><i class="bi bi-calendar-week"></i><strong data-i18n="home.weekend.empty">Няма събития за този уикенд.</strong><a asp-action="Index" data-i18n="home.all.events">Разгледай всички събития</a></div>
+            }
+            else
+            {
+                <div class="row row-cols-1 row-cols-lg-2 g-3">
+                    @foreach (var ev in Model.WeekendEvents.Take(4))
+                    {
+                        <div class="col"><partial name="_EventCard" model="ev" /></div>
+                    }
+                </div>
+            }
+        </div>
+    </section>
+
+    @if (Model.RecentlyViewedEvents.Count > 0)
+    {
+        <section class="groove-section">
+            <div class="groove-section-heading">
+                <div>
+                    <span class="groove-stamp groove-stamp-teal" data-i18n="home.recently.viewed">Последно разглеждани</span>
+                    <h2 data-i18n="home.continue.exploring">Продължи разглеждането.</h2>
+                </div>
+            </div>
+            <div class="row row-cols-1 row-cols-md-3 g-3">
+                @foreach (var ev in Model.RecentlyViewedEvents.Take(3))
+                {
+                    <div class="col"><partial name="_EventCard" model="ev" /></div>
+                }
+            </div>
+        </section>
+    }
 
     <section id="event-map" class="groove-section groove-map-section home-results-section">
         <div class="home-results-heading">
@@ -188,6 +290,96 @@
                 </article>
             }
         </aside>
+    </section>
+
+    @if (Model.PopularOrganizers.Count > 0)
+    {
+        <section class="groove-section">
+            <div class="groove-section-heading">
+                <div>
+                    <span class="groove-stamp groove-stamp-yellow" data-i18n="home.popular.organizers">Популярни организатори</span>
+                    <h2 data-i18n="home.popular.organizers.title">Официални страници, които движат сцената.</h2>
+                </div>
+            </div>
+            <div class="home-organizer-grid">
+                @foreach (var organizer in Model.PopularOrganizers)
+                {
+                    <article class="home-organizer-card">
+                        @if (!string.IsNullOrWhiteSpace(organizer.AvatarImageUrl))
+                        {
+                            <img src="@organizer.AvatarImageUrl" alt="@organizer.DisplayName" />
+                        }
+                        else
+                        {
+                            <span>@organizer.DisplayName[..1].ToUpperInvariant()</span>
+                        }
+                        <div>
+                            <strong>@organizer.DisplayName</strong>
+                            <small>@organizer.City</small>
+                            @if (!string.IsNullOrWhiteSpace(organizer.Tagline))
+                            {
+                                <p>@organizer.Tagline</p>
+                            }
+                            <a asp-controller="Profiles" asp-action="Details" asp-route-id="@organizer.OwnerId" class="groove-link">
+                                @organizer.UpcomingEventsCount <span data-i18n="home.upcoming.events">предстоящи събития</span>
+                            </a>
+                        </div>
+                    </article>
+                }
+            </div>
+        </section>
+    }
+
+    @if (Model.PopularCities.Count > 0)
+    {
+        <section class="groove-section">
+            <div class="groove-section-heading">
+                <div>
+                    <span class="groove-stamp groove-stamp-teal" data-i18n="home.popular.cities">Популярни градове</span>
+                    <h2 data-i18n="home.popular.cities.title">Избери град и виж какво предстои.</h2>
+                </div>
+            </div>
+            <div class="modern-search-chips">
+                @foreach (var cityItem in Model.PopularCities)
+                {
+                    <a asp-action="Index" asp-route-city="@cityItem.Name">@cityItem.Name · @cityItem.EventsCount</a>
+                }
+            </div>
+        </section>
+    }
+
+    <section class="groove-section home-how-grid">
+        <article class="groove-table-card">
+            <span class="groove-stamp groove-stamp-teal" data-i18n="home.how.title">Как работи</span>
+            <ol class="home-steps">
+                <li><strong data-i18n="home.how.discover">Открий събитие</strong></li>
+                <li><strong data-i18n="home.how.save.buy">Запази или купи билет</strong></li>
+                <li><strong data-i18n="home.how.follow">Последвай организатор и остани в течение</strong></li>
+            </ol>
+            @if (User.Identity?.IsAuthenticated == true)
+            {
+                <a asp-controller="Preferences" asp-action="Index" class="groove-button groove-button-paper" data-i18n="account.preferences">Предпочитания</a>
+            }
+            else
+            {
+                <a asp-controller="Account" asp-action="Login" class="groove-button groove-button-dark" data-i18n="home.login.register">Вход / Регистрация</a>
+            }
+        </article>
+        <article class="groove-table-card">
+            <span class="groove-stamp groove-stamp-red" data-i18n="home.organizer.cta.kicker">Организираш събития?</span>
+            <h2 data-i18n="home.organizer.cta.title">Създай публична страница, публикувай събития и управлявай билети от едно място.</h2>
+            <div class="groove-hero__actions">
+                @if (User.IsInRole(GlobalConstants.Roles.Organizer) || User.IsInRole(GlobalConstants.Roles.Admin))
+                {
+                    <a asp-controller="Organizer" asp-action="Dashboard" class="groove-button groove-button-dark" data-i18n="nav.organizer.panel">Organizer Panel</a>
+                }
+                else
+                {
+                    <a asp-controller="Account" asp-action="Apply" class="groove-button groove-button-dark" data-i18n="home.become.organizer">Стани организатор</a>
+                }
+                <a asp-controller="Posts" asp-action="Index" class="groove-button groove-button-paper" data-i18n="home.openfeed">Виж как работи</a>
+            </div>
+        </article>
     </section>
 
     <section class="groove-section">

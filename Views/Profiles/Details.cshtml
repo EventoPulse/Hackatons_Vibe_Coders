@@ -39,8 +39,16 @@
             <div class="social-profile-stats">
                 <a asp-action="Followers" asp-route-id="@Model.Id"><strong>@Model.FollowersCount</strong><span data-i18n="profile.followers">followers</span></a>
                 <a asp-action="Following" asp-route-id="@Model.Id"><strong>@Model.FollowingCount</strong><span data-i18n="profile.following">following</span></a>
-                <span><strong>@Model.PostsCount</strong><span data-i18n="profile.posts">posts</span></span>
-                <span><strong>@Model.EventsCount</strong><span data-i18n="profile.events">events</span></span>
+                @if (Model.IsOrganizer)
+                {
+                    <span><strong>@Model.PostsCount</strong><span data-i18n="profile.posts">posts</span></span>
+                    <span><strong>@Model.EventsCount</strong><span data-i18n="profile.events">events</span></span>
+                }
+                else
+                {
+                    <span><strong>@Model.GoingEventsCount</strong><span>going</span></span>
+                    <span><strong>@Model.SavedEventsCount</strong><span>saved</span></span>
+                }
             </div>
             <div class="groove-cta-row">
                 @if (User.Identity?.IsAuthenticated == true && !Model.IsCurrentUser)
@@ -64,13 +72,16 @@
                         </form>
                     }
 
-                    <form asp-controller="Messages" asp-action="Start" method="post">
-                        @Html.AntiForgeryToken()
-                        <input type="hidden" name="userId" value="@Model.Id" />
-                        <button class="groove-button groove-button-paper" type="submit">
-                            <i class="bi bi-chat-dots"></i> <span data-i18n="profile.message">Message</span>
-                        </button>
-                    </form>
+                    @if (Model.CanStartConversation)
+                    {
+                        <form asp-controller="Messages" asp-action="Start" method="post">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="userId" value="@Model.Id" />
+                            <button class="groove-button groove-button-paper" type="submit">
+                                <i class="bi bi-chat-dots"></i> <span data-i18n="profile.message">Message</span>
+                            </button>
+                        </form>
+                    }
                 }
                 else if (Model.IsCurrentUser)
                 {
@@ -82,9 +93,82 @@
         </div>
     </article>
 
+    @if (!Model.IsOrganizer)
+    {
+        <section class="profile-live-grid">
+            <article class="profile-live-card profile-live-card--status">
+                <span class="groove-kicker">Status</span>
+                @if (!string.IsNullOrWhiteSpace(Model.ProfileStatusText))
+                {
+                    <p class="profile-status-text">
+                        <span>@(string.IsNullOrWhiteSpace(Model.ProfileStatusEmoji) ? "♪" : Model.ProfileStatusEmoji)</span>
+                        @Model.ProfileStatusText
+                    </p>
+                    @if (Model.ProfileStatusUpdatedAt.HasValue)
+                    {
+                        <small>@Model.ProfileStatusUpdatedAt.Value.ToString("dd.MM HH:mm") · @Model.ProfileStatusVisibility</small>
+                    }
+                }
+                else
+                {
+                    <p class="profile-empty-copy">Set a short vibe for people visiting your profile.</p>
+                }
+
+                @if (Model.CanEditProfileStatus)
+                {
+                    <form asp-action="UpdateStatus" method="post" class="profile-status-form">
+                        @Html.AntiForgeryToken()
+                        <input type="text" name="statusEmoji" maxlength="16" placeholder="♪" />
+                        <input type="text" name="statusText" maxlength="140" placeholder="Going out tonight..." value="@Model.ProfileStatusText" />
+                        <select name="visibility">
+                            <option value="@ProfileStatusVisibility.Public">Public</option>
+                            <option value="@ProfileStatusVisibility.FollowersOnly">Followers</option>
+                            <option value="@ProfileStatusVisibility.Private">Private</option>
+                        </select>
+                        <button type="submit" class="groove-button groove-button-dark">Update</button>
+                    </form>
+                }
+            </article>
+
+            <article class="profile-live-card">
+                <span class="groove-kicker">Vibe tags</span>
+                @if (Model.VibeTags.Any())
+                {
+                    <div class="profile-vibe-tags">
+                        @foreach (var tag in Model.VibeTags)
+                        {
+                            <span>@tag</span>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <p class="profile-empty-copy">Like, save and attend events to shape your music taste here.</p>
+                    @if (Model.IsCurrentUser)
+                    {
+                        <a asp-controller="Preferences" asp-action="Index" class="groove-link">Edit preferences</a>
+                    }
+                }
+            </article>
+        </section>
+
+        <section class="groove-page-section profile-tab-section">
+            <div class="profile-tabs" role="tablist" aria-label="Profile sections">
+                <a href="#profile-overview">Overview</a>
+                <a href="#profile-shared">Shared Events</a>
+                <a href="#profile-going">Going / Tickets</a>
+                @if (Model.IsCurrentUser)
+                {
+                    <a href="#profile-saved">Saved Events</a>
+                }
+                <a href="#profile-following">Following</a>
+            </div>
+        </section>
+    }
+
     @if (Model.Events.Any())
     {
-        <section class="groove-page-section">
+        <section class="groove-page-section" id="profile-overview">
             <div class="groove-section-bar">
                 <div>
                     <span class="groove-kicker" data-i18n="profile.events.kicker">Events</span>
@@ -100,6 +184,153 @@
         </section>
     }
 
+    @if (!Model.IsOrganizer)
+    {
+        <section class="groove-page-section" id="profile-overview">
+            <div class="groove-section-bar">
+                <div>
+                    <span class="groove-kicker">Featured event</span>
+                    <h2>Pinned on this profile.</h2>
+                </div>
+            </div>
+            @if (Model.PinnedEvent != null)
+            {
+                <div class="social-card-grid">
+                    <partial name="_EventCard" model="Model.PinnedEvent" />
+                </div>
+                @if (Model.IsCurrentUser)
+                {
+                    <form asp-action="UnpinEvent" method="post" class="mt-3">
+                        @Html.AntiForgeryToken()
+                        <button class="groove-button groove-button-paper" type="submit"><i class="bi bi-pin-angle"></i> Remove pinned event</button>
+                    </form>
+                }
+            }
+            else
+            {
+                <div class="profile-empty-state">
+                    <i class="bi bi-pin-angle"></i>
+                    <strong>No pinned event yet.</strong>
+                    <span>Pin an event from its details page to feature it here.</span>
+                    @if (Model.IsCurrentUser)
+                    {
+                        <a asp-controller="Home" asp-action="Index" class="groove-button groove-button-paper">Explore Events</a>
+                    }
+                </div>
+            }
+        </section>
+
+        <section class="groove-page-section" id="profile-shared">
+            <div class="groove-section-bar">
+                <div>
+                    <span class="groove-kicker">Shared Events</span>
+                    <h2>Profile-only shares.</h2>
+                </div>
+            </div>
+            @if (Model.SharedEvents.Any())
+            {
+                <div class="social-card-grid">
+                    @foreach (var ev in Model.SharedEvents)
+                    {
+                        <div>
+                            <partial name="_EventCard" model="ev" />
+                            @if (Model.IsCurrentUser)
+                            {
+                                <form asp-action="RemoveSharedEvent" asp-route-eventId="@ev.Id" method="post" class="mt-2">
+                                    @Html.AntiForgeryToken()
+                                    <button class="btn btn-sm btn-outline-secondary" type="submit">Remove from profile</button>
+                                </form>
+                            }
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="profile-empty-state">
+                    <i class="bi bi-calendar-heart"></i>
+                    <strong>Още няма споделени събития.</strong>
+                    <span>Shared events stay on the profile and never enter Discover.</span>
+                </div>
+            }
+        </section>
+
+        <section class="groove-page-section" id="profile-going">
+            <div class="groove-section-bar">
+                <div>
+                    <span class="groove-kicker">Going / Tickets</span>
+                    <h2>Plans and recent activity.</h2>
+                </div>
+                @if (Model.IsCurrentUser)
+                {
+                    <a asp-controller="Tickets" asp-action="MyTickets" class="groove-link">My tickets (@Model.TicketsCount)</a>
+                }
+            </div>
+            @if (Model.GoingEvents.Any())
+            {
+                <div class="social-card-grid">
+                    @foreach (var ev in Model.GoingEvents)
+                    {
+                        <partial name="_EventCard" model="ev" />
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="profile-empty-state">
+                    <i class="bi bi-ticket-perforated"></i>
+                    <strong>Все още няма отбелязани събития.</strong>
+                    <span>Mark events as Going to build a livelier profile.</span>
+                </div>
+            }
+        </section>
+
+        @if (Model.IsCurrentUser)
+        {
+            <section class="groove-page-section" id="profile-saved">
+                <div class="groove-section-bar">
+                    <div>
+                        <span class="groove-kicker">Saved Events</span>
+                        <h2>Events you want to keep close.</h2>
+                    </div>
+                </div>
+                @if (Model.SavedEvents.Any())
+                {
+                    <div class="social-card-grid">
+                        @foreach (var ev in Model.SavedEvents)
+                        {
+                            <partial name="_EventCard" model="ev" />
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="profile-empty-state">
+                        <i class="bi bi-bookmark"></i>
+                        <strong>Няма запазени събития.</strong>
+                        <span>Запази събитие, за да го видиш тук.</span>
+                    </div>
+                }
+            </section>
+        }
+
+        <section class="groove-page-section" id="profile-following">
+            <div class="groove-section-bar">
+                <div>
+                    <span class="groove-kicker">Reviews</span>
+                    <h2>Coming after attended events.</h2>
+                </div>
+            </div>
+            <div class="profile-empty-state">
+                <i class="bi bi-chat-quote"></i>
+                <strong>Все още няма ревюта.</strong>
+                <span>Reviews are reserved for events with tickets or attendance history.</span>
+            </div>
+        </section>
+    }
+
+    @if (Model.IsOrganizer)
+    {
     <section class="groove-page-section">
         <div class="groove-section-bar">
             <div>
@@ -124,4 +355,5 @@
             </div>
         }
     </section>
+    }
 </section>

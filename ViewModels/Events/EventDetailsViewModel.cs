@@ -1,5 +1,6 @@
 using EventsApp.Models;
 using EventsApp.ViewModels.Layouts;
+using EventsApp.ViewModels.Social;
 using EventsApp.ViewModels.Tickets;
 
 namespace EventsApp.ViewModels.Events
@@ -27,6 +28,8 @@ namespace EventsApp.ViewModels.Events
         public int InterestedCount { get; set; }
         public bool CurrentUserLiked { get; set; }
         public bool CurrentUserSaved { get; set; }
+        public bool CurrentUserPinned { get; set; }
+        public bool CurrentUserSharedToProfile { get; set; }
         public EventAttendanceStatus? CurrentUserAttendanceStatus { get; set; }
         public IReadOnlyList<EventCommentViewModel> Comments { get; set; } = Array.Empty<EventCommentViewModel>();
         public bool CanEdit { get; set; }
@@ -41,6 +44,8 @@ namespace EventsApp.ViewModels.Events
         public EventTicketingMode TicketingMode { get; set; } = EventTicketingMode.GeneralAdmission;
         public bool HasSeatLayout { get; set; }
         public EventSeatMapViewModel? SeatMap { get; set; }
+
+        public IReadOnlyList<ActingIdentityOptionViewModel> ActingIdentities { get; set; } = Array.Empty<ActingIdentityOptionViewModel>();
     }
 
     public class EventOccurrenceOptionViewModel
@@ -59,6 +64,11 @@ namespace EventsApp.ViewModels.Events
         public int Id { get; set; }
         public string UserId { get; set; } = null!;
         public string UserName { get; set; } = null!;
+        public string? AuthorImageUrl { get; set; }
+        public string AuthorBadgeKey { get; set; } = "identity.user";
+        public string AuthorBadgeText { get; set; } = "User";
+        public string? AuthorProfileUserId { get; set; }
+        public bool IsOrganizerPageAuthor { get; set; }
         public string Content { get; set; } = null!;
         public DateTime CreatedAt { get; set; }
         public bool CanDelete { get; set; }

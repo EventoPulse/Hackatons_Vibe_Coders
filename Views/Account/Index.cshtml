@@ -45,9 +45,12 @@
                     <i class="bi bi-person-lines-fill"></i> <span data-i18n="profile.public">Публичен профил</span>
                 </a>
             }
-            <a asp-controller="Posts" asp-action="Create" class="groove-button groove-button-paper">
-                <i class="bi bi-plus-square"></i> <span data-i18n="post.create">Нова публикация</span>
-            </a>
+            @if (Model.CanCreatePosts)
+            {
+                <a asp-controller="Posts" asp-action="Create" class="groove-button groove-button-paper">
+                    <i class="bi bi-plus-square"></i> <span data-i18n="post.create">Нова публикация</span>
+                </a>
+            }
             <a asp-controller="Preferences" asp-action="Index" class="groove-button groove-button-paper">
                 <i class="bi bi-sliders"></i> <span data-i18n="account.preferences">Предпочитания</span>
             </a>
@@ -63,10 +66,13 @@
             <strong>@Model.FollowingCount</strong>
             <span data-i18n="profile.following">следва</span>
         </a>
-        <span>
-            <strong>@Model.PostsCount</strong>
-            <span data-i18n="profile.posts">публикации</span>
-        </span>
+        @if (Model.CanCreatePosts)
+        {
+            <span>
+                <strong>@Model.PostsCount</strong>
+                <span data-i18n="profile.posts">публикации</span>
+            </span>
+        }
         <span>
             <strong>@Model.SavedPostsCount</strong>
             <span data-i18n="account.saved.posts">запазени публикации</span>
@@ -83,6 +89,8 @@
 
     <div class="account-overview-grid">
         <main class="account-overview-main">
+            @if (Model.CanCreatePosts)
+            {
             <section class="groove-page-section">
                 <div class="groove-section-bar">
                     <div>
@@ -108,6 +116,24 @@
                     </div>
                 }
             </section>
+            }
+            else
+            {
+                <section class="groove-page-section">
+                    <div class="groove-section-bar">
+                        <div>
+                            <span class="groove-kicker">Explore</span>
+                            <h2>Event-first activity.</h2>
+                        </div>
+                    </div>
+                    <div class="account-link-list">
+                        <a asp-controller="Home" asp-action="Index"><i class="bi bi-search"></i> Explore Events</a>
+                        <a asp-controller="Tickets" asp-action="MyTickets"><i class="bi bi-ticket-perforated"></i> My Tickets</a>
+                        <a asp-controller="Profiles" asp-action="Following" asp-route-id="@currentUserId"><i class="bi bi-person-check"></i> Following</a>
+                        <a asp-controller="Events" asp-action="Recommended"><i class="bi bi-stars"></i> Recommended</a>
+                    </div>
+                </section>
+            }
 
             <section class="groove-page-section">
                 <div class="groove-section-bar">

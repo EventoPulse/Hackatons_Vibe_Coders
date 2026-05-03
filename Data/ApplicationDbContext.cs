@@ -67,6 +67,10 @@ namespace EventsApp.Data
 
         public DbSet<EventSeatInventory> EventSeatInventories { get; set; } = null!;
 
+        public DbSet<UserProfileSharedEvent> UserProfileSharedEvents { get; set; } = null!;
+
+        public DbSet<BusinessWorkspace> BusinessWorkspaces { get; set; } = null!;
+
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
@@ -88,8 +92,25 @@ namespace EventsApp.Data
                       .HasForeignKey(p => p.OwnerId)
                       .OnDelete(DeleteBehavior.Cascade);
 
+                entity.HasOne(p => p.BusinessWorkspace)
+                      .WithMany(w => w.OrganizerProfiles)
+                      .HasForeignKey(p => p.BusinessWorkspaceId)
+                      .OnDelete(DeleteBehavior.NoAction);
+
                 entity.HasIndex(p => new { p.OwnerId, p.DisplayName });
                 entity.HasIndex(p => new { p.OwnerId, p.IsDefault });
+                entity.HasIndex(p => new { p.BusinessWorkspaceId, p.IsDefaultForWorkspace });
+            });
+
+            builder.Entity<BusinessWorkspace>(entity =>
+            {
+                entity.HasOne(w => w.Owner)
+                      .WithMany(u => u.BusinessWorkspaces)
+                      .HasForeignKey(w => w.OwnerId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(w => new { w.OwnerId, w.IsDefault });
+                entity.HasIndex(w => w.StripeConnectedAccountId);
             });
 
             builder.Entity<UserPreferences>(entity =>
@@ -114,10 +135,17 @@ namespace EventsApp.Data
                       .HasForeignKey(e => e.OrganizerProfileId)
                       .OnDelete(DeleteBehavior.SetNull);
 
+                entity.HasOne(e => e.BusinessWorkspace)
+                      .WithMany(w => w.Events)
+                      .HasForeignKey(e => e.BusinessWorkspaceId)
+                      .OnDelete(DeleteBehavior.NoAction);
+
                 entity.HasOne(e => e.VenueLayout)
                       .WithMany(l => l.Events)
                       .HasForeignKey(e => e.VenueLayoutId)
                       .OnDelete(DeleteBehavior.SetNull);
+
+                entity.Property(e => e.IsApproved).HasDefaultValue(true);
             });
 
             builder.Entity<EventSeries>(entity =>
@@ -157,7 +185,17 @@ namespace EventsApp.Data
                 entity.HasOne(p => p.Event)
                       .WithMany(e => e.Posts)
                       .HasForeignKey(p => p.EventId)
-                      .OnDelete(DeleteBehavior.SetNull);
+                      .OnDelete(DeleteBehavior.NoAction);
+
+                entity.HasOne(p => p.OrganizerProfile)
+                      .WithMany(op => op.Posts)
+                      .HasForeignKey(p => p.OrganizerProfileId)
+                      .OnDelete(DeleteBehavior.NoAction);
+
+                entity.HasOne(p => p.BusinessWorkspace)
+                      .WithMany(w => w.Posts)
+                      .HasForeignKey(p => p.BusinessWorkspaceId)
+                      .OnDelete(DeleteBehavior.NoAction);
             });
 
             builder.Entity<PostImage>(entity =>
@@ -179,6 +217,16 @@ namespace EventsApp.Data
                       .WithMany(u => u.PostComments)
                       .HasForeignKey(pc => pc.UserId)
                       .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(pc => pc.AuthorOrganizerProfile)
+                      .WithMany()
+                      .HasForeignKey(pc => pc.AuthorOrganizerProfileId)
+                      .OnDelete(DeleteBehavior.NoAction);
+
+                entity.HasOne(pc => pc.BusinessWorkspace)
+                      .WithMany()
+                      .HasForeignKey(pc => pc.BusinessWorkspaceId)
+                      .OnDelete(DeleteBehavior.NoAction);
             });
 
             builder.Entity<PostLike>(entity =>
@@ -222,6 +270,16 @@ namespace EventsApp.Data
                       .WithMany(u => u.EventComments)
                       .HasForeignKey(ec => ec.UserId)
                       .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(ec => ec.AuthorOrganizerProfile)
+                      .WithMany()
+                      .HasForeignKey(ec => ec.AuthorOrganizerProfileId)
+                      .OnDelete(DeleteBehavior.NoAction);
+
+                entity.HasOne(ec => ec.BusinessWorkspace)
+                      .WithMany()
+                      .HasForeignKey(ec => ec.BusinessWorkspaceId)
+                      .OnDelete(DeleteBehavior.NoAction);
             });
 
             builder.Entity<EventLike>(entity =>
@@ -267,6 +325,7 @@ namespace EventsApp.Data
                       .OnDelete(DeleteBehavior.Restrict);
 
                 entity.HasIndex(ea => new { ea.EventId, ea.UserId }).IsUnique();
+                entity.Property(ea => ea.Status).HasDefaultValue(EventAttendanceStatus.Interested);
             });
 
             builder.Entity<EventImage>(entity =>
@@ -299,6 +358,16 @@ namespace EventsApp.Data
                       .HasForeignKey(s => s.AuthorId)
                       .OnDelete(DeleteBehavior.Restrict);
 
+                entity.HasOne(s => s.OrganizerProfile)
+                      .WithMany(p => p.Stories)
+                      .HasForeignKey(s => s.OrganizerProfileId)
+                      .OnDelete(DeleteBehavior.NoAction);
+
+                entity.HasOne(s => s.BusinessWorkspace)
+                      .WithMany(w => w.Stories)
+                      .HasForeignKey(s => s.BusinessWorkspaceId)
+                      .OnDelete(DeleteBehavior.NoAction);
+
             });
 
             builder.Entity<Conversation>(entity =>
@@ -328,6 +397,16 @@ namespace EventsApp.Data
                       .HasForeignKey(m => m.SenderId)
                       .OnDelete(DeleteBehavior.Restrict);
 
+                entity.HasOne(m => m.AuthorOrganizerProfile)
+                      .WithMany()
+                      .HasForeignKey(m => m.AuthorOrganizerProfileId)
+                      .OnDelete(DeleteBehavior.NoAction);
+
+                entity.HasOne(m => m.BusinessWorkspace)
+                      .WithMany()
+                      .HasForeignKey(m => m.BusinessWorkspaceId)
+                      .OnDelete(DeleteBehavior.NoAction);
+
                 entity.HasIndex(m => new { m.ConversationId, m.CreatedAt });
             });
 
@@ -356,6 +435,30 @@ namespace EventsApp.Data
                 entity.HasIndex(a => new { a.UserId, a.ActivityType, a.CreatedAt });
             });
 
+            builder.Entity<ApplicationUser>(entity =>
+            {
+                entity.HasOne(u => u.PinnedEvent)
+                      .WithMany()
+                      .HasForeignKey(u => u.PinnedEventId)
+                      .OnDelete(DeleteBehavior.SetNull);
+            });
+
+            builder.Entity<UserProfileSharedEvent>(entity =>
+            {
+                entity.HasOne(s => s.User)
+                      .WithMany(u => u.ProfileSharedEvents)
+                      .HasForeignKey(s => s.UserId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(s => s.Event)
+                      .WithMany()
+                      .HasForeignKey(s => s.EventId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(s => new { s.UserId, s.EventId }).IsUnique();
+                entity.HasIndex(s => new { s.UserId, s.CreatedAt });
+            });
+
             builder.Entity<Ticket>(entity =>
             {
                 entity.HasOne(t => t.Event)
@@ -370,6 +473,11 @@ namespace EventsApp.Data
                       .WithMany()
                       .HasForeignKey(t => t.UserId)
                       .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(t => t.BusinessWorkspace)
+                      .WithMany(w => w.Transactions)
+                      .HasForeignKey(t => t.BusinessWorkspaceId)
+                      .OnDelete(DeleteBehavior.NoAction);
             });
 
             builder.Entity<UserTicket>(entity =>

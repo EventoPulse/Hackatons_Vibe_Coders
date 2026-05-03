@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using EventsApp.Common;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace EventsApp.ViewModels.Organizer
 {
@@ -77,5 +78,14 @@ namespace EventsApp.ViewModels.Organizer
         public bool IsActive { get; set; } = true;
 
         public bool Approved { get; set; }
+
+        [Display(Name = "Workspace")]
+        public int? BusinessWorkspaceId { get; set; }
+
+        public IEnumerable<SelectListItem> Workspaces { get; set; } = Array.Empty<SelectListItem>();
+
+        public bool ShowOwnerProfilePublicly { get; set; }
+
+        public bool ShowLegalBusinessNamePublicly { get; set; }
     }
 }

@@ -96,6 +96,85 @@ namespace EventsApp.Controllers
                 .ToListAsync();
 
             var markers = BuildMarkers(events);
+            var now = DateTime.UtcNow;
+            var tonightEnd = now.Date.AddDays(1);
+            var weekendStart = GetWeekendStart(now);
+            var weekendEnd = weekendStart.AddDays(2);
+
+            var discoveryBase = _db.Events.AsNoTracking().Where(e => isAdmin || e.IsApproved);
+            var upcomingBase = discoveryBase.Where(e => e.StartTime >= now);
+
+            var tonightEvents = await QueryEventCards(upcomingBase
+                    .Where(e => e.StartTime >= now && e.StartTime < tonightEnd)
+                    .OrderBy(e => e.StartTime)
+                    .Take(6),
+                userId)
+                .ToListAsync();
+
+            var weekendEvents = await QueryEventCards(upcomingBase
+                    .Where(e => e.StartTime >= weekendStart && e.StartTime < weekendEnd)
+                    .OrderBy(e => e.StartTime)
+                    .Take(6),
+                userId)
+                .ToListAsync();
+
+            var trending = await QueryEventCards(upcomingBase
+                    .OrderByDescending(e => e.Attendances.Count * 2 + e.Likes.Count + e.Saves.Count + e.Comments.Count)
+                    .ThenBy(e => e.StartTime)
+                    .Take(6),
+                userId)
+                .ToListAsync();
+
+            var popularOrganizers = await _db.OrganizerProfiles
+                .AsNoTracking()
+                .Where(p => p.IsActive && p.IsApproved)
+                .OrderByDescending(p => p.Events.Count(e => e.IsApproved && e.StartTime >= now))
+                .ThenByDescending(p => p.Owner.Followers.Count)
+                .Take(6)
+                .Select(p => new PopularOrganizerViewModel
+                {
+                    Id = p.Id,
+                    OwnerId = p.OwnerId,
+                    DisplayName = p.DisplayName,
+                    City = p.City,
+                    Tagline = p.Tagline,
+                    AvatarImageUrl = p.AvatarImageUrl,
+                    UpcomingEventsCount = p.Events.Count(e => e.IsApproved && e.StartTime >= now),
+                })
+                .ToListAsync();
+
+            var popularCities = await discoveryBase
+                .Where(e => e.StartTime >= now)
+                .GroupBy(e => e.City)
+                .OrderByDescending(g => g.Count())
+                .ThenBy(g => g.Key)
+                .Take(8)
+                .Select(g => new PopularCityViewModel
+                {
+                    Name = g.Key,
+                    EventsCount = g.Count(),
+                })
+                .ToListAsync();
+
+            var recentlyViewed = userId == null
+                ? new List<EventCardViewModel>()
+                : await QueryEventCards(_db.UserActivities
+                        .AsNoTracking()
+                        .Where(a => a.UserId == userId && a.ActivityType == UserActivityType.EventViewed && a.EventId != null && a.Event!.IsApproved)
+                        .OrderByDescending(a => a.CreatedAt)
+                        .Select(a => a.Event!)
+                        .Distinct()
+                        .Take(6),
+                    userId)
+                    .ToListAsync();
+
+            var preferredCity = userId == null
+                ? null
+                : await _db.UserPreferences
+                    .AsNoTracking()
+                    .Where(p => p.UserId == userId)
+                    .Select(p => p.PreferredCity)
+                    .FirstOrDefaultAsync();
 
             var cities = await _db.Events
                 .AsNoTracking()
@@ -113,7 +192,54 @@ namespace EventsApp.Controllers
                 Events = events,
                 MapMarkers = markers,
                 Cities = cities,
+                TonightEvents = tonightEvents,
+                WeekendEvents = weekendEvents,
+                TrendingEvents = trending,
+                PopularOrganizers = popularOrganizers,
+                PopularCities = popularCities,
+                RecentlyViewedEvents = recentlyViewed,
+                PreferredCity = preferredCity,
+                IsAuthenticated = User.Identity?.IsAuthenticated == true,
             });
+        }
+
+        private static IQueryable<EventCardViewModel> QueryEventCards(IQueryable<Event> query, string? userId)
+        {
+            return query.Select(e => new EventCardViewModel
+            {
+                Id = e.Id,
+                Title = e.Title,
+                ImageUrl = e.ImageUrl,
+                Address = e.Address,
+                City = e.City,
+                StartTime = e.StartTime,
+                Genre = e.Genre,
+                IsApproved = e.IsApproved,
+                OrganizerId = e.OrganizerId,
+                OrganizerName = e.OrganizerProfile != null ? e.OrganizerProfile.DisplayName : e.Organizer.UserName ?? string.Empty,
+                LikesCount = e.Likes.Count,
+                CommentsCount = e.Comments.Count,
+                SavesCount = e.Saves.Count,
+                GoingCount = e.Attendances.Count(a => a.Status == EventAttendanceStatus.Going),
+                InterestedCount = e.Attendances.Count(a => a.Status == EventAttendanceStatus.Interested),
+                CurrentUserLiked = userId != null && e.Likes.Any(l => l.UserId == userId),
+                CurrentUserSaved = userId != null && e.Saves.Any(s => s.UserId == userId),
+                CurrentUserAttendanceStatus = userId == null
+                    ? null
+                    : e.Attendances
+                        .Where(a => a.UserId == userId)
+                        .Select(a => (EventAttendanceStatus?)a.Status)
+                        .FirstOrDefault(),
+                Latitude = e.Latitude,
+                Longitude = e.Longitude,
+            });
+        }
+
+        private static DateTime GetWeekendStart(DateTime now)
+        {
+            var today = now.Date;
+            var daysUntilSaturday = ((int)DayOfWeek.Saturday - (int)today.DayOfWeek + 7) % 7;
+            return today.AddDays(daysUntilSaturday);
         }
 
         private static IReadOnlyList<EventMapMarkerViewModel> BuildMarkers(IReadOnlyList<EventCardViewModel> events)

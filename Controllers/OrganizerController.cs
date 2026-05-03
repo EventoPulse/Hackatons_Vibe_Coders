@@ -18,15 +18,18 @@ namespace EventsApp.Controllers
         private readonly ApplicationDbContext _db;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly IMediaUploadService _mediaUpload;
+        private readonly IBusinessContextService _businessContext;
 
         public OrganizerController(
             ApplicationDbContext db,
             UserManager<ApplicationUser> userManager,
-            IMediaUploadService mediaUpload)
+            IMediaUploadService mediaUpload,
+            IBusinessContextService businessContext)
         {
             _db = db;
             _userManager = userManager;
             _mediaUpload = mediaUpload;
+            _businessContext = businessContext;
         }
 
         public async Task<IActionResult> Dashboard()
@@ -41,6 +44,9 @@ namespace EventsApp.Controllers
             {
                 return RedirectToAction(nameof(Profile));
             }
+
+            await EnsureDefaultProfileFromOrganizerDataAsync(userId);
+            var context = await _businessContext.GetContextAsync(HttpContext);
 
             var recentEvents = await _db.Events
                 .AsNoTracking()
@@ -219,6 +225,34 @@ namespace EventsApp.Controllers
                 Website = orgData.Website,
                 CompanyNumber = orgData.CompanyNumber,
                 Approved = orgData.Approved,
+                ActiveWorkspaceId = context.Workspace?.Id,
+                ActivePageId = context.Page?.Id,
+                ActiveWorkspaceName = context.Workspace?.DisplayName,
+                ActivePageName = context.Page?.DisplayName,
+                PaymentStatus = context.Workspace == null
+                    ? "Не е избран workspace"
+                    : context.Workspace.ChargesEnabled && context.Workspace.PayoutsEnabled
+                        ? "Плащанията са активни"
+                        : "Плащанията не са напълно активни",
+                Workspaces = context.Workspaces.Select(w => new OrganizerWorkspaceRowViewModel
+                {
+                    Id = w.Id,
+                    DisplayName = w.DisplayName,
+                    LegalName = w.LegalName,
+                    CompanyNumber = w.CompanyNumber,
+                    IsDefault = w.IsDefault,
+                    ChargesEnabled = w.ChargesEnabled,
+                    PayoutsEnabled = w.PayoutsEnabled,
+                    PaymentProvider = w.PaymentProvider,
+                }).ToList(),
+                Pages = context.Pages.Select(p => new OrganizerPageContextRowViewModel
+                {
+                    Id = p.Id,
+                    DisplayName = p.DisplayName,
+                    BusinessWorkspaceId = p.BusinessWorkspaceId,
+                    IsDefaultForWorkspace = p.IsDefaultForWorkspace,
+                    IsActive = p.IsActive,
+                }).ToList(),
                 EventsCount = await _db.Events.CountAsync(e => e.OrganizerId == userId),
                 PostsCount = await _db.Posts.CountAsync(p => p.OrganizerId == userId),
                 TicketTypesCount = ticketTypesCount,
@@ -247,10 +281,211 @@ namespace EventsApp.Controllers
             return View(vm);
         }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SwitchContext(int workspaceId, int? pageId)
+        {
+            await _businessContext.SetActiveContextAsync(HttpContext, workspaceId, pageId);
+            TempData["StatusMessage"] = "Активният workspace/page е обновен.";
+            return RedirectToAction(nameof(Dashboard));
+        }
+
+        public async Task<IActionResult> Workspaces()
+        {
+            var userId = _userManager.GetUserId(User)!;
+            await _businessContext.EnsureDefaultWorkspaceAsync(userId);
+
+            var workspaces = await _db.BusinessWorkspaces
+                .AsNoTracking()
+                .Where(w => w.OwnerId == userId && w.Status != BusinessWorkspaceStatus.Archived)
+                .OrderByDescending(w => w.IsDefault)
+                .ThenBy(w => w.DisplayName)
+                .ToListAsync();
+
+            return View(workspaces);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> Workspace(int? id)
+        {
+            var userId = _userManager.GetUserId(User)!;
+            if (!id.HasValue)
+            {
+                return View(new BusinessWorkspace
+                {
+                    OwnerId = userId,
+                    Country = "BG",
+                    BillingEmail = User.Identity?.Name,
+                    Status = BusinessWorkspaceStatus.Active,
+                    PaymentProvider = PaymentProvider.Stripe,
+                    StripeOnboardingStatus = StripeOnboardingStatus.NotStarted,
+                });
+            }
+
+            var workspace = await _db.BusinessWorkspaces.FirstOrDefaultAsync(w =>
+                w.Id == id.Value &&
+                w.OwnerId == userId &&
+                w.Status != BusinessWorkspaceStatus.Archived);
+            return workspace == null ? NotFound() : View(workspace);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Workspace(int? id, BusinessWorkspace input)
+        {
+            var userId = _userManager.GetUserId(User)!;
+            if (string.IsNullOrWhiteSpace(input.DisplayName) && string.IsNullOrWhiteSpace(input.LegalName))
+            {
+                ModelState.AddModelError(nameof(input.DisplayName), "Enter a workspace display name or legal name.");
+            }
+
+            if (string.IsNullOrWhiteSpace(input.DisplayName) && !string.IsNullOrWhiteSpace(input.LegalName))
+            {
+                ModelState.Remove(nameof(input.DisplayName));
+            }
+
+            if (string.IsNullOrWhiteSpace(input.LegalName) && !string.IsNullOrWhiteSpace(input.DisplayName))
+            {
+                ModelState.Remove(nameof(input.LegalName));
+            }
+
+            if (!ModelState.IsValid)
+            {
+                return View(input);
+            }
+
+            var workspace = id.HasValue
+                ? await _db.BusinessWorkspaces.FirstOrDefaultAsync(w =>
+                    w.Id == id.Value &&
+                    w.OwnerId == userId &&
+                    w.Status != BusinessWorkspaceStatus.Archived)
+                : null;
+
+            if (id.HasValue && workspace == null)
+            {
+                return NotFound();
+            }
+
+            if (workspace == null)
+            {
+                workspace = new BusinessWorkspace
+                {
+                    OwnerId = userId,
+                    CreatedAt = DateTime.UtcNow,
+                };
+                _db.BusinessWorkspaces.Add(workspace);
+            }
+
+            workspace.DisplayName = string.IsNullOrWhiteSpace(input.DisplayName) ? input.LegalName : input.DisplayName.Trim();
+            workspace.LegalName = string.IsNullOrWhiteSpace(input.LegalName) ? workspace.DisplayName : input.LegalName.Trim();
+            workspace.CompanyNumber = string.IsNullOrWhiteSpace(input.CompanyNumber) ? null : input.CompanyNumber.Trim();
+            workspace.BillingEmail = string.IsNullOrWhiteSpace(input.BillingEmail) ? null : input.BillingEmail.Trim();
+            workspace.PhoneNumber = string.IsNullOrWhiteSpace(input.PhoneNumber) ? null : input.PhoneNumber.Trim();
+            workspace.Address = string.IsNullOrWhiteSpace(input.Address) ? null : input.Address.Trim();
+            workspace.City = string.IsNullOrWhiteSpace(input.City) ? null : input.City.Trim();
+            workspace.Country = string.IsNullOrWhiteSpace(input.Country) ? "BG" : input.Country.Trim();
+            workspace.Status = input.Status;
+            workspace.PaymentProvider = input.PaymentProvider;
+            workspace.StripeConnectedAccountId = string.IsNullOrWhiteSpace(input.StripeConnectedAccountId) ? null : input.StripeConnectedAccountId.Trim();
+            workspace.StripeOnboardingStatus = input.StripeOnboardingStatus;
+            workspace.ChargesEnabled = input.ChargesEnabled;
+            workspace.PayoutsEnabled = input.PayoutsEnabled;
+            workspace.UpdatedAt = DateTime.UtcNow;
+
+            if (input.IsDefault || !await _db.BusinessWorkspaces.AnyAsync(w =>
+                w.OwnerId == userId &&
+                w.Id != workspace.Id &&
+                w.IsDefault &&
+                w.Status != BusinessWorkspaceStatus.Archived))
+            {
+                await _db.BusinessWorkspaces
+                    .Where(w => w.OwnerId == userId && w.Id != workspace.Id && w.Status != BusinessWorkspaceStatus.Archived)
+                    .ExecuteUpdateAsync(s => s.SetProperty(w => w.IsDefault, false));
+                workspace.IsDefault = true;
+            }
+
+            await _db.SaveChangesAsync();
+            TempData["StatusMessage"] = "Workspace saved.";
+            return RedirectToAction(nameof(Workspaces));
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteWorkspace(int id)
+        {
+            var userId = _userManager.GetUserId(User)!;
+            var workspace = await _db.BusinessWorkspaces
+                .Include(w => w.OrganizerProfiles)
+                .FirstOrDefaultAsync(w =>
+                    w.Id == id &&
+                    w.OwnerId == userId &&
+                    w.Status != BusinessWorkspaceStatus.Archived);
+
+            if (workspace == null)
+            {
+                return NotFound();
+            }
+
+            var replacement = await _db.BusinessWorkspaces
+                .Where(w =>
+                    w.OwnerId == userId &&
+                    w.Id != workspace.Id &&
+                    w.Status != BusinessWorkspaceStatus.Archived)
+                .OrderByDescending(w => w.IsDefault)
+                .ThenBy(w => w.DisplayName)
+                .FirstOrDefaultAsync();
+
+            if (replacement == null)
+            {
+                TempData["StatusMessage"] = "Create another workspace before deleting this one.";
+                return RedirectToAction(nameof(Workspaces));
+            }
+
+            workspace.Status = BusinessWorkspaceStatus.Archived;
+            workspace.IsDefault = false;
+            workspace.UpdatedAt = DateTime.UtcNow;
+
+            foreach (var page in workspace.OrganizerProfiles)
+            {
+                page.IsActive = false;
+                page.IsDefault = false;
+                page.IsDefaultForWorkspace = false;
+                page.Status = BusinessWorkspaceStatus.Archived;
+            }
+
+            if (!await _db.BusinessWorkspaces.AnyAsync(w =>
+                w.OwnerId == userId &&
+                w.Id != workspace.Id &&
+                w.Status != BusinessWorkspaceStatus.Archived &&
+                w.IsDefault))
+            {
+                replacement.IsDefault = true;
+                replacement.UpdatedAt = DateTime.UtcNow;
+            }
+
+            await _db.SaveChangesAsync();
+
+            var replacementPageId = await _db.OrganizerProfiles
+                .Where(p =>
+                    p.OwnerId == userId &&
+                    p.BusinessWorkspaceId == replacement.Id &&
+                    p.IsActive &&
+                    p.Status != BusinessWorkspaceStatus.Archived)
+                .OrderByDescending(p => p.IsDefaultForWorkspace)
+                .ThenByDescending(p => p.IsDefault)
+                .Select(p => (int?)p.Id)
+                .FirstOrDefaultAsync();
+
+            await _businessContext.SetActiveContextAsync(HttpContext, replacement.Id, replacementPageId);
+            TempData["StatusMessage"] = "Workspace deleted safely. Existing reports and ticket/payment history are preserved.";
+            return RedirectToAction(nameof(Workspaces));
+        }
+
         public async Task<IActionResult> Profiles()
         {
             var userId = _userManager.GetUserId(User)!;
             await EnsureDefaultProfileFromOrganizerDataAsync(userId);
+            await _businessContext.EnsureDefaultWorkspaceAsync(userId);
 
             var profiles = await _db.OrganizerProfiles
                 .AsNoTracking()
@@ -285,7 +520,9 @@ namespace EventsApp.Controllers
             {
                 var profile = await _db.OrganizerProfiles.AsNoTracking().FirstOrDefaultAsync(p => p.Id == id && p.OwnerId == userId);
                 if (profile == null) return NotFound();
-                return View(ToProfileInput(profile, await GetApprovedStatusAsync(userId)));
+                var vm = ToProfileInput(profile, await GetApprovedStatusAsync(userId));
+                vm.Workspaces = await GetWorkspaceOptionsAsync(userId);
+                return View(vm);
             }
 
             var hasProfiles = await _db.OrganizerProfiles.AnyAsync(p => p.OwnerId == userId);
@@ -298,6 +535,8 @@ namespace EventsApp.Controllers
                 Approved = orgData?.Approved ?? false,
                 IsDefault = !hasProfiles,
                 IsActive = true,
+                BusinessWorkspaceId = (await _businessContext.EnsureDefaultWorkspaceAsync(userId)).Id,
+                Workspaces = await GetWorkspaceOptionsAsync(userId),
             });
         }
 
@@ -308,8 +547,18 @@ namespace EventsApp.Controllers
             var userId = _userManager.GetUserId(User)!;
             var approved = await GetApprovedStatusAsync(userId);
             input.Approved = approved;
+            input.Workspaces = await GetWorkspaceOptionsAsync(userId);
 
             if (!ModelState.IsValid) return View(input);
+            var workspace = input.BusinessWorkspaceId.HasValue
+                ? await _db.BusinessWorkspaces.FirstOrDefaultAsync(w => w.Id == input.BusinessWorkspaceId && w.OwnerId == userId)
+                : await _businessContext.EnsureDefaultWorkspaceAsync(userId);
+            if (workspace == null)
+            {
+                ModelState.AddModelError(nameof(input.BusinessWorkspaceId), "Избери валиден workspace.");
+                input.Workspaces = await GetWorkspaceOptionsAsync(userId);
+                return View(input);
+            }
 
             var profile = input.Id.HasValue
                 ? await _db.OrganizerProfiles.FirstOrDefaultAsync(p => p.Id == input.Id && p.OwnerId == userId)
@@ -332,6 +581,9 @@ namespace EventsApp.Controllers
             profile.TikTokUrl = string.IsNullOrWhiteSpace(input.TikTokUrl) ? null : input.TikTokUrl.Trim();
             profile.BrandColor = string.IsNullOrWhiteSpace(input.BrandColor) ? null : input.BrandColor.Trim();
             profile.IsActive = input.IsActive;
+            profile.BusinessWorkspaceId = workspace.Id;
+            profile.ShowOwnerProfilePublicly = input.ShowOwnerProfilePublicly;
+            profile.ShowLegalBusinessNamePublicly = input.ShowLegalBusinessNamePublicly;
 
             try
             {
@@ -359,6 +611,10 @@ namespace EventsApp.Controllers
             {
                 await ClearDefaultProfileAsync(userId);
                 profile.IsDefault = true;
+            }
+            if (!await _db.OrganizerProfiles.AnyAsync(p => p.OwnerId == userId && p.BusinessWorkspaceId == workspace.Id && p.Id != profile.Id && p.IsDefaultForWorkspace))
+            {
+                profile.IsDefaultForWorkspace = true;
             }
 
             await EnsureOrganizerDataAsync(userId, input, approved);
@@ -444,6 +700,9 @@ namespace EventsApp.Controllers
                 IsDefault = profile.IsDefault,
                 IsActive = profile.IsActive,
                 Approved = approved,
+                BusinessWorkspaceId = profile.BusinessWorkspaceId,
+                ShowOwnerProfilePublicly = profile.ShowOwnerProfilePublicly,
+                ShowLegalBusinessNamePublicly = profile.ShowLegalBusinessNamePublicly,
             };
         }
 
@@ -468,14 +727,32 @@ namespace EventsApp.Controllers
             _db.OrganizerProfiles.Add(new OrganizerProfile
             {
                 OwnerId = userId,
+                BusinessWorkspaceId = (await _businessContext.EnsureDefaultWorkspaceAsync(userId)).Id,
                 DisplayName = orgData.OrganizationName,
                 Description = orgData.Description,
                 PhoneNumber = orgData.PhoneNumber,
                 Website = orgData.Website,
                 IsDefault = true,
+                IsDefaultForWorkspace = true,
                 IsActive = true,
             });
             await _db.SaveChangesAsync();
+        }
+
+        private async Task<IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>> GetWorkspaceOptionsAsync(string userId)
+        {
+            await _businessContext.EnsureDefaultWorkspaceAsync(userId);
+            return await _db.BusinessWorkspaces
+                .AsNoTracking()
+                .Where(w => w.OwnerId == userId && w.Status != BusinessWorkspaceStatus.Archived)
+                .OrderByDescending(w => w.IsDefault)
+                .ThenBy(w => w.DisplayName)
+                .Select(w => new Microsoft.AspNetCore.Mvc.Rendering.SelectListItem
+                {
+                    Value = w.Id.ToString(),
+                    Text = w.IsDefault ? w.DisplayName + " (default)" : w.DisplayName,
+                })
+                .ToListAsync();
         }
 
         private async Task EnsureOrganizerDataAsync(string userId, OrganizerProfileViewModel input, bool approved)

@@ -19,12 +19,18 @@ namespace EventsApp.Controllers
         private readonly ApplicationDbContext _db;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly IMediaUploadService _mediaUpload;
+        private readonly IPlatformPermissionService _permissions;
 
-        public AccountController(ApplicationDbContext db, UserManager<ApplicationUser> userManager, IMediaUploadService mediaUpload)
+        public AccountController(
+            ApplicationDbContext db,
+            UserManager<ApplicationUser> userManager,
+            IMediaUploadService mediaUpload,
+            IPlatformPermissionService permissions)
         {
             _db = db;
             _userManager = userManager;
             _mediaUpload = mediaUpload;
+            _permissions = permissions;
         }
 
         public async Task<IActionResult> Index()
@@ -54,6 +60,7 @@ namespace EventsApp.Controllers
                 Role = role,
                 HasApplied = orgData != null,
                 IsApproved = orgData?.Approved ?? false,
+                CanCreatePosts = await _permissions.CanCreatePostAsync(User),
                 OrganizationName = orgData?.OrganizationName,
                 ApplicationDate = orgData?.CreatedAt,
                 HasPreferences = preferences != null,

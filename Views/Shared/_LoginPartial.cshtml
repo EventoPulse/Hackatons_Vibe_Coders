@@ -1,7 +1,9 @@
 @using Microsoft.AspNetCore.Identity
 @using EventsApp.Models
+@using EventsApp.Services
 @inject SignInManager<ApplicationUser> SignInManager
 @inject UserManager<ApplicationUser> UserManager
+@inject IPlatformPermissionService Permissions
 
 <ul class="navbar-nav">
     @if (SignInManager.IsSignedIn(User))
@@ -15,6 +17,8 @@
                 ? currentUser!.UserName
                 : (!string.IsNullOrWhiteSpace(currentUser?.Email) ? currentUser!.Email : "Профил"));
         var currentUserId = currentUser?.Id;
+        var canCreatePublicContent = await Permissions.CanCreatePostAsync(User);
+        var canCreateStory = await Permissions.CanCreateStoryAsync(User);
         <li class="nav-item dropdown site-account-menu">
             <a class="nav-link dropdown-toggle" href="#" id="accountMenu" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                 <i class="bi bi-person-circle"></i> @displayName
@@ -33,16 +37,22 @@
                         </a>
                     </li>
                 }
-                <li>
-                    <a class="dropdown-item" asp-controller="Posts" asp-action="Create">
-                        <i class="bi bi-plus-square"></i> <span data-i18n="post.create">Create post</span>
-                    </a>
-                </li>
-                <li>
-                    <a class="dropdown-item" asp-controller="Stories" asp-action="Create">
-                        <i class="bi bi-camera"></i> <span data-i18n="story.create">Story</span>
-                    </a>
-                </li>
+                @if (canCreatePublicContent)
+                {
+                    <li>
+                        <a class="dropdown-item" asp-controller="Posts" asp-action="Create">
+                            <i class="bi bi-plus-square"></i> <span data-i18n="post.create">Create post</span>
+                        </a>
+                    </li>
+                    @if (canCreateStory)
+                    {
+                        <li>
+                            <a class="dropdown-item" asp-controller="Stories" asp-action="Create">
+                                <i class="bi bi-camera"></i> <span data-i18n="story.create">Story</span>
+                            </a>
+                        </li>
+                    }
+                }
                 <li>
                     <a class="dropdown-item" asp-controller="Events" asp-action="Recommended">
                         <i class="bi bi-stars"></i> <span data-i18n="nav.recommended">Recommended</span>

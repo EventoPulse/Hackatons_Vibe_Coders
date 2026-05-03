@@ -13,6 +13,13 @@ namespace EventsApp.ViewModels.Organizer
         public string? Website { get; set; }
         public string? CompanyNumber { get; set; }
         public bool Approved { get; set; }
+        public int? ActiveWorkspaceId { get; set; }
+        public int? ActivePageId { get; set; }
+        public string? ActiveWorkspaceName { get; set; }
+        public string? ActivePageName { get; set; }
+        public string? PaymentStatus { get; set; }
+        public IReadOnlyList<OrganizerWorkspaceRowViewModel> Workspaces { get; set; } = Array.Empty<OrganizerWorkspaceRowViewModel>();
+        public IReadOnlyList<OrganizerPageContextRowViewModel> Pages { get; set; } = Array.Empty<OrganizerPageContextRowViewModel>();
 
         public int EventsCount { get; set; }
         public int PostsCount { get; set; }
@@ -40,6 +47,27 @@ namespace EventsApp.ViewModels.Organizer
         public IReadOnlyList<EventCardViewModel> RecentEvents { get; set; } = Array.Empty<EventCardViewModel>();
         public IReadOnlyList<PostCardViewModel> RecentPosts { get; set; } = Array.Empty<PostCardViewModel>();
         public IReadOnlyList<OrganizerEventTicketRowViewModel> EventTicketRows { get; set; } = Array.Empty<OrganizerEventTicketRowViewModel>();
+    }
+
+    public class OrganizerWorkspaceRowViewModel
+    {
+        public int Id { get; set; }
+        public string DisplayName { get; set; } = null!;
+        public string LegalName { get; set; } = null!;
+        public string? CompanyNumber { get; set; }
+        public bool IsDefault { get; set; }
+        public bool ChargesEnabled { get; set; }
+        public bool PayoutsEnabled { get; set; }
+        public PaymentProvider PaymentProvider { get; set; }
+    }
+
+    public class OrganizerPageContextRowViewModel
+    {
+        public int Id { get; set; }
+        public string DisplayName { get; set; } = null!;
+        public int? BusinessWorkspaceId { get; set; }
+        public bool IsDefaultForWorkspace { get; set; }
+        public bool IsActive { get; set; }
     }
 
     public class OrganizerEventTicketRowViewModel

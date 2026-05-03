@@ -1,8 +1,11 @@
 @model FeedViewModel
+@inject EventsApp.Services.IPlatformPermissionService Permissions
 @{
     ViewData["Title"] = "Поток";
     var returnUrl = $"{Context.Request.Path}{Context.Request.QueryString}";
     var isSignedIn = User.Identity?.IsAuthenticated == true;
+    var canCreatePublicContent = await Permissions.CanCreatePostAsync(User);
+    var canCreateStory = await Permissions.CanCreateStoryAsync(User);
     var currentStoryInitial = string.IsNullOrWhiteSpace(Model.CurrentUserDisplayName)
         ? "?"
         : Model.CurrentUserDisplayName[..1].ToUpperInvariant();
@@ -11,10 +14,10 @@
 <section class="groove-feed-page social-feed-page social-feed-page--stream">
     <header class="social-feed-topbar">
         <div>
-            <span class="groove-stamp groove-stamp-teal" data-i18n="feed.kicker">Поток</span>
-            <h1 data-i18n="feed.title">Последно от сцената.</h1>
+            <span class="groove-stamp groove-stamp-teal" data-i18n="feed.kicker">Discover</span>
+            <h1 data-i18n="feed.title">Събития, организатори и новини от сцената.</h1>
         </div>
-        @if (isSignedIn)
+        @if (isSignedIn && canCreateStory)
         {
             <a asp-controller="Account" asp-action="Index" class="groove-button groove-button-paper">
                 <i class="bi bi-columns-gap"></i> <span data-i18n="account.overview">Преглед</span>
@@ -23,7 +26,7 @@
     </header>
 
     <section class="social-stories-strip" aria-label="Активни сторита" data-i18n-aria-label="story.active">
-        @if (isSignedIn)
+        @if (isSignedIn && canCreatePublicContent)
         {
             <article class="social-story-card social-story-card--create">
                 <form asp-controller="Stories" asp-action="Create" asp-route-returnUrl="@returnUrl" method="post" enctype="multipart/form-data" class="story-create-form">
@@ -113,7 +116,7 @@
                     <div class="social-section-heading social-section-heading--compact">
                         <div>
                             <span class="groove-kicker" data-i18n="feed.following.kicker">Следиш</span>
-                            <h2 data-i18n="feed.following.title">Хората, които следиш.</h2>
+                            <h2 data-i18n="feed.following.title">Съдържание от следвани организатори.</h2>
                         </div>
                     </div>
                     <div class="social-post-list social-post-list--stream">

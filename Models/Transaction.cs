@@ -23,6 +23,10 @@ namespace EventsApp.Models
 
         public ApplicationUser User { get; set; } = null!;
 
+        public int? BusinessWorkspaceId { get; set; }
+
+        public BusinessWorkspace? BusinessWorkspace { get; set; }
+
         [Required]
         [Range(0, double.MaxValue)]
         [Column(TypeName = "decimal(18,2)")]

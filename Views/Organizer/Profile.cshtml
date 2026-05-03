@@ -31,6 +31,18 @@
             <input asp-for="CurrentCoverUrl" type="hidden" />
             <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
 
+            <div class="groove-note mb-3">
+                <strong data-i18n="workspace.page.context">Business workspace</strong>
+                <span data-i18n="workspace.page.context.desc">This public page belongs to the selected legal/payment workspace. Ticket payouts for this page go to that workspace.</span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="BusinessWorkspaceId" class="form-label"></label>
+                <select asp-for="BusinessWorkspaceId" asp-items="Model.Workspaces" class="form-select"></select>
+                <span asp-validation-for="BusinessWorkspaceId" class="text-danger small"></span>
+                <div class="form-text" data-i18n="workspace.page.payout.note">Confirm that sales from this organizer page should be paid to the selected workspace.</div>
+            </div>
+
             <div class="groove-form-grid">
                 <div class="mb-3">
                     <label asp-for="OrganizationName" class="form-label"></label>
@@ -135,6 +147,14 @@
                 <label class="form-check">
                     <input asp-for="IsActive" class="form-check-input" />
                     <span class="form-check-label" data-i18n="organizer.pages.active.selectable">Активна и избираема</span>
+                </label>
+                <label class="form-check">
+                    <input asp-for="ShowOwnerProfilePublicly" class="form-check-input" />
+                    <span class="form-check-label" data-i18n="workspace.show.owner">Show owner profile publicly</span>
+                </label>
+                <label class="form-check">
+                    <input asp-for="ShowLegalBusinessNamePublicly" class="form-check-input" />
+                    <span class="form-check-label" data-i18n="workspace.show.legal">Show legal business name publicly</span>
                 </label>
             </div>
 

@@ -15,7 +15,7 @@ namespace EventsApp.Services.AI
         };
 
         private static readonly string SearchInstructions =
-@"You are a search parser for GrooveOn, an events discovery platform in Bulgaria.
+@"You are a search parser for Evento, an events discovery platform in Bulgaria.
 Extract structured search filters from the user query.
 Return ONLY valid JSON. No markdown. No explanations.
 
@@ -306,7 +306,7 @@ Output ONLY the description text in Bulgarian, no preamble, no quotes, no Englis
                 projectId = _opts.ProjectId,
                 name = _opts.AgentName,
                 presetName = _opts.PresetName,
-                description = "GrooveOn assistant: parses search queries and generates event copy.",
+                description = "Evento assistant: parses search queries and generates event copy.",
                 configuration = new
                 {
                     model = new

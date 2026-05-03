@@ -79,9 +79,26 @@ namespace EventsApp.Migrations
                     b.Property<bool>("PhoneNumberConfirmed")
                         .HasColumnType("bit");
 
+                    b.Property<int?>("PinnedEventId")
+                        .HasColumnType("int");
+
                     b.Property<string>("ProfileImageUrl")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("ProfileStatusEmoji")
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<string>("ProfileStatusText")
+                        .HasMaxLength(140)
+                        .HasColumnType("nvarchar(140)");
+
+                    b.Property<DateTime?>("ProfileStatusUpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("ProfileStatusVisibility")
+                        .HasColumnType("int");
 
                     b.Property<string>("SecurityStamp")
                         .HasColumnType("nvarchar(max)");
@@ -103,7 +120,92 @@ namespace EventsApp.Migrations
                         .HasDatabaseName("UserNameIndex")
                         .HasFilter("[NormalizedUserName] IS NOT NULL");
 
+                    b.HasIndex("PinnedEventId");
+
                     b.ToTable("AspNetUsers", (string)null);
+                });
+
+            modelBuilder.Entity("EventsApp.Models.BusinessWorkspace", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Address")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("BillingEmail")
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)");
+
+                    b.Property<bool>("ChargesEnabled")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("City")
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.Property<string>("CompanyNumber")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("Country")
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<bool>("IsDefault")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("LegalName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("OwnerId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<int>("PaymentProvider")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("PayoutsEnabled")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("PhoneNumber")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<string>("StripeConnectedAccountId")
+                        .HasMaxLength(160)
+                        .HasColumnType("nvarchar(160)");
+
+                    b.Property<int>("StripeOnboardingStatus")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("StripeConnectedAccountId");
+
+                    b.HasIndex("OwnerId", "IsDefault");
+
+                    b.ToTable("BusinessWorkspaces");
                 });
 
             modelBuilder.Entity("EventsApp.Models.Conversation", b =>
@@ -151,6 +253,9 @@ namespace EventsApp.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
+                    b.Property<int?>("BusinessWorkspaceId")
+                        .HasColumnType("int");
+
                     b.Property<string>("City")
                         .IsRequired()
                         .HasMaxLength(80)
@@ -174,7 +279,9 @@ namespace EventsApp.Migrations
                         .HasColumnType("nvarchar(500)");
 
                     b.Property<bool>("IsApproved")
-                        .HasColumnType("bit");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
 
                     b.Property<double?>("Latitude")
                         .HasColumnType("float");
@@ -205,6 +312,8 @@ namespace EventsApp.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("BusinessWorkspaceId");
+
                     b.HasIndex("OrganizerId");
 
                     b.HasIndex("OrganizerProfileId");
@@ -229,7 +338,9 @@ namespace EventsApp.Migrations
                         .HasColumnType("int");
 
                     b.Property<int>("Status")
-                        .HasColumnType("int");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(1);
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
@@ -256,6 +367,15 @@ namespace EventsApp.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<int?>("AuthorOrganizerProfileId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("AuthorType")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("BusinessWorkspaceId")
+                        .HasColumnType("int");
+
                     b.Property<string>("Content")
                         .IsRequired()
                         .HasMaxLength(1000)
@@ -272,6 +392,10 @@ namespace EventsApp.Migrations
                         .HasColumnType("nvarchar(450)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("AuthorOrganizerProfileId");
+
+                    b.HasIndex("BusinessWorkspaceId");
 
                     b.HasIndex("EventId");
 
@@ -615,6 +739,15 @@ namespace EventsApp.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<int?>("AuthorOrganizerProfileId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("AuthorType")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("BusinessWorkspaceId")
+                        .HasColumnType("int");
+
                     b.Property<string>("Content")
                         .IsRequired()
                         .HasMaxLength(2000)
@@ -634,6 +767,10 @@ namespace EventsApp.Migrations
                         .HasColumnType("nvarchar(450)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("AuthorOrganizerProfileId");
+
+                    b.HasIndex("BusinessWorkspaceId");
 
                     b.HasIndex("SenderId");
 
@@ -695,6 +832,9 @@ namespace EventsApp.Migrations
                         .HasMaxLength(16)
                         .HasColumnType("nvarchar(16)");
 
+                    b.Property<int?>("BusinessWorkspaceId")
+                        .HasColumnType("int");
+
                     b.Property<string>("City")
                         .HasMaxLength(80)
                         .HasColumnType("nvarchar(80)");
@@ -730,7 +870,13 @@ namespace EventsApp.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
+                    b.Property<bool>("IsApproved")
+                        .HasColumnType("bit");
+
                     b.Property<bool>("IsDefault")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDefaultForWorkspace")
                         .HasColumnType("bit");
 
                     b.Property<string>("OwnerId")
@@ -740,6 +886,15 @@ namespace EventsApp.Migrations
                     b.Property<string>("PhoneNumber")
                         .HasMaxLength(30)
                         .HasColumnType("nvarchar(30)");
+
+                    b.Property<bool>("ShowLegalBusinessNamePublicly")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("ShowOwnerProfilePublicly")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
 
                     b.Property<string>("Tagline")
                         .HasMaxLength(140)
@@ -754,6 +909,8 @@ namespace EventsApp.Migrations
                         .HasColumnType("nvarchar(200)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("BusinessWorkspaceId", "IsDefaultForWorkspace");
 
                     b.HasIndex("OwnerId", "DisplayName");
 
@@ -770,6 +927,9 @@ namespace EventsApp.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<int?>("BusinessWorkspaceId")
+                        .HasColumnType("int");
+
                     b.Property<string>("Content")
                         .IsRequired()
                         .HasMaxLength(3000)
@@ -785,14 +945,21 @@ namespace EventsApp.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
+                    b.Property<int?>("OrganizerProfileId")
+                        .HasColumnType("int");
+
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
 
                     b.HasKey("Id");
 
+                    b.HasIndex("BusinessWorkspaceId");
+
                     b.HasIndex("EventId");
 
                     b.HasIndex("OrganizerId");
+
+                    b.HasIndex("OrganizerProfileId");
 
                     b.ToTable("Posts");
                 });
@@ -804,6 +971,15 @@ namespace EventsApp.Migrations
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("AuthorOrganizerProfileId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("AuthorType")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("BusinessWorkspaceId")
+                        .HasColumnType("int");
 
                     b.Property<string>("Content")
                         .IsRequired()
@@ -821,6 +997,10 @@ namespace EventsApp.Migrations
                         .HasColumnType("nvarchar(450)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("AuthorOrganizerProfileId");
+
+                    b.HasIndex("BusinessWorkspaceId");
 
                     b.HasIndex("PostId");
 
@@ -969,6 +1149,9 @@ namespace EventsApp.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
+                    b.Property<int?>("BusinessWorkspaceId")
+                        .HasColumnType("int");
+
                     b.Property<string>("Caption")
                         .HasMaxLength(280)
                         .HasColumnType("nvarchar(280)");
@@ -987,9 +1170,16 @@ namespace EventsApp.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
+                    b.Property<int?>("OrganizerProfileId")
+                        .HasColumnType("int");
+
                     b.HasKey("Id");
 
                     b.HasIndex("AuthorId");
+
+                    b.HasIndex("BusinessWorkspaceId");
+
+                    b.HasIndex("OrganizerProfileId");
 
                     b.ToTable("Stories");
                 });
@@ -1044,6 +1234,9 @@ namespace EventsApp.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<int?>("BusinessWorkspaceId")
+                        .HasColumnType("int");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
@@ -1060,6 +1253,8 @@ namespace EventsApp.Migrations
                         .HasColumnType("nvarchar(450)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("BusinessWorkspaceId");
 
                     b.HasIndex("UserId");
 
@@ -1146,6 +1341,36 @@ namespace EventsApp.Migrations
                     b.ToTable("UserPreferences");
                 });
 
+            modelBuilder.Entity("EventsApp.Models.UserProfileSharedEvent", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("EventId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EventId");
+
+                    b.HasIndex("UserId", "CreatedAt");
+
+                    b.HasIndex("UserId", "EventId")
+                        .IsUnique();
+
+                    b.ToTable("UserProfileSharedEvents");
+                });
+
             modelBuilder.Entity("EventsApp.Models.UserTicket", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1160,6 +1385,9 @@ namespace EventsApp.Migrations
 
                     b.Property<bool>("IsUsed")
                         .HasColumnType("bit");
+
+                    b.Property<decimal>("PricePaid")
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("QrCode")
                         .IsRequired()
@@ -1377,6 +1605,27 @@ namespace EventsApp.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("EventsApp.Models.ApplicationUser", b =>
+                {
+                    b.HasOne("EventsApp.Models.Event", "PinnedEvent")
+                        .WithMany()
+                        .HasForeignKey("PinnedEventId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("PinnedEvent");
+                });
+
+            modelBuilder.Entity("EventsApp.Models.BusinessWorkspace", b =>
+                {
+                    b.HasOne("EventsApp.Models.ApplicationUser", "Owner")
+                        .WithMany("BusinessWorkspaces")
+                        .HasForeignKey("OwnerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Owner");
+                });
+
             modelBuilder.Entity("EventsApp.Models.Conversation", b =>
                 {
                     b.HasOne("EventsApp.Models.ApplicationUser", "ParticipantOne")
@@ -1398,6 +1647,11 @@ namespace EventsApp.Migrations
 
             modelBuilder.Entity("EventsApp.Models.Event", b =>
                 {
+                    b.HasOne("EventsApp.Models.BusinessWorkspace", "BusinessWorkspace")
+                        .WithMany("Events")
+                        .HasForeignKey("BusinessWorkspaceId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
                     b.HasOne("EventsApp.Models.ApplicationUser", "Organizer")
                         .WithMany("Events")
                         .HasForeignKey("OrganizerId")
@@ -1413,6 +1667,8 @@ namespace EventsApp.Migrations
                         .WithMany("Events")
                         .HasForeignKey("VenueLayoutId")
                         .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("BusinessWorkspace");
 
                     b.Navigation("Organizer");
 
@@ -1442,6 +1698,16 @@ namespace EventsApp.Migrations
 
             modelBuilder.Entity("EventsApp.Models.EventComment", b =>
                 {
+                    b.HasOne("EventsApp.Models.OrganizerProfile", "AuthorOrganizerProfile")
+                        .WithMany()
+                        .HasForeignKey("AuthorOrganizerProfileId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("EventsApp.Models.BusinessWorkspace", "BusinessWorkspace")
+                        .WithMany()
+                        .HasForeignKey("BusinessWorkspaceId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
                     b.HasOne("EventsApp.Models.Event", "Event")
                         .WithMany("Comments")
                         .HasForeignKey("EventId")
@@ -1453,6 +1719,10 @@ namespace EventsApp.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("AuthorOrganizerProfile");
+
+                    b.Navigation("BusinessWorkspace");
 
                     b.Navigation("Event");
 
@@ -1609,6 +1879,16 @@ namespace EventsApp.Migrations
 
             modelBuilder.Entity("EventsApp.Models.Message", b =>
                 {
+                    b.HasOne("EventsApp.Models.OrganizerProfile", "AuthorOrganizerProfile")
+                        .WithMany()
+                        .HasForeignKey("AuthorOrganizerProfileId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("EventsApp.Models.BusinessWorkspace", "BusinessWorkspace")
+                        .WithMany()
+                        .HasForeignKey("BusinessWorkspaceId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
                     b.HasOne("EventsApp.Models.Conversation", "Conversation")
                         .WithMany("Messages")
                         .HasForeignKey("ConversationId")
@@ -1620,6 +1900,10 @@ namespace EventsApp.Migrations
                         .HasForeignKey("SenderId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("AuthorOrganizerProfile");
+
+                    b.Navigation("BusinessWorkspace");
 
                     b.Navigation("Conversation");
 
@@ -1639,21 +1923,33 @@ namespace EventsApp.Migrations
 
             modelBuilder.Entity("EventsApp.Models.OrganizerProfile", b =>
                 {
+                    b.HasOne("EventsApp.Models.BusinessWorkspace", "BusinessWorkspace")
+                        .WithMany("OrganizerProfiles")
+                        .HasForeignKey("BusinessWorkspaceId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
                     b.HasOne("EventsApp.Models.ApplicationUser", "Owner")
                         .WithMany("OrganizerProfiles")
                         .HasForeignKey("OwnerId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.Navigation("BusinessWorkspace");
+
                     b.Navigation("Owner");
                 });
 
             modelBuilder.Entity("EventsApp.Models.Post", b =>
                 {
+                    b.HasOne("EventsApp.Models.BusinessWorkspace", "BusinessWorkspace")
+                        .WithMany("Posts")
+                        .HasForeignKey("BusinessWorkspaceId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
                     b.HasOne("EventsApp.Models.Event", "Event")
                         .WithMany("Posts")
                         .HasForeignKey("EventId")
-                        .OnDelete(DeleteBehavior.SetNull);
+                        .OnDelete(DeleteBehavior.NoAction);
 
                     b.HasOne("EventsApp.Models.ApplicationUser", "Organizer")
                         .WithMany("Posts")
@@ -1661,13 +1957,32 @@ namespace EventsApp.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("EventsApp.Models.OrganizerProfile", "OrganizerProfile")
+                        .WithMany("Posts")
+                        .HasForeignKey("OrganizerProfileId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.Navigation("BusinessWorkspace");
+
                     b.Navigation("Event");
 
                     b.Navigation("Organizer");
+
+                    b.Navigation("OrganizerProfile");
                 });
 
             modelBuilder.Entity("EventsApp.Models.PostComment", b =>
                 {
+                    b.HasOne("EventsApp.Models.OrganizerProfile", "AuthorOrganizerProfile")
+                        .WithMany()
+                        .HasForeignKey("AuthorOrganizerProfileId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("EventsApp.Models.BusinessWorkspace", "BusinessWorkspace")
+                        .WithMany()
+                        .HasForeignKey("BusinessWorkspaceId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
                     b.HasOne("EventsApp.Models.Post", "Post")
                         .WithMany("Comments")
                         .HasForeignKey("PostId")
@@ -1679,6 +1994,10 @@ namespace EventsApp.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("AuthorOrganizerProfile");
+
+                    b.Navigation("BusinessWorkspace");
 
                     b.Navigation("Post");
 
@@ -1761,7 +2080,21 @@ namespace EventsApp.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("EventsApp.Models.BusinessWorkspace", "BusinessWorkspace")
+                        .WithMany("Stories")
+                        .HasForeignKey("BusinessWorkspaceId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("EventsApp.Models.OrganizerProfile", "OrganizerProfile")
+                        .WithMany("Stories")
+                        .HasForeignKey("OrganizerProfileId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
                     b.Navigation("Author");
+
+                    b.Navigation("BusinessWorkspace");
+
+                    b.Navigation("OrganizerProfile");
                 });
 
             modelBuilder.Entity("EventsApp.Models.Ticket", b =>
@@ -1777,11 +2110,18 @@ namespace EventsApp.Migrations
 
             modelBuilder.Entity("EventsApp.Models.Transaction", b =>
                 {
+                    b.HasOne("EventsApp.Models.BusinessWorkspace", "BusinessWorkspace")
+                        .WithMany("Transactions")
+                        .HasForeignKey("BusinessWorkspaceId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
                     b.HasOne("EventsApp.Models.ApplicationUser", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("BusinessWorkspace");
 
                     b.Navigation("User");
                 });
@@ -1825,6 +2165,25 @@ namespace EventsApp.Migrations
                         .HasForeignKey("EventsApp.Models.UserPreferences", "UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("EventsApp.Models.UserProfileSharedEvent", b =>
+                {
+                    b.HasOne("EventsApp.Models.Event", "Event")
+                        .WithMany()
+                        .HasForeignKey("EventId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("EventsApp.Models.ApplicationUser", "User")
+                        .WithMany("ProfileSharedEvents")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Event");
 
                     b.Navigation("User");
                 });
@@ -1933,6 +2292,8 @@ namespace EventsApp.Migrations
 
             modelBuilder.Entity("EventsApp.Models.ApplicationUser", b =>
                 {
+                    b.Navigation("BusinessWorkspaces");
+
                     b.Navigation("EventAttendances");
 
                     b.Navigation("EventComments");
@@ -1961,6 +2322,8 @@ namespace EventsApp.Migrations
 
                     b.Navigation("Posts");
 
+                    b.Navigation("ProfileSharedEvents");
+
                     b.Navigation("SentMessages");
 
                     b.Navigation("Stories");
@@ -1970,6 +2333,19 @@ namespace EventsApp.Migrations
                     b.Navigation("UserPreferences");
 
                     b.Navigation("VenueLayouts");
+                });
+
+            modelBuilder.Entity("EventsApp.Models.BusinessWorkspace", b =>
+                {
+                    b.Navigation("Events");
+
+                    b.Navigation("OrganizerProfiles");
+
+                    b.Navigation("Posts");
+
+                    b.Navigation("Stories");
+
+                    b.Navigation("Transactions");
                 });
 
             modelBuilder.Entity("EventsApp.Models.Conversation", b =>
@@ -2020,6 +2396,10 @@ namespace EventsApp.Migrations
             modelBuilder.Entity("EventsApp.Models.OrganizerProfile", b =>
                 {
                     b.Navigation("Events");
+
+                    b.Navigation("Posts");
+
+                    b.Navigation("Stories");
                 });
 
             modelBuilder.Entity("EventsApp.Models.Post", b =>

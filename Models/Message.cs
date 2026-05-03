@@ -26,6 +26,18 @@ namespace EventsApp.Models
 
         public ApplicationUser Sender { get; set; } = null!;
 
+        public AuthorIdentityType AuthorType { get; set; } = AuthorIdentityType.User;
+
+        [ForeignKey(nameof(AuthorOrganizerProfile))]
+        public int? AuthorOrganizerProfileId { get; set; }
+
+        public OrganizerProfile? AuthorOrganizerProfile { get; set; }
+
+        [ForeignKey(nameof(BusinessWorkspace))]
+        public int? BusinessWorkspaceId { get; set; }
+
+        public BusinessWorkspace? BusinessWorkspace { get; set; }
+
         [Required]
         [MinLength(GlobalConstants.Social.MessageContentMinLength)]
         [MaxLength(GlobalConstants.Social.MessageContentMaxLength)]
@@ -35,5 +47,8 @@ namespace EventsApp.Models
         public DateTime CreatedAt { get; set; }
 
         public DateTime? SeenAt { get; set; }
+
+        // TODO: Add MessageStatus and report metadata when message moderation moves
+        // beyond the current MVP permission/rate-limit checks.
     }
 }

@@ -22,6 +22,17 @@
             @Html.AntiForgeryToken()
             <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
 
+            @if (!string.IsNullOrWhiteSpace(Model.ActiveWorkspaceName) || !string.IsNullOrWhiteSpace(Model.ActivePageName))
+            {
+                <div class="groove-note mb-3">
+                    <strong data-i18n="workspace.publish.context">Publishing context</strong>
+                    <span>
+                        <span data-i18n="workspace.publish.as">Publishing as</span>: @Model.ActivePageName
+                        · <span data-i18n="workspace.payments.to">Payments go to</span>: @Model.ActiveWorkspaceName
+                    </span>
+                </div>
+            }
+
             <div class="mb-3">
                 <label asp-for="OrganizerProfileId" class="form-label"></label>
                 <select asp-for="OrganizerProfileId" asp-items="Model.OrganizerProfiles" class="form-select">

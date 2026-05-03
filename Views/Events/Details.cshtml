@@ -125,6 +125,20 @@
                             <i class="bi bi-star"></i> <span data-i18n="event.action.interested">Интересува ме</span>
                         </button>
                     </form>
+                    <form asp-controller="Profiles" asp-action="@(Model.CurrentUserPinned ? "UnpinEvent" : "PinEvent")" asp-route-eventId="@Model.Id" asp-route-returnUrl="@($"{Context.Request.Path}{Context.Request.QueryString}")" method="post">
+                        @Html.AntiForgeryToken()
+                        <button class="groove-button groove-button-paper" type="submit">
+                            <i class="bi bi-pin-angle"></i>
+                            @(Model.CurrentUserPinned ? "Unpin" : "Pin to profile")
+                        </button>
+                    </form>
+                    <form asp-controller="Profiles" asp-action="@(Model.CurrentUserSharedToProfile ? "RemoveSharedEvent" : "ShareEvent")" asp-route-eventId="@Model.Id" asp-route-returnUrl="@($"{Context.Request.Path}{Context.Request.QueryString}")" method="post">
+                        @Html.AntiForgeryToken()
+                        <button class="groove-button groove-button-paper" type="submit">
+                            <i class="bi bi-person-bounding-box"></i>
+                            @(Model.CurrentUserSharedToProfile ? "Remove profile share" : "Share on profile")
+                        </button>
+                    </form>
                 </div>
             }
         </aside>
@@ -278,13 +292,23 @@
                                         {
                                             <input type="hidden" name="occurrenceId" value="@Model.SelectedOccurrenceId" />
                                         }
-                                        @if (Model.HasSeatLayout)
-                                        {
-                                            <input type="hidden" name="seatId" data-seat-input />
-                                        }
-                                        <button type="submit" class="groove-button groove-button-dark">
-                                            <i class="bi bi-bag-check"></i> <span data-i18n="@ticketActionKey">@ticketActionText</span>
-                                        </button>
+                                         @if (Model.HasSeatLayout)
+                                         {
+                                             <input type="hidden" name="seatId" data-seat-input />
+                                         }
+                                         else
+                                         {
+                                             <label class="visually-hidden" for="quantity-@t.Id" data-i18n="ticket.quantity">Брой билети</label>
+                                             <select id="quantity-@t.Id" name="quantity" class="form-select form-select-sm groove-ticket-quantity" aria-label="Брой билети">
+                                                 @for (var q = 1; q <= t.MaxPurchaseQuantity; q++)
+                                                 {
+                                                     <option value="@q">@q</option>
+                                                 }
+                                             </select>
+                                         }
+                                         <button type="submit" class="groove-button groove-button-dark">
+                                             <i class="bi bi-bag-check"></i> <span data-i18n="@ticketActionKey">@ticketActionText</span>
+                                         </button>
                                     </form>
                                 }
                                 else
@@ -326,6 +350,30 @@
         {
             <form asp-action="AddComment" asp-route-id="@Model.Id" method="post" class="mb-4">
                 @Html.AntiForgeryToken()
+                @if (Model.ActingIdentities.Count > 1)
+                {
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                        <label for="event-comment-identity" class="form-label small mb-0" data-i18n="identity.commenting.as">Коментираш като</label>
+                        <select id="event-comment-identity" name="actingIdentityKey" class="form-select form-select-sm" style="max-width:260px;">
+                            @foreach (var identity in Model.ActingIdentities)
+                            {
+                                if (identity.IsDefault)
+                                {
+                                    <option value="@identity.Key" selected>@identity.Label</option>
+                                }
+                                else
+                                {
+                                    <option value="@identity.Key">@identity.Label</option>
+                                }
+                            }
+                        </select>
+                    </div>
+                }
+                else if (Model.ActingIdentities.Count == 1)
+                {
+                    <input type="hidden" name="actingIdentityKey" value="@Model.ActingIdentities[0].Key" />
+                    <p class="small text-muted mb-2"><span data-i18n="identity.commenting.as">Коментираш като</span>: @Model.ActingIdentities[0].DisplayName</p>
+                }
                 <div class="input-group">
                     <input type="text" name="content" class="form-control" placeholder="Напиши коментар..." data-i18n-placeholder="comments.placeholder" maxlength="1000" required />
                     <button class="btn btn-primary" type="submit"><i class="bi bi-send"></i> <span data-i18n="common.send">Изпрати</span></button>
@@ -347,10 +395,28 @@
                     @foreach (var c in Model.Comments)
                     {
                         <article class="groove-list-item">
-                            <div>
-                                <strong>@c.UserName</strong>
+                            <div class="d-flex gap-3">
+                                @if (!string.IsNullOrWhiteSpace(c.AuthorImageUrl))
+                                {
+                                    <img src="@c.AuthorImageUrl" alt="@c.UserName" class="social-avatar-xs" />
+                                }
+                                else
+                                {
+                                    <span class="social-avatar-xs social-avatar-xs--fallback">@(string.IsNullOrWhiteSpace(c.UserName) ? "?" : c.UserName[..1].ToUpperInvariant())</span>
+                                }
+                                <div>
+                                    @if (!c.IsOrganizerPageAuthor && !string.IsNullOrWhiteSpace(c.AuthorProfileUserId))
+                                    {
+                                        <a asp-controller="Profiles" asp-action="Details" asp-route-id="@c.AuthorProfileUserId" class="fw-bold text-decoration-none">@c.UserName</a>
+                                    }
+                                    else
+                                    {
+                                        <strong>@c.UserName</strong>
+                                    }
+                                    <span class="groove-badge ms-2" data-i18n="@c.AuthorBadgeKey">@c.AuthorBadgeText</span>
                                 <p class="groove-list-meta mt-1">@c.CreatedAt.ToString("dd.MM.yyyy HH:mm")</p>
                                 <p>@c.Content</p>
+                                </div>
                             </div>
                             @if (c.CanDelete)
                             {

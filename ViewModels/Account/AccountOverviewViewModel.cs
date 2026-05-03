@@ -18,6 +18,7 @@ namespace EventsApp.ViewModels.Account
 
         public bool HasApplied { get; set; }
         public bool IsApproved { get; set; }
+        public bool CanCreatePosts { get; set; }
         public string? OrganizationName { get; set; }
         public DateTime? ApplicationDate { get; set; }
 

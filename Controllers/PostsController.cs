@@ -19,17 +19,26 @@ namespace EventsApp.Controllers
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly IMediaUploadService _mediaUpload;
         private readonly ISocialFeedService _socialFeed;
+        private readonly IPlatformPermissionService _permissions;
+        private readonly IBusinessContextService _businessContext;
+        private readonly IActingIdentityService _actingIdentity;
 
         public PostsController(
             ApplicationDbContext db,
             UserManager<ApplicationUser> userManager,
             IMediaUploadService mediaUpload,
-            ISocialFeedService socialFeed)
+            ISocialFeedService socialFeed,
+            IPlatformPermissionService permissions,
+            IBusinessContextService businessContext,
+            IActingIdentityService actingIdentity)
         {
             _db = db;
             _userManager = userManager;
             _mediaUpload = mediaUpload;
             _socialFeed = socialFeed;
+            _permissions = permissions;
+            _businessContext = businessContext;
+            _actingIdentity = actingIdentity;
         }
 
         public async Task<IActionResult> Index()
@@ -48,12 +57,15 @@ namespace EventsApp.Controllers
                 .AsNoTracking()
                 .Include(p => p.Organizer)
                     .ThenInclude(o => o.OrganizerData)
+                .Include(p => p.OrganizerProfile)
                 .Include(p => p.Event)
                 .Include(p => p.Images)
                 .Include(p => p.Likes)
                 .Include(p => p.Saves)
                 .Include(p => p.Comments)
                     .ThenInclude(c => c.User)
+                .Include(p => p.Comments)
+                    .ThenInclude(c => c.AuthorOrganizerProfile)
                 .FirstOrDefaultAsync(p => p.Id == id);
 
             if (post == null) return NotFound();
@@ -62,7 +74,9 @@ namespace EventsApp.Controllers
             {
                 Id = post.Id,
                 OrganizerId = post.OrganizerId,
-                OrganizerName = post.Organizer?.OrganizerData?.Approved == true
+                OrganizerName = !string.IsNullOrWhiteSpace(post.OrganizerProfile?.DisplayName)
+                    ? post.OrganizerProfile.DisplayName
+                    : post.Organizer?.OrganizerData?.Approved == true
                     ? post.Organizer.OrganizerData.OrganizationName
                     : post.Organizer?.UserName ?? string.Empty,
                 Content = post.Content,
@@ -70,7 +84,7 @@ namespace EventsApp.Controllers
                 UpdatedAt = post.UpdatedAt,
                 EventId = post.EventId,
                 EventTitle = post.Event?.Title,
-                OrganizerImageUrl = post.Organizer?.ProfileImageUrl,
+                OrganizerImageUrl = post.OrganizerProfile?.AvatarImageUrl ?? post.Organizer?.ProfileImageUrl,
                 OrganizerIsOrganizer = post.Organizer?.OrganizerData?.Approved ?? false,
                 Media = post.Images
                     .Select(i => new PostMediaItemViewModel { Url = i.ImageUrl, MediaType = i.MediaType })
@@ -85,7 +99,12 @@ namespace EventsApp.Controllers
                     {
                         Id = c.Id,
                         UserId = c.UserId,
-                        UserName = c.User?.UserName ?? string.Empty,
+                        UserName = GetCommentDisplayName(c),
+                        AuthorImageUrl = c.AuthorType == AuthorIdentityType.OrganizerPage ? c.AuthorOrganizerProfile?.AvatarImageUrl : c.User?.ProfileImageUrl,
+                        AuthorBadgeKey = GetAuthorBadgeKey(c.AuthorType),
+                        AuthorBadgeText = GetAuthorBadgeText(c.AuthorType, c.UserId == userId),
+                        AuthorProfileUserId = c.AuthorType == AuthorIdentityType.OrganizerPage ? null : c.UserId,
+                        IsOrganizerPageAuthor = c.AuthorType == AuthorIdentityType.OrganizerPage,
                         Content = c.Content,
                         CreatedAt = c.CreatedAt,
                         CanDelete = isAdmin || c.UserId == userId,
@@ -93,15 +112,33 @@ namespace EventsApp.Controllers
                     .ToList(),
                 CanEdit = isAdmin || post.OrganizerId == userId,
                 CanDelete = isAdmin || post.OrganizerId == userId,
+                ActingIdentities = User.Identity?.IsAuthenticated == true
+                    ? await _actingIdentity.GetOptionsAsync(HttpContext, post.OrganizerProfileId)
+                    : Array.Empty<ViewModels.Social.ActingIdentityOptionViewModel>(),
             });
         }
 
         [Authorize]
         public async Task<IActionResult> Create()
         {
+            if (!await _permissions.CanCreatePostAsync(User))
+            {
+                TempData["StatusMessage"] = "Only approved organizers can create public posts.";
+                return Forbid();
+            }
+
+            var context = await _businessContext.GetContextAsync(HttpContext);
+            if (context.Page == null || context.Workspace == null)
+            {
+                TempData["StatusMessage"] = "Избери активна organizer page преди да публикуваш.";
+                return RedirectToAction("Dashboard", "Organizer");
+            }
+
             return View(new PostCreateEditViewModel
             {
                 Events = await GetEventOptionsAsync(),
+                ActiveWorkspaceName = context.Workspace.DisplayName,
+                ActivePageName = context.Page.DisplayName,
             });
         }
 
@@ -111,9 +148,27 @@ namespace EventsApp.Controllers
         [Authorize]
         public async Task<IActionResult> Create(PostCreateEditViewModel input)
         {
+            if (!await _permissions.CanCreatePostAsync(User))
+            {
+                TempData["StatusMessage"] = "Only approved organizers can create public posts.";
+                return Forbid();
+            }
+
+            var context = await _businessContext.GetContextAsync(HttpContext);
+            if (context.Page == null || context.Workspace == null)
+            {
+                ModelState.AddModelError(string.Empty, "Избери активна organizer page преди да публикуваш.");
+            }
+            else if (!await _permissions.CanPublishAsIdentityAsync(User, AuthorIdentityType.OrganizerPage, context.Page.Id))
+            {
+                return Forbid();
+            }
+
             if (!ModelState.IsValid)
             {
                 input.Events = await GetEventOptionsAsync();
+                input.ActiveWorkspaceName = context.Workspace?.DisplayName;
+                input.ActivePageName = context.Page?.DisplayName;
                 return View(input);
             }
 
@@ -122,6 +177,8 @@ namespace EventsApp.Controllers
             var post = new Post
             {
                 OrganizerId = userId,
+                OrganizerProfileId = context.Page!.Id,
+                BusinessWorkspaceId = context.Workspace!.Id,
                 Content = input.Content,
                 EventId = input.EventId,
             };
@@ -153,6 +210,8 @@ namespace EventsApp.Controllers
 
             var post = await _db.Posts
                 .Include(p => p.Images)
+                .Include(p => p.OrganizerProfile)
+                .Include(p => p.BusinessWorkspace)
                 .FirstOrDefaultAsync(p => p.Id == id);
 
             if (post == null) return NotFound();
@@ -165,6 +224,8 @@ namespace EventsApp.Controllers
                 EventId = post.EventId,
                 CurrentMediaUrl = post.Images.Select(i => i.ImageUrl).FirstOrDefault(),
                 Events = await GetEventOptionsAsync(),
+                ActiveWorkspaceName = post.BusinessWorkspace?.DisplayName,
+                ActivePageName = post.OrganizerProfile?.DisplayName,
             });
         }
 
@@ -318,8 +379,13 @@ namespace EventsApp.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize]
-        public async Task<IActionResult> AddComment(int id, string content)
+        public async Task<IActionResult> AddComment(int id, string content, string? actingIdentityKey)
         {
+            if (!await _permissions.CanCommentAsync(User))
+            {
+                return Forbid();
+            }
+
             if (string.IsNullOrWhiteSpace(content))
             {
                 TempData["StatusMessage"] = "Comment cannot be empty.";
@@ -330,14 +396,24 @@ namespace EventsApp.Controllers
             if (content.Length > GlobalConstants.Comment.ContentMaxLength)
                 content = content[..GlobalConstants.Comment.ContentMaxLength];
 
-            if (!await _db.Posts.AnyAsync(p => p.Id == id))
+            var post = await _db.Posts.AsNoTracking().FirstOrDefaultAsync(p => p.Id == id);
+            if (post == null)
                 return NotFound();
 
             var userId = _userManager.GetUserId(User)!;
+            var identity = await _actingIdentity.ResolveAsync(HttpContext, actingIdentityKey, post.OrganizerProfileId);
+            if (identity == null || !await _permissions.CanCommentAsIdentityAsync(User, identity.Type, identity.OrganizerProfileId))
+            {
+                return Forbid();
+            }
+
             _db.PostComments.Add(new PostComment
             {
                 PostId = id,
                 UserId = userId,
+                AuthorType = identity.Type,
+                AuthorOrganizerProfileId = identity.OrganizerProfileId,
+                BusinessWorkspaceId = identity.BusinessWorkspaceId,
                 Content = content,
             });
             await _db.SaveChangesAsync();
@@ -418,6 +494,40 @@ namespace EventsApp.Controllers
                     Text = e.Title,
                 })
                 .ToListAsync();
+        }
+
+        private static string GetCommentDisplayName(PostComment comment)
+        {
+            return comment.AuthorType == AuthorIdentityType.OrganizerPage && comment.AuthorOrganizerProfile != null
+                ? comment.AuthorOrganizerProfile.DisplayName
+                : comment.User?.UserName ?? string.Empty;
+        }
+
+        private static string GetAuthorBadgeKey(AuthorIdentityType type)
+        {
+            return type switch
+            {
+                AuthorIdentityType.OrganizerPage => "identity.page",
+                AuthorIdentityType.Admin => "identity.admin",
+                AuthorIdentityType.System => "identity.system",
+                _ => "identity.user",
+            };
+        }
+
+        private static string GetAuthorBadgeText(AuthorIdentityType type, bool isYou)
+        {
+            if (isYou)
+            {
+                return "You";
+            }
+
+            return type switch
+            {
+                AuthorIdentityType.OrganizerPage => "Organizer Page",
+                AuthorIdentityType.Admin => "Admin",
+                AuthorIdentityType.System => "System",
+                _ => "User",
+            };
         }
     }
 }

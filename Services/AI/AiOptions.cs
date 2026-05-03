@@ -8,8 +8,8 @@ namespace EventsApp.Services.AI
         public string BaseUrl { get; set; } = "https://stage.sirma.ai/client/api/v1";
         public string ApiKey { get; set; } = string.Empty;
         public int ProjectId { get; set; }
-        public string AgentName { get; set; } = "GrooveOnSearch";
-        public string PresetName { get; set; } = "GrooveOn Smart Search";
+        public string AgentName { get; set; } = "EventoSearch";
+        public string PresetName { get; set; } = "Evento Smart Search";
         public int ProviderConfigId { get; set; } = 1610;
         public string ModelName { get; set; } = "gpt-4.1-mini";
         public string? AgentId { get; set; }

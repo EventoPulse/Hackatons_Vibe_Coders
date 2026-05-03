@@ -22,6 +22,15 @@
             @Html.AntiForgeryToken()
             <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
 
+            <div class="groove-note mb-3">
+                <strong data-i18n="workspace.publish.context">Publishing context</strong>
+                <span>
+                    <span data-i18n="workspace.publish.as">Publishing as</span>: @Model.ActivePageName
+                    · <span data-i18n="workspace.feed.visible">Visible in Discover</span>
+                    · <span data-i18n="workspace.payments.to">Payments go to</span>: @Model.ActiveWorkspaceName
+                </span>
+            </div>
+
             <div class="mb-3">
                 <label asp-for="MediaFile" class="form-label"></label>
                 <input asp-for="MediaFile" class="form-control" type="file"

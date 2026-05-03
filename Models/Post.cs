@@ -26,6 +26,16 @@ namespace EventsApp.Models
 
         public ApplicationUser Organizer { get; set; } = null!;
 
+        [ForeignKey(nameof(OrganizerProfile))]
+        public int? OrganizerProfileId { get; set; }
+
+        public OrganizerProfile? OrganizerProfile { get; set; }
+
+        [ForeignKey(nameof(BusinessWorkspace))]
+        public int? BusinessWorkspaceId { get; set; }
+
+        public BusinessWorkspace? BusinessWorkspace { get; set; }
+
         [ForeignKey(nameof(Event))]
         public int? EventId { get; set; }
 
