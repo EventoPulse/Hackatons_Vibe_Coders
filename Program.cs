@@ -48,7 +48,7 @@ builder.Services.AddScoped<IActingIdentityService, ActingIdentityService>();
 builder.Services.Configure<AiOptions>(builder.Configuration.GetSection(AiOptions.SectionName));
 builder.Services.Configure<SirmaAiOptions>(builder.Configuration.GetSection(SirmaAiOptions.SectionName));
 builder.Services.Configure<GoogleMapsOptions>(builder.Configuration.GetSection(GoogleMapsOptions.SectionName));
-builder.Services.AddHttpClient<IAiSearchService, SirmaAiSearchService>();
+builder.Services.AddHttpClient<IAiSearchService, OpenAiService>();
 builder.Services.AddHttpClient<IGeocodingService, NominatimGeocodingService>();
 // Image generation removed — no additional HttpClient or image service registered.
 

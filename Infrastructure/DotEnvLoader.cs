@@ -36,7 +36,8 @@ namespace EventsApp.Infrastructure
             {
                 mapped[kv.Key] = kv.Value;
 
-                if (string.Equals(kv.Key, "Sirma_key", StringComparison.OrdinalIgnoreCase) ||
+                if (string.Equals(kv.Key, "OPENAI_API_KEY", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(kv.Key, "Sirma_key", StringComparison.OrdinalIgnoreCase) ||
                     string.Equals(kv.Key, "SIRMA_API_KEY", StringComparison.OrdinalIgnoreCase) ||
                     string.Equals(kv.Key, "AI_API_KEY", StringComparison.OrdinalIgnoreCase))
                 {
