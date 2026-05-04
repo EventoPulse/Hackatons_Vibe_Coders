@@ -46,7 +46,7 @@ namespace EventsApp.Controllers.Api
                 ApplyKeywordFallback(result, query);
                 result.AiUsed = false;
                 result.AiStatus = "Disabled";
-                result.AiStatusDetail = "Sirma AI not configured. Add Sirma_key + Sirma_agent_id to .env or user-secrets.";
+                result.AiStatusDetail = "AI search is not configured. Add OPENAI_API_KEY or AI_API_KEY to .env or user-secrets.";
                 return Ok(result);
             }
 
@@ -57,7 +57,7 @@ namespace EventsApp.Controllers.Api
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Smart search call to Sirma AI threw");
+                _logger.LogWarning(ex, "Smart search AI call threw");
             }
 
             if (intent != null)

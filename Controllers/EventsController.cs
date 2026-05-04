@@ -143,6 +143,12 @@ namespace EventsApp.Controllers
                 ?? occurrences.FirstOrDefault(o => o.Status == EventOccurrenceStatus.Scheduled && o.StartDateTime > DateTime.UtcNow)
                 ?? occurrences.FirstOrDefault();
 
+            var comments = ev.Comments.ToList();
+            var repliesByParentId = comments
+                .Where(c => c.ParentCommentId.HasValue)
+                .GroupBy(c => c.ParentCommentId!.Value)
+                .ToDictionary(g => g.Key, g => g.OrderBy(r => r.CreatedAt).ToList());
+
             if (ev.VenueLayoutId.HasValue && ev.TicketingMode != EventTicketingMode.GeneralAdmission)
             {
                 await _layouts.EnsureInventoryAsync(ev.Id, selectedOccurrence?.Id, ev.VenueLayoutId.Value);
@@ -171,6 +177,7 @@ namespace EventsApp.Controllers
                 SavesCount = ev.Saves.Count,
                 GoingCount = ev.Attendances.Count(a => a.Status == EventAttendanceStatus.Going),
                 InterestedCount = ev.Attendances.Count(a => a.Status == EventAttendanceStatus.Interested),
+                CommentsCount = comments.Count,
                 CurrentUserLiked = userId != null && ev.Likes.Any(l => l.UserId == userId),
                 CurrentUserSaved = userId != null && ev.Saves.Any(s => s.UserId == userId),
                 CurrentUserPinned = userId != null && await _db.Users.AnyAsync(u => u.Id == userId && u.PinnedEventId == ev.Id),
@@ -181,22 +188,10 @@ namespace EventsApp.Controllers
                         .Where(a => a.UserId == userId)
                         .Select(a => (EventAttendanceStatus?)a.Status)
                         .FirstOrDefault(),
-                Comments = ev.Comments
+                Comments = comments
+                    .Where(c => c.ParentCommentId == null)
                     .OrderByDescending(c => c.CreatedAt)
-                    .Select(c => new EventCommentViewModel
-                    {
-                        Id = c.Id,
-                        UserId = c.UserId,
-                        UserName = GetCommentDisplayName(c),
-                        AuthorImageUrl = c.AuthorType == AuthorIdentityType.OrganizerPage ? c.AuthorOrganizerProfile?.AvatarImageUrl : c.User.ProfileImageUrl,
-                        AuthorBadgeKey = GetAuthorBadgeKey(c.AuthorType),
-                        AuthorBadgeText = GetAuthorBadgeText(c.AuthorType, c.UserId == userId),
-                        AuthorProfileUserId = c.AuthorType == AuthorIdentityType.OrganizerPage ? null : c.UserId,
-                        IsOrganizerPageAuthor = c.AuthorType == AuthorIdentityType.OrganizerPage,
-                        Content = c.Content,
-                        CreatedAt = c.CreatedAt,
-                        CanDelete = isAdmin || c.UserId == userId,
-                    })
+                    .Select(c => ToCommentViewModel(c, userId, isAdmin, repliesByParentId))
                     .ToList(),
                 CanEdit = isAdmin || ev.OrganizerId == userId,
                 CanDelete = isAdmin || ev.OrganizerId == userId,
@@ -292,6 +287,11 @@ namespace EventsApp.Controllers
                     InterestedCount = e.Attendances.Count(a => a.Status == EventAttendanceStatus.Interested),
                     CurrentUserLiked = userId != null && e.Likes.Any(l => l.UserId == userId),
                     CurrentUserSaved = userId != null && e.Saves.Any(s => s.UserId == userId),
+                    HasActiveTickets = e.Tickets.Any(t => t.IsActive),
+                    HasPaidTickets = e.Tickets.Any(t => t.IsActive && t.Price > 0m),
+                    LowestPaidTicketPrice = e.Tickets
+                        .Where(t => t.IsActive && t.Price > 0m)
+                        .Min(t => (decimal?)t.Price),
                 })
                 .ToListAsync();
 
@@ -890,7 +890,7 @@ namespace EventsApp.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize]
-        public async Task<IActionResult> AddComment(int id, string content, string? actingIdentityKey)
+        public async Task<IActionResult> AddComment(int id, string content, string? actingIdentityKey, int? parentCommentId)
         {
             if (!await _permissions.CanCommentAsync(User))
             {
@@ -915,6 +915,18 @@ namespace EventsApp.Controllers
                 return NotFound();
             }
 
+            if (parentCommentId.HasValue)
+            {
+                var parentIsValid = await _db.EventComments
+                    .AsNoTracking()
+                    .AnyAsync(c => c.Id == parentCommentId.Value && c.EventId == id && c.ParentCommentId == null);
+                if (!parentIsValid)
+                {
+                    TempData["StatusMessage"] = "Reply target was not found.";
+                    return RedirectToAction(nameof(Details), new { id });
+                }
+            }
+
             var userId = _userManager.GetUserId(User)!;
             var identity = await _actingIdentity.ResolveAsync(HttpContext, actingIdentityKey, ev.OrganizerProfileId);
             if (identity == null || !await _permissions.CanCommentAsIdentityAsync(User, identity.Type, identity.OrganizerProfileId))
@@ -929,6 +941,7 @@ namespace EventsApp.Controllers
                 AuthorType = identity.Type,
                 AuthorOrganizerProfileId = identity.OrganizerProfileId,
                 BusinessWorkspaceId = identity.BusinessWorkspaceId,
+                ParentCommentId = parentCommentId,
                 Content = content,
             });
             await _db.SaveChangesAsync();
@@ -955,6 +968,13 @@ namespace EventsApp.Controllers
             }
 
             var eventId = comment.EventId;
+            var replies = await _db.EventComments
+                .Where(c => c.ParentCommentId == comment.Id)
+                .ToListAsync();
+            if (replies.Count > 0)
+            {
+                _db.EventComments.RemoveRange(replies);
+            }
             _db.EventComments.Remove(comment);
             await _db.SaveChangesAsync();
             return RedirectToAction(nameof(Details), new { id = eventId });
@@ -1009,6 +1029,11 @@ namespace EventsApp.Controllers
                         .Where(a => a.UserId == userId)
                         .Select(a => (EventAttendanceStatus?)a.Status)
                         .FirstOrDefault(),
+                    HasActiveTickets = e.Tickets.Any(t => t.IsActive),
+                    HasPaidTickets = e.Tickets.Any(t => t.IsActive && t.Price > 0m),
+                    LowestPaidTicketPrice = e.Tickets
+                        .Where(t => t.IsActive && t.Price > 0m)
+                        .Min(t => (decimal?)t.Price),
                 })
                 .ToListAsync();
 
@@ -1362,6 +1387,33 @@ namespace EventsApp.Controllers
             return comment.AuthorType == AuthorIdentityType.OrganizerPage && comment.AuthorOrganizerProfile != null
                 ? comment.AuthorOrganizerProfile.DisplayName
                 : comment.User.UserName ?? string.Empty;
+        }
+
+        private static EventCommentViewModel ToCommentViewModel(
+            EventComment comment,
+            string? currentUserId,
+            bool isAdmin,
+            IReadOnlyDictionary<int, List<EventComment>> repliesByParentId)
+        {
+            return new EventCommentViewModel
+            {
+                Id = comment.Id,
+                UserId = comment.UserId,
+                UserName = GetCommentDisplayName(comment),
+                AuthorImageUrl = comment.AuthorType == AuthorIdentityType.OrganizerPage
+                    ? comment.AuthorOrganizerProfile?.AvatarImageUrl
+                    : comment.User.ProfileImageUrl,
+                AuthorBadgeKey = GetAuthorBadgeKey(comment.AuthorType),
+                AuthorBadgeText = GetAuthorBadgeText(comment.AuthorType, comment.UserId == currentUserId),
+                AuthorProfileUserId = comment.AuthorType == AuthorIdentityType.OrganizerPage ? null : comment.UserId,
+                IsOrganizerPageAuthor = comment.AuthorType == AuthorIdentityType.OrganizerPage,
+                Content = comment.Content,
+                CreatedAt = comment.CreatedAt,
+                CanDelete = isAdmin || comment.UserId == currentUserId,
+                Replies = repliesByParentId.TryGetValue(comment.Id, out var replies)
+                    ? replies.Select(r => ToCommentViewModel(r, currentUserId, isAdmin, new Dictionary<int, List<EventComment>>())).ToList()
+                    : Array.Empty<EventCommentViewModel>(),
+            };
         }
 
         private static string GetAuthorBadgeKey(AuthorIdentityType type)

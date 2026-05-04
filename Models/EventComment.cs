@@ -9,6 +9,7 @@ namespace EventsApp.Models
         public EventComment()
         {
             this.CreatedAt = DateTime.UtcNow;
+            this.Replies = new HashSet<EventComment>();
         }
 
         [Key]
@@ -37,6 +38,13 @@ namespace EventsApp.Models
         public int? BusinessWorkspaceId { get; set; }
 
         public BusinessWorkspace? BusinessWorkspace { get; set; }
+
+        [ForeignKey(nameof(ParentComment))]
+        public int? ParentCommentId { get; set; }
+
+        public EventComment? ParentComment { get; set; }
+
+        public ICollection<EventComment> Replies { get; set; }
 
         [Required]
         [MinLength(GlobalConstants.Comment.ContentMinLength)]

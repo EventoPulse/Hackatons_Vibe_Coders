@@ -24,6 +24,43 @@
         </header>
 
         <div class="social-chat-thread">
+            @if (Model.Status == ConversationStatus.Pending)
+            {
+                <div class="social-message-request">
+                    @if (Model.CanRespondToRequest)
+                    {
+                        <strong data-i18n="messages.request.title">Заявка за съобщение</strong>
+                        <p data-i18n="messages.request.desc">Този човек иска да започне разговор с теб. Одобри заявката, за да можете да си пишете.</p>
+                        <div class="groove-cta-row">
+                            <form asp-action="Approve" asp-route-id="@Model.Id" method="post">
+                                @Html.AntiForgeryToken()
+                                <button class="groove-button groove-button-dark" type="submit">
+                                    <i class="bi bi-check2"></i> <span data-i18n="messages.approve">Одобри</span>
+                                </button>
+                            </form>
+                            <form asp-action="Decline" asp-route-id="@Model.Id" method="post">
+                                @Html.AntiForgeryToken()
+                                <button class="groove-button groove-button-paper" type="submit">
+                                    <i class="bi bi-x-lg"></i> <span data-i18n="messages.decline">Откажи</span>
+                                </button>
+                            </form>
+                        </div>
+                    }
+                    else
+                    {
+                        <strong data-i18n="messages.request.waiting">Заявката е изпратена</strong>
+                        <p data-i18n="messages.request.waiting.desc">Ще можете да си пишете, когато човекът отсреща я одобри.</p>
+                    }
+                </div>
+            }
+            else if (Model.Status == ConversationStatus.Declined)
+            {
+                <div class="social-message-request">
+                    <strong data-i18n="messages.request.declined">Заявката е отказана</strong>
+                    <p data-i18n="messages.request.declined.desc">Този разговор не е активен.</p>
+                </div>
+            }
+
             @foreach (var message in Model.Messages)
             {
                 <article class="social-message-bubble @(message.IsMine ? "is-mine" : "")">
@@ -47,33 +84,36 @@
             }
         </div>
 
-        <form asp-action="Send" asp-route-id="@Model.Id" method="post" class="social-chat-compose">
-            @Html.AntiForgeryToken()
-            @if (Model.ActingIdentities.Count > 1)
-            {
-                <select name="actingIdentityKey" class="form-select form-select-sm" aria-label="Replying as">
-                    @foreach (var identity in Model.ActingIdentities)
-                    {
-                        if (identity.IsDefault)
+        @if (Model.CanSendMessage)
+        {
+            <form asp-action="Send" asp-route-id="@Model.Id" method="post" class="social-chat-compose">
+                @Html.AntiForgeryToken()
+                @if (Model.ActingIdentities.Count > 1)
+                {
+                    <select name="actingIdentityKey" class="form-select form-select-sm" aria-label="Replying as">
+                        @foreach (var identity in Model.ActingIdentities)
                         {
-                            <option value="@identity.Key" selected>@identity.Label</option>
+                            if (identity.IsDefault)
+                            {
+                                <option value="@identity.Key" selected>@identity.Label</option>
+                            }
+                            else
+                            {
+                                <option value="@identity.Key">@identity.Label</option>
+                            }
                         }
-                        else
-                        {
-                            <option value="@identity.Key">@identity.Label</option>
-                        }
-                    }
-                </select>
-            }
-            else if (Model.ActingIdentities.Count == 1)
-            {
-                <input type="hidden" name="actingIdentityKey" value="@Model.ActingIdentities[0].Key" />
-                <span class="small text-muted"><span data-i18n="identity.replying.as">Отговаряш като</span>: @Model.ActingIdentities[0].DisplayName</span>
-            }
-            <input type="text" name="content" maxlength="2000" placeholder="Напиши съобщение..." data-i18n-placeholder="messages.placeholder" required />
-            <button type="submit" class="groove-button groove-button-dark">
-                <i class="bi bi-send"></i> <span data-i18n="common.send">Изпрати</span>
-            </button>
-        </form>
+                    </select>
+                }
+                else if (Model.ActingIdentities.Count == 1)
+                {
+                    <input type="hidden" name="actingIdentityKey" value="@Model.ActingIdentities[0].Key" />
+                    <span class="small text-muted"><span data-i18n="identity.replying.as">Отговаряш като</span>: @Model.ActingIdentities[0].DisplayName</span>
+                }
+                <input type="text" name="content" maxlength="2000" placeholder="Напиши съобщение..." data-i18n-placeholder="messages.placeholder" required />
+                <button type="submit" class="groove-button groove-button-dark">
+                    <i class="bi bi-send"></i> <span data-i18n="common.send">Изпрати</span>
+                </button>
+            </form>
+        }
     </div>
 </section>

@@ -36,7 +36,20 @@
     }
 
     function formatDate(iso) {
-        try { return new Date(iso).toLocaleString(); } catch (_) { return iso; }
+        try {
+            var lang = currentLang() === 'en' ? 'en-GB' : 'bg-BG';
+            return new Date(iso).toLocaleString(lang, {
+                day: '2-digit',
+                month: 'short',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        } catch (_) { return iso; }
+    }
+
+    function currentLang() {
+        var meta = document.querySelector('meta[name="x-app-lang"]');
+        return meta && meta.getAttribute('content') === 'en' ? 'en' : 'bg';
     }
 
     function normalize(s) { return (s == null ? '' : String(s)).trim().toLowerCase(); }
@@ -86,19 +99,32 @@
     }
 
     function popupHtml(m) {
-        return '<div class="event-popup" style="width:240px;">' +
-            (m.imageUrl ? '<img src="' + escapeHtml(m.imageUrl) + '" alt="" style="width:100%;height:110px;object-fit:cover;border-radius:6px;margin-bottom:6px;" />' : '') +
-            '<div style="font-weight:700;margin-bottom:4px;font-size:0.95rem;">' + escapeHtml(m.title) + '</div>' +
-            '<div style="font-size:0.78rem;color:#6c757d;margin-bottom:2px;">' +
-                '<i class="bi bi-geo-alt"></i> ' + escapeHtml(m.address) + ', ' + escapeHtml(m.city) + '</div>' +
-            '<div style="font-size:0.78rem;color:#6c757d;margin-bottom:4px;">' +
-                '<i class="bi bi-clock"></i> ' + escapeHtml(formatDate(m.startTime)) + '</div>' +
-            '<div style="font-size:0.78rem;margin:4px 0;">' +
-                '<span class="badge" style="background:' + genreColor(m.genre) + ';color:#fff;">' + escapeHtml(m.genre) + '</span>' +
-                (m.isApproximate ? ' <span class="badge bg-light text-muted border">approx.</span>' : '') +
+        var lang = currentLang();
+        var detailsText = lang === 'en' ? 'Open event' : 'Виж събитието';
+        var approxText = lang === 'en' ? 'approx.' : 'прибл.';
+        var organizerText = lang === 'en' ? 'Organizer' : 'Организатор';
+        var location = [m.address, m.city].filter(Boolean).join(', ');
+
+        return '<article class="evt-map-card">' +
+            (m.imageUrl
+                ? '<a class="evt-map-card__media" href="/Events/Details/' + encodeURIComponent(m.eventId) + '">' +
+                    '<img src="' + escapeHtml(m.imageUrl) + '" alt="' + escapeHtml(m.title) + '" />' +
+                  '</a>'
+                : '') +
+            '<div class="evt-map-card__body">' +
+                '<div class="evt-map-card__chips">' +
+                    '<span class="evt-map-card__chip" style="background:' + genreColor(m.genre) + ';">' + escapeHtml(m.genre || '') + '</span>' +
+                    (m.isApproximate ? '<span class="evt-map-card__chip evt-map-card__chip--muted">' + approxText + '</span>' : '') +
+                '</div>' +
+                '<a class="evt-map-card__title" href="/Events/Details/' + encodeURIComponent(m.eventId) + '">' + escapeHtml(m.title) + '</a>' +
+                '<div class="evt-map-card__meta"><i class="bi bi-geo-alt"></i><span>' + escapeHtml(location || m.city || '') + '</span></div>' +
+                '<div class="evt-map-card__meta"><i class="bi bi-clock"></i><span>' + escapeHtml(formatDate(m.startTime)) + '</span></div>' +
+                (m.organizerName ? '<div class="evt-map-card__meta"><i class="bi bi-person-badge"></i><span>' + organizerText + ': ' + escapeHtml(m.organizerName) + '</span></div>' : '') +
+                '<a class="evt-map-card__cta" href="/Events/Details/' + encodeURIComponent(m.eventId) + '">' +
+                    '<span>' + detailsText + '</span><i class="bi bi-arrow-right"></i>' +
+                '</a>' +
             '</div>' +
-            '<a class="btn btn-sm btn-primary mt-1 w-100" href="/Events/Details/' + m.eventId + '">Open details</a>' +
-            '</div>';
+        '</article>';
     }
 
     function pinSvg(color) {
@@ -301,7 +327,19 @@
             );
             map.fitBounds(bgBounds);
 
-            var infoWindow = new google.maps.InfoWindow({ maxWidth: 260 });
+            // Fix tiles not covering full container on initial load
+            google.maps.event.addListenerOnce(map, 'tilesloaded', function () {
+                var center = map.getCenter();
+                google.maps.event.trigger(map, 'resize');
+                if (center) map.setCenter(center);
+            });
+            setTimeout(function () {
+                var center = map.getCenter();
+                google.maps.event.trigger(map, 'resize');
+                if (center) map.setCenter(center);
+            }, 400);
+
+            var infoWindow = new google.maps.InfoWindow({ maxWidth: 320, disableAutoPan: false });
             var liveMarkers = {};
             window.GrooveHomeMapRefresh = function () {
                 if (!map || !(window.google && window.google.maps)) return;
@@ -309,6 +347,51 @@
                 google.maps.event.trigger(map, 'resize');
                 if (center) map.setCenter(center);
             };
+
+            // Preview panel helpers
+            var previewPanel = document.getElementById('map-event-preview');
+            var previewImg = document.getElementById('map-preview-img');
+            var previewTitle = document.getElementById('map-preview-title');
+            var previewAddress = document.getElementById('map-preview-address');
+            var previewTime = document.getElementById('map-preview-time');
+            var previewGenre = document.getElementById('map-preview-genre');
+            var previewLink = document.getElementById('map-preview-link');
+            var previewClose = document.getElementById('map-preview-close');
+
+            var detailUrl = function(id) { return '/Events/Details/' + id; };
+
+            function showPreview(m) {
+                if (!previewPanel) return;
+                if (previewImg) {
+                    if (m.imageUrl) { previewImg.src = m.imageUrl; previewImg.style.display = ''; }
+                    else { previewImg.style.display = 'none'; }
+                }
+                if (previewTitle) {
+                    previewTitle.textContent = m.title || '';
+                    previewTitle.style.cursor = 'pointer';
+                    previewTitle.onclick = function () { window.location.href = detailUrl(m.eventId); };
+                }
+                if (previewAddress) previewAddress.textContent = (m.address || '') + (m.city ? ', ' + m.city : '');
+                if (previewTime) previewTime.textContent = formatDate(m.startTime);
+                if (previewGenre) {
+                    previewGenre.textContent = m.genre || '';
+                    previewGenre.style.background = genreColor(m.genre);
+                    previewGenre.style.color = '#fff';
+                }
+                if (previewLink) previewLink.href = detailUrl(m.eventId);
+                previewPanel.style.display = '';
+                previewPanel.classList.add('is-open');
+            }
+
+            function closePreview() {
+                if (!previewPanel) return;
+                previewPanel.classList.remove('is-open');
+                setTimeout(function () { previewPanel.style.display = 'none'; }, 220);
+                infoWindow.close();
+                document.querySelectorAll('.event-card.is-active').forEach(function (n) { n.classList.remove('is-active'); });
+            }
+
+            if (previewClose) previewClose.addEventListener('click', closePreview);
 
             function highlightCard(eventId, scroll) {
                 document.querySelectorAll('.event-card.is-active').forEach(function (n) {
@@ -353,6 +436,10 @@
                     marker.addListener('click', function () {
                         infoWindow.setContent(popupHtml(m));
                         infoWindow.open({ map: map, anchor: marker });
+                        if (previewPanel) {
+                            previewPanel.classList.remove('is-open');
+                            previewPanel.style.display = 'none';
+                        }
                         highlightCard(m.eventId, false);
                     });
 
@@ -418,7 +505,7 @@
 
             function updateCount(visible, hasFilter) {
                 var badge = document.getElementById('home-event-count');
-                if (badge) badge.textContent = visible + ' event' + (visible === 1 ? '' : 's');
+                if (badge) badge.textContent = String(visible);
                 var emptyEl = document.getElementById('home-no-results');
                 if (emptyEl) emptyEl.style.display = (hasFilter && visible === 0) ? '' : 'none';
             }

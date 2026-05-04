@@ -37,7 +37,22 @@
                     <div>
                         <strong>@conversation.OtherUserName</strong>
                         <small>
-                            @if (string.IsNullOrWhiteSpace(conversation.LastMessage))
+                            @if (conversation.Status == ConversationStatus.Pending)
+                            {
+                                if (conversation.IsRequestedByCurrentUser)
+                                {
+                                    <span data-i18n="messages.request.sent">Заявката чака одобрение</span>
+                                }
+                                else
+                                {
+                                    <span data-i18n="messages.request.incoming">Нова заявка за съобщение</span>
+                                }
+                            }
+                            else if (conversation.Status == ConversationStatus.Declined)
+                            {
+                                <span data-i18n="messages.request.declined">Заявката е отказана</span>
+                            }
+                            else if (string.IsNullOrWhiteSpace(conversation.LastMessage))
                             {
                                 <span data-i18n="messages.none">Все още няма съобщения</span>
                             }

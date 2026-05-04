@@ -9,7 +9,7 @@ namespace EventsApp.Services
 {
     public interface ISocialFeedService
     {
-        Task<FeedViewModel> BuildFeedAsync(string? userId, CancellationToken cancellationToken = default);
+        Task<FeedViewModel> BuildFeedAsync(string? userId, string? searchTerm = null, CancellationToken cancellationToken = default);
         Task TrackActivityAsync(string userId, UserActivityType activityType, int? eventId = null, int? postId = null, string? targetUserId = null, string? value = null, CancellationToken cancellationToken = default);
     }
 
@@ -22,9 +22,10 @@ namespace EventsApp.Services
             _db = db;
         }
 
-        public async Task<FeedViewModel> BuildFeedAsync(string? userId, CancellationToken cancellationToken = default)
+        public async Task<FeedViewModel> BuildFeedAsync(string? userId, string? searchTerm = null, CancellationToken cancellationToken = default)
         {
             var now = DateTime.UtcNow;
+            var normalizedSearch = string.IsNullOrWhiteSpace(searchTerm) ? null : searchTerm.Trim();
             var followedIds = userId == null
                 ? new List<string>()
                 : await _db.Follows
@@ -188,7 +189,19 @@ namespace EventsApp.Services
                         ? u.OrganizerData.OrganizationName
                         : u.UserName ?? string.Empty,
                     Bio = u.Bio ?? (u.OrganizerData != null ? u.OrganizerData.Description : null),
-                    ProfileImageUrl = u.ProfileImageUrl,
+                    ProfileImageUrl = u.OrganizerProfiles
+                        .Where(p => p.IsActive && p.IsApproved && p.AvatarImageUrl != null && p.AvatarImageUrl != string.Empty)
+                        .OrderByDescending(p => p.IsDefault)
+                        .ThenByDescending(p => p.CreatedAt)
+                        .Select(p => p.AvatarImageUrl)
+                        .FirstOrDefault()
+                        ?? u.ProfileImageUrl
+                        ?? u.OrganizerProfiles
+                            .Where(p => p.IsActive && p.IsApproved && p.CoverImageUrl != null && p.CoverImageUrl != string.Empty)
+                            .OrderByDescending(p => p.IsDefault)
+                            .ThenByDescending(p => p.CreatedAt)
+                            .Select(p => p.CoverImageUrl)
+                            .FirstOrDefault(),
                     IsOrganizer = u.OrganizerData != null && u.OrganizerData.Approved,
                     FollowersCount = u.Followers.Count,
                     FollowingCount = u.Following.Count,
@@ -198,6 +211,10 @@ namespace EventsApp.Services
                 })
                 .ToListAsync(cancellationToken);
 
+            var searchResults = string.IsNullOrWhiteSpace(normalizedSearch)
+                ? new List<FeedSearchResultViewModel>()
+                : await SearchProfilesAsync(normalizedSearch, userId, cancellationToken);
+
             return new FeedViewModel
             {
                 Stories = stories,
@@ -206,6 +223,8 @@ namespace EventsApp.Services
                 FriendsActivity = friendsActivity,
                 OrganizerPosts = organizerPosts,
                 SuggestedProfiles = suggestedProfiles,
+                SearchQuery = normalizedSearch,
+                SearchResults = searchResults,
                 HasPersonalSignals = hasPersonalSignals,
                 PreferredCity = prefs?.PreferredCity,
                 CurrentUserDisplayName = currentUser?.DisplayName,
@@ -231,6 +250,78 @@ namespace EventsApp.Services
             });
 
             await _db.SaveChangesAsync(cancellationToken);
+        }
+
+        private async Task<List<FeedSearchResultViewModel>> SearchProfilesAsync(string searchTerm, string? currentUserId, CancellationToken cancellationToken)
+        {
+            var term = searchTerm.ToLowerInvariant();
+
+            var users = await _db.Users
+                .AsNoTracking()
+                .Where(u =>
+                    (u.UserName ?? string.Empty).ToLower().Contains(term)
+                    || (u.FirstName ?? string.Empty).ToLower().Contains(term)
+                    || (u.LastName ?? string.Empty).ToLower().Contains(term)
+                    || (u.Bio ?? string.Empty).ToLower().Contains(term)
+                    || (u.OrganizerData != null && (
+                        (u.OrganizerData.OrganizationName ?? string.Empty).ToLower().Contains(term)
+                        || (u.OrganizerData.Description ?? string.Empty).ToLower().Contains(term))))
+                .OrderByDescending(u => u.Followers.Count + u.Events.Count + u.Posts.Count)
+                .Take(8)
+                .Select(u => new FeedSearchResultViewModel
+                {
+                    Id = "user:" + u.Id,
+                    UserId = u.Id,
+                    DisplayName = u.OrganizerData != null && u.OrganizerData.Approved
+                        ? u.OrganizerData.OrganizationName
+                        : u.UserName ?? ((u.FirstName ?? string.Empty) + " " + (u.LastName ?? string.Empty)).Trim(),
+                    UserName = u.UserName,
+                    Bio = u.Bio ?? (u.OrganizerData != null ? u.OrganizerData.Description : null),
+                    ProfileImageUrl = u.ProfileImageUrl,
+                    TypeKey = u.OrganizerData != null && u.OrganizerData.Approved ? "profile.type.organizer" : "profile.type.profile",
+                    TypeText = u.OrganizerData != null && u.OrganizerData.Approved ? "Organizer" : "Profile",
+                    FollowersCount = u.Followers.Count,
+                    PostsCount = u.Posts.Count,
+                    EventsCount = u.Events.Count(e => e.IsApproved),
+                    CurrentUserFollows = currentUserId != null && u.Followers.Any(f => f.FollowerId == currentUserId),
+                })
+                .ToListAsync(cancellationToken);
+
+            var pages = await _db.OrganizerProfiles
+                .AsNoTracking()
+                .Where(p => p.IsActive && p.IsApproved)
+                .Where(p =>
+                    p.DisplayName.ToLower().Contains(term)
+                    || (p.Tagline ?? string.Empty).ToLower().Contains(term)
+                    || (p.Description ?? string.Empty).ToLower().Contains(term)
+                    || (p.City ?? string.Empty).ToLower().Contains(term)
+                    || (p.Owner.UserName ?? string.Empty).ToLower().Contains(term))
+                .OrderByDescending(p => p.Events.Count + p.Posts.Count)
+                .Take(8)
+                .Select(p => new FeedSearchResultViewModel
+                {
+                    Id = "page:" + p.Id,
+                    UserId = p.OwnerId,
+                    OrganizerProfileId = p.Id,
+                    DisplayName = p.DisplayName,
+                    UserName = p.Owner.UserName,
+                    Bio = p.Tagline ?? p.Description,
+                    ProfileImageUrl = p.AvatarImageUrl != null && p.AvatarImageUrl != string.Empty ? p.AvatarImageUrl : p.Owner.ProfileImageUrl,
+                    TypeKey = "organizer.pages.public",
+                    TypeText = "Public page",
+                    FollowersCount = p.Owner.Followers.Count,
+                    PostsCount = p.Posts.Count,
+                    EventsCount = p.Events.Count(e => e.IsApproved),
+                    CurrentUserFollows = currentUserId != null && p.Owner.Followers.Any(f => f.FollowerId == currentUserId),
+                })
+                .ToListAsync(cancellationToken);
+
+            return pages
+                .Concat(users)
+                .GroupBy(r => r.Id)
+                .Select(g => g.First())
+                .Take(12)
+                .ToList();
         }
 
         private static async Task<List<EventCardViewModel>> QueryEventCards(IQueryable<Event> query, string? userId, CancellationToken cancellationToken)
@@ -267,6 +358,11 @@ namespace EventsApp.Services
                             .FirstOrDefault(),
                     Latitude = e.Latitude,
                     Longitude = e.Longitude,
+                    HasActiveTickets = e.Tickets.Any(t => t.IsActive),
+                    HasPaidTickets = e.Tickets.Any(t => t.IsActive && t.Price > 0m),
+                    LowestPaidTicketPrice = e.Tickets
+                        .Where(t => t.IsActive && t.Price > 0m)
+                        .Min(t => (decimal?)t.Price),
                 })
                 .ToListAsync(cancellationToken);
         }

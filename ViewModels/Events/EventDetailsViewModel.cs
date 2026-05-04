@@ -26,6 +26,7 @@ namespace EventsApp.ViewModels.Events
         public int SavesCount { get; set; }
         public int GoingCount { get; set; }
         public int InterestedCount { get; set; }
+        public int CommentsCount { get; set; }
         public bool CurrentUserLiked { get; set; }
         public bool CurrentUserSaved { get; set; }
         public bool CurrentUserPinned { get; set; }
@@ -73,5 +74,6 @@ namespace EventsApp.ViewModels.Events
         public string Content { get; set; } = null!;
         public DateTime CreatedAt { get; set; }
         public bool CanDelete { get; set; }
+        public IReadOnlyList<EventCommentViewModel> Replies { get; set; } = Array.Empty<EventCommentViewModel>();
     }
 }

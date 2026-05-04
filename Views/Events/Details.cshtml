@@ -368,7 +368,7 @@
         <div class="groove-section-bar">
             <div>
                 <span class="groove-kicker" data-i18n="comments.kicker">Разговор</span>
-                <h2 id="comments"><span data-i18n="comments.title">Коментари</span> <span>(@Model.Comments.Count)</span>.</h2>
+                <h2 id="comments"><span data-i18n="comments.title">Коментари</span> <span>(@Model.CommentsCount)</span>.</h2>
             </div>
         </div>
 
@@ -407,7 +407,7 @@
             </form>
         }
 
-        @if (Model.Comments.Count == 0)
+        @if (Model.CommentsCount == 0)
         {
             <div class="groove-empty-card">
                 <i class="bi bi-chat-square-text"></i>
@@ -420,7 +420,7 @@
                 <div class="groove-list-stack">
                     @foreach (var c in Model.Comments)
                     {
-                        <article class="groove-list-item">
+                        <article class="groove-list-item social-comment-item" id="comment-@c.Id">
                             <div class="d-flex gap-3">
                                 @if (!string.IsNullOrWhiteSpace(c.AuthorImageUrl))
                                 {
@@ -440,10 +440,83 @@
                                         <strong>@c.UserName</strong>
                                     }
                                     <span class="groove-badge ms-2" data-i18n="@c.AuthorBadgeKey">@c.AuthorBadgeText</span>
-                                <p class="groove-list-meta mt-1">@c.CreatedAt.ToString("dd.MM.yyyy HH:mm")</p>
-                                <p>@c.Content</p>
+                                    <p class="groove-list-meta mt-1">@c.CreatedAt.ToString("dd.MM.yyyy HH:mm")</p>
+                                    <p>@c.Content</p>
+                                    @if (User.Identity?.IsAuthenticated == true)
+                                    {
+                                        <details class="social-comment-reply">
+                                            <summary><i class="bi bi-reply"></i> <span data-i18n="comments.reply">Отговори</span></summary>
+                                            <form asp-action="AddComment" asp-route-id="@Model.Id" method="post" class="social-comment-reply__form">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="parentCommentId" value="@c.Id" />
+                                                @if (Model.ActingIdentities.Count > 1)
+                                                {
+                                                    <select name="actingIdentityKey" class="form-select form-select-sm">
+                                                        @foreach (var identity in Model.ActingIdentities)
+                                                        {
+                                                            if (identity.IsDefault)
+                                                            {
+                                                                <option value="@identity.Key" selected>@identity.Label</option>
+                                                            }
+                                                            else
+                                                            {
+                                                                <option value="@identity.Key">@identity.Label</option>
+                                                            }
+                                                        }
+                                                    </select>
+                                                }
+                                                else if (Model.ActingIdentities.Count == 1)
+                                                {
+                                                    <input type="hidden" name="actingIdentityKey" value="@Model.ActingIdentities[0].Key" />
+                                                }
+                                                <div class="input-group input-group-sm">
+                                                    <input type="text" name="content" class="form-control" placeholder="Напиши отговор..." data-i18n-placeholder="comments.reply.placeholder" maxlength="1000" required />
+                                                    <button class="btn btn-primary" type="submit"><i class="bi bi-send"></i></button>
+                                                </div>
+                                            </form>
+                                        </details>
+                                    }
                                 </div>
                             </div>
+                            @if (c.Replies.Count > 0)
+                            {
+                                <div class="social-comment-replies">
+                                    @foreach (var reply in c.Replies)
+                                    {
+                                        <article class="social-comment-reply-item" id="comment-@reply.Id">
+                                            @if (!string.IsNullOrWhiteSpace(reply.AuthorImageUrl))
+                                            {
+                                                <img src="@reply.AuthorImageUrl" alt="@reply.UserName" class="social-avatar-xs" />
+                                            }
+                                            else
+                                            {
+                                                <span class="social-avatar-xs social-avatar-xs--fallback">@(string.IsNullOrWhiteSpace(reply.UserName) ? "?" : reply.UserName[..1].ToUpperInvariant())</span>
+                                            }
+                                            <div class="social-comment-reply-item__body">
+                                                @if (!reply.IsOrganizerPageAuthor && !string.IsNullOrWhiteSpace(reply.AuthorProfileUserId))
+                                                {
+                                                    <a asp-controller="Profiles" asp-action="Details" asp-route-id="@reply.AuthorProfileUserId" class="fw-bold text-decoration-none">@reply.UserName</a>
+                                                }
+                                                else
+                                                {
+                                                    <strong>@reply.UserName</strong>
+                                                }
+                                                <span class="groove-badge ms-2" data-i18n="@reply.AuthorBadgeKey">@reply.AuthorBadgeText</span>
+                                                <p class="groove-list-meta mt-1">@reply.CreatedAt.ToString("dd.MM.yyyy HH:mm")</p>
+                                                <p>@reply.Content</p>
+                                            </div>
+                                            @if (reply.CanDelete)
+                                            {
+                                                <form asp-action="DeleteComment" method="post" class="social-comment-reply-item__delete">
+                                                    @Html.AntiForgeryToken()
+                                                    <input type="hidden" name="commentId" value="@reply.Id" />
+                                                    <button class="groove-button groove-button-paper" type="submit"><i class="bi bi-trash"></i></button>
+                                                </form>
+                                            }
+                                        </article>
+                                    }
+                                </div>
+                            }
                             @if (c.CanDelete)
                             {
                                 <form asp-action="DeleteComment" method="post" class="ms-2">

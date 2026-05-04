@@ -37,13 +37,21 @@ namespace EventsApp.Controllers
                 query = query.Where(e => e.IsApproved);
             }
 
-            if (!string.IsNullOrWhiteSpace(search))
+            var normalizedSearch = search?.Trim();
+            var freeOnly = string.Equals(normalizedSearch, "free", StringComparison.OrdinalIgnoreCase);
+
+            if (!string.IsNullOrWhiteSpace(normalizedSearch) && !freeOnly)
             {
                 query = query.Where(e =>
-                    e.Title.Contains(search) ||
-                    (e.Description != null && e.Description.Contains(search)) ||
-                    e.City.Contains(search) ||
-                    e.Address.Contains(search));
+                    e.Title.Contains(normalizedSearch) ||
+                    (e.Description != null && e.Description.Contains(normalizedSearch)) ||
+                    e.City.Contains(normalizedSearch) ||
+                    e.Address.Contains(normalizedSearch));
+            }
+
+            if (freeOnly)
+            {
+                query = query.Where(e => !e.Tickets.Any(t => t.IsActive && t.Price > 0m));
             }
 
             if (!string.IsNullOrWhiteSpace(city))
@@ -69,36 +77,7 @@ namespace EventsApp.Controllers
                 query = query.Where(e => e.StartTime < to);
             }
 
-            var events = await query
-                .OrderBy(e => e.StartTime)
-                .Select(e => new EventCardViewModel
-                {
-                    Id = e.Id,
-                    Title = e.Title,
-                    ImageUrl = e.ImageUrl,
-                    Address = e.Address,
-                    City = e.City,
-                    StartTime = e.StartTime,
-                    Genre = e.Genre,
-                    IsApproved = e.IsApproved,
-                    OrganizerId = e.OrganizerId,
-                    OrganizerName = e.Organizer.UserName ?? string.Empty,
-                    LikesCount = e.Likes.Count,
-                    CommentsCount = e.Comments.Count,
-                    SavesCount = e.Saves.Count,
-                    GoingCount = e.Attendances.Count(a => a.Status == EventAttendanceStatus.Going),
-                    InterestedCount = e.Attendances.Count(a => a.Status == EventAttendanceStatus.Interested),
-                    CurrentUserLiked = userId != null && e.Likes.Any(l => l.UserId == userId),
-                    CurrentUserSaved = userId != null && e.Saves.Any(s => s.UserId == userId),
-                    CurrentUserAttendanceStatus = userId == null
-                        ? null
-                        : e.Attendances
-                            .Where(a => a.UserId == userId)
-                            .Select(a => (EventAttendanceStatus?)a.Status)
-                            .FirstOrDefault(),
-                    Latitude = e.Latitude,
-                    Longitude = e.Longitude,
-                })
+            var events = await QueryEventCards(query.OrderBy(e => e.StartTime), userId)
                 .ToListAsync();
 
             var markers = BuildMarkers(events);
@@ -191,7 +170,7 @@ namespace EventsApp.Controllers
 
             return View(new EventsIndexViewModel
             {
-                Search = search,
+                Search = freeOnly ? "free" : normalizedSearch,
                 City = city,
                 Genre = genre,
                 DateFrom = dateFrom,
@@ -239,6 +218,11 @@ namespace EventsApp.Controllers
                         .FirstOrDefault(),
                 Latitude = e.Latitude,
                 Longitude = e.Longitude,
+                HasActiveTickets = e.Tickets.Any(t => t.IsActive),
+                HasPaidTickets = e.Tickets.Any(t => t.IsActive && t.Price > 0m),
+                LowestPaidTicketPrice = e.Tickets
+                    .Where(t => t.IsActive && t.Price > 0m)
+                    .Min(t => (decimal?)t.Price),
             });
         }
 

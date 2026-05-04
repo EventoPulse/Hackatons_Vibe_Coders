@@ -272,9 +272,17 @@ namespace EventsApp.Services
             }
 
             var (one, two) = SortParticipants(senderId, receiverId);
-            var existingConversation = await _db.Conversations
+            var existingConversationStatus = await _db.Conversations
                 .AsNoTracking()
-                .AnyAsync(c => c.ParticipantOneId == one && c.ParticipantTwoId == two, cancellationToken);
+                .Where(c => c.ParticipantOneId == one && c.ParticipantTwoId == two)
+                .Select(c => (ConversationStatus?)c.Status)
+                .FirstOrDefaultAsync(cancellationToken);
+            var existingConversation = existingConversationStatus.HasValue;
+
+            if (existingConversationStatus == ConversationStatus.Accepted)
+            {
+                return true;
+            }
 
             if (!existingConversation)
             {

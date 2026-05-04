@@ -179,6 +179,11 @@ namespace EventsApp.Controllers
                             .Where(a => a.UserId == currentUserId)
                             .Select(a => (EventAttendanceStatus?)a.Status)
                             .FirstOrDefault(),
+                    HasActiveTickets = e.Tickets.Any(t => t.IsActive),
+                    HasPaidTickets = e.Tickets.Any(t => t.IsActive && t.Price > 0m),
+                    LowestPaidTicketPrice = e.Tickets
+                        .Where(t => t.IsActive && t.Price > 0m)
+                        .Min(t => (decimal?)t.Price),
                 })
                 .ToListAsync();
 
@@ -524,6 +529,11 @@ namespace EventsApp.Controllers
                         .FirstOrDefault(),
                 Latitude = e.Latitude,
                 Longitude = e.Longitude,
+                HasActiveTickets = e.Tickets.Any(t => t.IsActive),
+                HasPaidTickets = e.Tickets.Any(t => t.IsActive && t.Price > 0m),
+                LowestPaidTicketPrice = e.Tickets
+                    .Where(t => t.IsActive && t.Price > 0m)
+                    .Min(t => (decimal?)t.Price),
             });
         }
 

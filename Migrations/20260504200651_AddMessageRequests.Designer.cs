@@ -4,6 +4,7 @@ using EventsApp.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace EventsApp.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260504200651_AddMessageRequests")]
+    partial class AddMessageRequests
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -398,9 +401,6 @@ namespace EventsApp.Migrations
                     b.Property<int>("EventId")
                         .HasColumnType("int");
 
-                    b.Property<int?>("ParentCommentId")
-                        .HasColumnType("int");
-
                     b.Property<string>("UserId")
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
@@ -412,8 +412,6 @@ namespace EventsApp.Migrations
                     b.HasIndex("BusinessWorkspaceId");
 
                     b.HasIndex("EventId");
-
-                    b.HasIndex("ParentCommentId");
 
                     b.HasIndex("UserId");
 
@@ -1005,9 +1003,6 @@ namespace EventsApp.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<int?>("ParentCommentId")
-                        .HasColumnType("int");
-
                     b.Property<int>("PostId")
                         .HasColumnType("int");
 
@@ -1020,8 +1015,6 @@ namespace EventsApp.Migrations
                     b.HasIndex("AuthorOrganizerProfileId");
 
                     b.HasIndex("BusinessWorkspaceId");
-
-                    b.HasIndex("ParentCommentId");
 
                     b.HasIndex("PostId");
 
@@ -1742,11 +1735,6 @@ namespace EventsApp.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("EventsApp.Models.EventComment", "ParentComment")
-                        .WithMany("Replies")
-                        .HasForeignKey("ParentCommentId")
-                        .OnDelete(DeleteBehavior.NoAction);
-
                     b.HasOne("EventsApp.Models.ApplicationUser", "User")
                         .WithMany("EventComments")
                         .HasForeignKey("UserId")
@@ -1758,8 +1746,6 @@ namespace EventsApp.Migrations
                     b.Navigation("BusinessWorkspace");
 
                     b.Navigation("Event");
-
-                    b.Navigation("ParentComment");
 
                     b.Navigation("User");
                 });
@@ -2018,11 +2004,6 @@ namespace EventsApp.Migrations
                         .HasForeignKey("BusinessWorkspaceId")
                         .OnDelete(DeleteBehavior.NoAction);
 
-                    b.HasOne("EventsApp.Models.PostComment", "ParentComment")
-                        .WithMany("Replies")
-                        .HasForeignKey("ParentCommentId")
-                        .OnDelete(DeleteBehavior.NoAction);
-
                     b.HasOne("EventsApp.Models.Post", "Post")
                         .WithMany("Comments")
                         .HasForeignKey("PostId")
@@ -2038,8 +2019,6 @@ namespace EventsApp.Migrations
                     b.Navigation("AuthorOrganizerProfile");
 
                     b.Navigation("BusinessWorkspace");
-
-                    b.Navigation("ParentComment");
 
                     b.Navigation("Post");
 
@@ -2418,11 +2397,6 @@ namespace EventsApp.Migrations
                     b.Navigation("UserActivities");
                 });
 
-            modelBuilder.Entity("EventsApp.Models.EventComment", b =>
-                {
-                    b.Navigation("Replies");
-                });
-
             modelBuilder.Entity("EventsApp.Models.EventOccurrence", b =>
                 {
                     b.Navigation("SeatInventories");
@@ -2460,11 +2434,6 @@ namespace EventsApp.Migrations
                     b.Navigation("Saves");
 
                     b.Navigation("UserActivities");
-                });
-
-            modelBuilder.Entity("EventsApp.Models.PostComment", b =>
-                {
-                    b.Navigation("Replies");
                 });
 
             modelBuilder.Entity("EventsApp.Models.Seat", b =>

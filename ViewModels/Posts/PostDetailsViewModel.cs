@@ -15,6 +15,7 @@ namespace EventsApp.ViewModels.Posts
         public IReadOnlyList<PostMediaItemViewModel> Media { get; set; } = Array.Empty<PostMediaItemViewModel>();
         public int LikesCount { get; set; }
         public int SavesCount { get; set; }
+        public int CommentsCount { get; set; }
         public bool CurrentUserLiked { get; set; }
         public bool CurrentUserSaved { get; set; }
         public string? OrganizerImageUrl { get; set; }
@@ -38,5 +39,6 @@ namespace EventsApp.ViewModels.Posts
         public string Content { get; set; } = null!;
         public DateTime CreatedAt { get; set; }
         public bool CanDelete { get; set; }
+        public IReadOnlyList<PostCommentViewModel> Replies { get; set; } = Array.Empty<PostCommentViewModel>();
     }
 }

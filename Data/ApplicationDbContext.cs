@@ -1,4 +1,5 @@
 using EventsApp.Models;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
@@ -74,6 +75,18 @@ namespace EventsApp.Data
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
+
+            builder.Entity<IdentityUserLogin<string>>(entity =>
+            {
+                entity.Property(l => l.LoginProvider).HasMaxLength(128);
+                entity.Property(l => l.ProviderKey).HasMaxLength(128);
+            });
+
+            builder.Entity<IdentityUserToken<string>>(entity =>
+            {
+                entity.Property(t => t.LoginProvider).HasMaxLength(128);
+                entity.Property(t => t.Name).HasMaxLength(128);
+            });
 
             builder.Entity<OrganizerData>(entity =>
             {
@@ -227,6 +240,13 @@ namespace EventsApp.Data
                       .WithMany()
                       .HasForeignKey(pc => pc.BusinessWorkspaceId)
                       .OnDelete(DeleteBehavior.NoAction);
+
+                entity.HasOne(pc => pc.ParentComment)
+                      .WithMany(pc => pc.Replies)
+                      .HasForeignKey(pc => pc.ParentCommentId)
+                      .OnDelete(DeleteBehavior.NoAction);
+
+                entity.HasIndex(pc => pc.ParentCommentId);
             });
 
             builder.Entity<PostLike>(entity =>
@@ -280,6 +300,13 @@ namespace EventsApp.Data
                       .WithMany()
                       .HasForeignKey(ec => ec.BusinessWorkspaceId)
                       .OnDelete(DeleteBehavior.NoAction);
+
+                entity.HasOne(ec => ec.ParentComment)
+                      .WithMany(ec => ec.Replies)
+                      .HasForeignKey(ec => ec.ParentCommentId)
+                      .OnDelete(DeleteBehavior.NoAction);
+
+                entity.HasIndex(ec => ec.ParentCommentId);
             });
 
             builder.Entity<EventLike>(entity =>
@@ -381,6 +408,11 @@ namespace EventsApp.Data
                       .WithMany()
                       .HasForeignKey(c => c.ParticipantTwoId)
                       .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(c => c.RequestedByUser)
+                      .WithMany()
+                      .HasForeignKey(c => c.RequestedByUserId)
+                      .OnDelete(DeleteBehavior.SetNull);
 
                 entity.HasIndex(c => new { c.ParticipantOneId, c.ParticipantTwoId }).IsUnique();
             });

@@ -55,7 +55,16 @@
             <h3 class="evt-card__title">
                 <a asp-controller="Events" asp-action="Details" asp-route-id="@Model.Id">@Model.Title</a>
             </h3>
-            <span class="evt-card__price evt-card__price--free" data-i18n="event.price.free">FREE</span>
+            @if (Model.IsFreeEvent)
+            {
+                <span class="evt-card__price evt-card__price--free" data-i18n="event.price.free">Безплатно</span>
+            }
+            else if (Model.LowestPaidTicketPrice.HasValue)
+            {
+                <span class="evt-card__price">
+                    <span data-i18n="event.price.from">от</span> @Model.LowestPaidTicketPrice.Value.ToTicketPriceDisplay()
+                </span>
+            }
         </div>
 
         <div class="evt-card__meta">

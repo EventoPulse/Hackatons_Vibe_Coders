@@ -41,10 +41,10 @@ namespace EventsApp.Controllers
             _actingIdentity = actingIdentity;
         }
 
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(string? q)
         {
             var userId = _userManager.GetUserId(User);
-            var feed = await _socialFeed.BuildFeedAsync(userId);
+            var feed = await _socialFeed.BuildFeedAsync(userId, q);
             return View(feed);
         }
 
@@ -70,6 +70,12 @@ namespace EventsApp.Controllers
 
             if (post == null) return NotFound();
 
+            var comments = post.Comments.ToList();
+            var repliesByParentId = comments
+                .Where(c => c.ParentCommentId.HasValue)
+                .GroupBy(c => c.ParentCommentId!.Value)
+                .ToDictionary(g => g.Key, g => g.OrderBy(r => r.CreatedAt).ToList());
+
             return View(new PostDetailsViewModel
             {
                 Id = post.Id,
@@ -91,24 +97,13 @@ namespace EventsApp.Controllers
                     .ToList(),
                 LikesCount = post.Likes.Count,
                 SavesCount = post.Saves.Count,
+                CommentsCount = comments.Count,
                 CurrentUserLiked = userId != null && post.Likes.Any(l => l.UserId == userId),
                 CurrentUserSaved = userId != null && post.Saves.Any(s => s.UserId == userId),
-                Comments = post.Comments
+                Comments = comments
+                    .Where(c => c.ParentCommentId == null)
                     .OrderByDescending(c => c.CreatedAt)
-                    .Select(c => new PostCommentViewModel
-                    {
-                        Id = c.Id,
-                        UserId = c.UserId,
-                        UserName = GetCommentDisplayName(c),
-                        AuthorImageUrl = c.AuthorType == AuthorIdentityType.OrganizerPage ? c.AuthorOrganizerProfile?.AvatarImageUrl : c.User?.ProfileImageUrl,
-                        AuthorBadgeKey = GetAuthorBadgeKey(c.AuthorType),
-                        AuthorBadgeText = GetAuthorBadgeText(c.AuthorType, c.UserId == userId),
-                        AuthorProfileUserId = c.AuthorType == AuthorIdentityType.OrganizerPage ? null : c.UserId,
-                        IsOrganizerPageAuthor = c.AuthorType == AuthorIdentityType.OrganizerPage,
-                        Content = c.Content,
-                        CreatedAt = c.CreatedAt,
-                        CanDelete = isAdmin || c.UserId == userId,
-                    })
+                    .Select(c => ToCommentViewModel(c, userId, isAdmin, repliesByParentId))
                     .ToList(),
                 CanEdit = isAdmin || post.OrganizerId == userId,
                 CanDelete = isAdmin || post.OrganizerId == userId,
@@ -379,7 +374,7 @@ namespace EventsApp.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize]
-        public async Task<IActionResult> AddComment(int id, string content, string? actingIdentityKey)
+        public async Task<IActionResult> AddComment(int id, string content, string? actingIdentityKey, int? parentCommentId)
         {
             if (!await _permissions.CanCommentAsync(User))
             {
@@ -400,6 +395,18 @@ namespace EventsApp.Controllers
             if (post == null)
                 return NotFound();
 
+            if (parentCommentId.HasValue)
+            {
+                var parentIsValid = await _db.PostComments
+                    .AsNoTracking()
+                    .AnyAsync(c => c.Id == parentCommentId.Value && c.PostId == id && c.ParentCommentId == null);
+                if (!parentIsValid)
+                {
+                    TempData["StatusMessage"] = "Reply target was not found.";
+                    return RedirectToAction(nameof(Details), new { id });
+                }
+            }
+
             var userId = _userManager.GetUserId(User)!;
             var identity = await _actingIdentity.ResolveAsync(HttpContext, actingIdentityKey, post.OrganizerProfileId);
             if (identity == null || !await _permissions.CanCommentAsIdentityAsync(User, identity.Type, identity.OrganizerProfileId))
@@ -414,6 +421,7 @@ namespace EventsApp.Controllers
                 AuthorType = identity.Type,
                 AuthorOrganizerProfileId = identity.OrganizerProfileId,
                 BusinessWorkspaceId = identity.BusinessWorkspaceId,
+                ParentCommentId = parentCommentId,
                 Content = content,
             });
             await _db.SaveChangesAsync();
@@ -433,6 +441,13 @@ namespace EventsApp.Controllers
             if (!isAdmin && comment.UserId != userId) return Forbid();
 
             var postId = comment.PostId;
+            var replies = await _db.PostComments
+                .Where(c => c.ParentCommentId == comment.Id)
+                .ToListAsync();
+            if (replies.Count > 0)
+            {
+                _db.PostComments.RemoveRange(replies);
+            }
             _db.PostComments.Remove(comment);
             await _db.SaveChangesAsync();
             return RedirectToAction(nameof(Details), new { id = postId });
@@ -501,6 +516,33 @@ namespace EventsApp.Controllers
             return comment.AuthorType == AuthorIdentityType.OrganizerPage && comment.AuthorOrganizerProfile != null
                 ? comment.AuthorOrganizerProfile.DisplayName
                 : comment.User?.UserName ?? string.Empty;
+        }
+
+        private static PostCommentViewModel ToCommentViewModel(
+            PostComment comment,
+            string? currentUserId,
+            bool isAdmin,
+            IReadOnlyDictionary<int, List<PostComment>> repliesByParentId)
+        {
+            return new PostCommentViewModel
+            {
+                Id = comment.Id,
+                UserId = comment.UserId,
+                UserName = GetCommentDisplayName(comment),
+                AuthorImageUrl = comment.AuthorType == AuthorIdentityType.OrganizerPage
+                    ? comment.AuthorOrganizerProfile?.AvatarImageUrl
+                    : comment.User?.ProfileImageUrl,
+                AuthorBadgeKey = GetAuthorBadgeKey(comment.AuthorType),
+                AuthorBadgeText = GetAuthorBadgeText(comment.AuthorType, comment.UserId == currentUserId),
+                AuthorProfileUserId = comment.AuthorType == AuthorIdentityType.OrganizerPage ? null : comment.UserId,
+                IsOrganizerPageAuthor = comment.AuthorType == AuthorIdentityType.OrganizerPage,
+                Content = comment.Content,
+                CreatedAt = comment.CreatedAt,
+                CanDelete = isAdmin || comment.UserId == currentUserId,
+                Replies = repliesByParentId.TryGetValue(comment.Id, out var replies)
+                    ? replies.Select(r => ToCommentViewModel(r, currentUserId, isAdmin, new Dictionary<int, List<PostComment>>())).ToList()
+                    : Array.Empty<PostCommentViewModel>(),
+            };
         }
 
         private static string GetAuthorBadgeKey(AuthorIdentityType type)

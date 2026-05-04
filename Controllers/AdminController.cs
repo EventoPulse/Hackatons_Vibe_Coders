@@ -148,6 +148,11 @@ namespace EventsApp.Controllers
                     SavesCount = e.Saves.Count,
                     GoingCount = e.Attendances.Count(a => a.Status == EventAttendanceStatus.Going),
                     InterestedCount = e.Attendances.Count(a => a.Status == EventAttendanceStatus.Interested),
+                    HasActiveTickets = e.Tickets.Any(t => t.IsActive),
+                    HasPaidTickets = e.Tickets.Any(t => t.IsActive && t.Price > 0m),
+                    LowestPaidTicketPrice = e.Tickets
+                        .Where(t => t.IsActive && t.Price > 0m)
+                        .Min(t => (decimal?)t.Price),
                 })
                 .ToListAsync();
 

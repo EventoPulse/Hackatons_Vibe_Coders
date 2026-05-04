@@ -24,5 +24,9 @@ namespace EventsApp.ViewModels.Events
         public EventAttendanceStatus? CurrentUserAttendanceStatus { get; set; }
         public double? Latitude { get; set; }
         public double? Longitude { get; set; }
+        public bool HasActiveTickets { get; set; }
+        public bool HasPaidTickets { get; set; }
+        public decimal? LowestPaidTicketPrice { get; set; }
+        public bool IsFreeEvent => !HasActiveTickets || !HasPaidTickets;
     }
 }

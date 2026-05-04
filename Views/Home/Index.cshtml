@@ -56,19 +56,12 @@
 
     <section class="evt-hero">
         <div class="evt-hero__copy">
-            <span class="evt-hero__brand">
-                <span class="evt-hero__brand-dot"><i class="bi bi-stars"></i></span>
-                <span class="notranslate" translate="no">Evento</span>
-                <span data-i18n="home.live">· на живо</span>
-            </span>
-
             <h1 class="evt-hero__title" data-i18n-html="home.hero.h1">
-                Find. Feel. <em>Go.</em>
+                Открий <span>събития</span> наблизо.
             </h1>
 
             <p class="evt-hero__lead" data-i18n="home.hero.p">
-                Открий следващото си нощно изживяване — живи концерти, фестивали и партита из цяла България.
-                Една карта, едно търсене, всичко в един бийт.
+                Концерти, театър, клубни вечери и фестивали в една компактна карта.
             </p>
 
             <div class="evt-hero__cta">
@@ -103,7 +96,7 @@
             <div id="events-map" class="notranslate" translate="no" data-no-i18n="true">
                 <div class="map-loading-state">
                     <i class="bi bi-map" style="font-size:1.6rem;"></i>
-                    <span>Loading map…</span>
+                    <span data-i18n="home.map.loading">Картата се зарежда...</span>
                 </div>
             </div>
 
@@ -116,83 +109,97 @@
         </div>
     </section>
 
+    <!-- Event preview panel — shown when a map pin is clicked -->
+    <div id="map-event-preview" class="evt-map-preview" aria-live="polite" style="display:none;">
+        <div class="evt-map-preview__inner">
+            <img id="map-preview-img" src="" alt="" class="evt-map-preview__img" style="display:none;" />
+            <div class="evt-map-preview__body">
+                <div class="evt-map-preview__meta">
+                    <span id="map-preview-genre" class="evt-card__chip" style="position:static;display:inline-flex;"></span>
+                </div>
+                <h3 id="map-preview-title" class="evt-map-preview__title"></h3>
+                <p id="map-preview-address" class="evt-map-preview__address"></p>
+                <p id="map-preview-time" class="evt-map-preview__time"></p>
+            </div>
+            <a id="map-preview-link" href="#" class="evt-btn evt-btn-primary evt-map-preview__btn">
+                <i class="bi bi-arrow-right-circle"></i>
+                <span>Виж събитието</span>
+            </a>
+        </div>
+        <button id="map-preview-close" class="evt-map-preview__close" type="button" aria-label="Затвори">
+            <i class="bi bi-x-lg"></i>
+        </button>
+    </div>
+
     @{
         var today = DateTime.UtcNow.Date;
         var daysUntilSat = ((int)DayOfWeek.Saturday - (int)today.DayOfWeek + 7) % 7;
         if (daysUntilSat == 0) daysUntilSat = 7;
         var nextSat = today.AddDays(daysUntilSat);
         var nextSun = nextSat.AddDays(1);
+        // Days until Sunday in current week (0 = today is Sunday → end is today)
         var daysUntilSun = (7 - (int)today.DayOfWeek) % 7;
-        if (daysUntilSun == 0) daysUntilSun = 7;
         var endOfWeek = today.AddDays(daysUntilSun);
+
+        var isTabAll = Model.DateFrom == null && Model.DateTo == null && string.IsNullOrEmpty(Model.Search) && Model.Genre == null;
+        var isTabTonight = Model.DateFrom?.Date == today && Model.DateTo?.Date == today;
+        var isTabWeekend = Model.DateFrom?.Date == nextSat && Model.DateTo?.Date == nextSun;
+        var isTabWeek = Model.DateFrom?.Date == today && Model.DateTo?.Date == endOfWeek;
+        var isTabFree = Model.Search == "free";
     }
     <div class="evt-search-section">
         <div class="evt-search-tabs-bar">
-            <a class="evt-search-tab-link @(Model.DateFrom == null && string.IsNullOrEmpty(Model.Search) ? "is-active" : "")"
-               asp-action="Index">
+            <a class="evt-search-tab-link @(isTabAll ? "is-active" : "")" asp-action="Index">
                 <i class="bi bi-grid-3x3-gap"></i> <span>Всички</span>
             </a>
-            <a class="evt-search-tab-link @(Model.DateFrom?.Date == today ? "is-active" : "")"
-               asp-action="Index" asp-route-dateFrom="@today.ToString("yyyy-MM-dd")">
+            <a class="evt-search-tab-link @(isTabTonight ? "is-active" : "")"
+               asp-action="Index"
+               asp-route-dateFrom="@today.ToString("yyyy-MM-dd")"
+               asp-route-dateTo="@today.ToString("yyyy-MM-dd")">
                 <i class="bi bi-moon-stars"></i> <span data-i18n="search.tab.tonight">Тази вечер</span>
             </a>
-            <a class="evt-search-tab-link @(Model.DateFrom?.Date == nextSat ? "is-active" : "")"
-               asp-action="Index" asp-route-dateFrom="@nextSat.ToString("yyyy-MM-dd")" asp-route-dateTo="@nextSun.ToString("yyyy-MM-dd")">
+            <a class="evt-search-tab-link @(isTabWeekend ? "is-active" : "")"
+               asp-action="Index"
+               asp-route-dateFrom="@nextSat.ToString("yyyy-MM-dd")"
+               asp-route-dateTo="@nextSun.ToString("yyyy-MM-dd")">
                 <i class="bi bi-stars"></i> <span data-i18n="search.tab.weekend">Уикенд</span>
             </a>
-            <a class="evt-search-tab-link"
-               asp-action="Index" asp-route-dateFrom="@today.ToString("yyyy-MM-dd")" asp-route-dateTo="@endOfWeek.ToString("yyyy-MM-dd")">
+            <a class="evt-search-tab-link @(isTabWeek ? "is-active" : "")"
+               asp-action="Index"
+               asp-route-dateFrom="@today.ToString("yyyy-MM-dd")"
+               asp-route-dateTo="@endOfWeek.ToString("yyyy-MM-dd")">
                 <i class="bi bi-calendar-week"></i> <span>Тази седмица</span>
             </a>
-            <a class="evt-search-tab-link @(Model.Search == "free" ? "is-active" : "")"
+            <a class="evt-search-tab-link @(isTabFree ? "is-active" : "")"
                asp-action="Index" asp-route-search="free">
                 <i class="bi bi-ticket-perforated"></i> <span data-i18n="chip.free">Безплатни</span>
             </a>
         </div>
 
-        <form id="home-smart-search-form" class="evt-search-panel" autocomplete="off">
-            @Html.AntiForgeryToken()
-            <div class="evt-search-row">
-                <div class="evt-search-field evt-search-field--main">
-                    <i class="bi bi-search evt-search-field__icon"></i>
+        <div class="evt-ai-search-wrap">
+            <div class="evt-ai-search__label">
+                <i class="bi bi-stars"></i>
+                <span data-i18n="home.ai.label">AI Търсене</span>
+                <span class="evt-ai-search__badge">gpt-4.1-mini</span>
+            </div>
+            <form id="home-smart-search-form" class="evt-ai-search-form" autocomplete="off">
+                @Html.AntiForgeryToken()
+                <div class="evt-ai-search-row">
                     <input id="home-smart-search-input" type="text" name="q"
+                           class="evt-ai-search-input"
                            data-i18n-placeholder="home.search.placeholder"
-                           placeholder="техно тази вечер в София · джаз през уикенда" />
+                           placeholder="техно тази вечер в София · джаз през уикенда · безплатен концерт" />
+                    <button class="evt-ai-search-btn" type="submit">
+                        <i class="bi bi-stars"></i>
+                        <span data-i18n="home.search.btn">Търси с AI</span>
+                    </button>
                 </div>
-                <div class="evt-search-field">
-                    <span data-i18n="search.field.where">Град</span>
-                    <select form="home-events-filter" name="city">
-                        <option value="" data-i18n="filter.allcities">Всички градове</option>
-                        @foreach (var c in Model.Cities)
-                        {
-                            <option value="@c" selected="@(Model.City == c)">@c</option>
-                        }
-                    </select>
+                <div class="evt-search-status evt-ai-search-status">
+                    <span id="home-search-status"></span>
+                    <button id="home-smart-clear" class="evt-chip evt-chip--light" type="button" data-i18n="home.clear" style="display:none;">Изчисти</button>
                 </div>
-                <div class="evt-search-field">
-                    <span data-i18n="search.field.when">Дата</span>
-                    <input type="date" form="home-events-filter" name="dateFrom" value="@Model.DateFrom?.ToString("yyyy-MM-dd")" />
-                </div>
-                <div class="evt-search-field">
-                    <span data-i18n="search.field.genre">Жанр</span>
-                    <select form="home-events-filter" name="genre">
-                        <option value="" data-i18n="filter.allgenres">Всички жанрове</option>
-                        @foreach (var g in Enum.GetValues<EventGenre>())
-                        {
-                            <option value="@((int)g)" selected="@(Model.Genre == g)" data-i18n="genre.@g">@g.GetDisplayName()</option>
-                        }
-                    </select>
-                </div>
-                <button class="evt-search-submit" type="submit">
-                    <i class="bi bi-stars"></i>
-                    <span data-i18n="home.search.btn">Търси с AI</span>
-                </button>
-            </div>
-            <div class="evt-search-status">
-                <span id="home-search-status"></span>
-                <button id="home-smart-clear" class="evt-chip" type="button" data-i18n="home.clear" style="display:none;">Изчисти</button>
-            </div>
-        </form>
+            </form>
+        </div>
     </div>
 
     <section class="evt-section">

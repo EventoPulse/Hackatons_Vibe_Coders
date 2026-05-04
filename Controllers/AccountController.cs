@@ -135,6 +135,11 @@ namespace EventsApp.Controllers
                         .Where(a => a.UserId == user.Id)
                         .Select(a => (EventAttendanceStatus?)a.Status)
                         .FirstOrDefault(),
+                    HasActiveTickets = l.Event.Tickets.Any(t => t.IsActive),
+                    HasPaidTickets = l.Event.Tickets.Any(t => t.IsActive && t.Price > 0m),
+                    LowestPaidTicketPrice = l.Event.Tickets
+                        .Where(t => t.IsActive && t.Price > 0m)
+                        .Min(t => (decimal?)t.Price),
                 })
                 .ToListAsync();
 
@@ -221,6 +226,11 @@ namespace EventsApp.Controllers
                         .Where(a => a.UserId == user.Id)
                         .Select(a => (EventAttendanceStatus?)a.Status)
                         .FirstOrDefault(),
+                    HasActiveTickets = s.Event.Tickets.Any(t => t.IsActive),
+                    HasPaidTickets = s.Event.Tickets.Any(t => t.IsActive && t.Price > 0m),
+                    LowestPaidTicketPrice = s.Event.Tickets
+                        .Where(t => t.IsActive && t.Price > 0m)
+                        .Min(t => (decimal?)t.Price),
                 })
                 .ToListAsync();
 

@@ -42,6 +42,8 @@ namespace EventsApp.Controllers
                 {
                     c.Id,
                     c.UpdatedAt,
+                    c.Status,
+                    c.RequestedByUserId,
                     Other = c.ParticipantOneId == userId ? c.ParticipantTwo : c.ParticipantOne,
                     LastMessage = c.Messages
                         .OrderByDescending(m => m.CreatedAt)
@@ -60,6 +62,8 @@ namespace EventsApp.Controllers
                     LastMessage = c.LastMessage,
                     UpdatedAt = c.UpdatedAt,
                     UnseenCount = c.UnseenCount,
+                    Status = c.Status,
+                    IsRequestedByCurrentUser = c.RequestedByUserId == userId,
                 })
                 .ToListAsync();
 
@@ -107,6 +111,10 @@ namespace EventsApp.Controllers
                 OtherUserId = other.Id,
                 OtherUserName = GetDisplayName(other),
                 OtherUserImageUrl = other.ProfileImageUrl,
+                Status = conversation.Status,
+                IsRequestedByCurrentUser = conversation.RequestedByUserId == userId,
+                CanRespondToRequest = conversation.Status == ConversationStatus.Pending
+                    && conversation.RequestedByUserId != userId,
                 Messages = conversation.Messages
                     .OrderBy(m => m.CreatedAt)
                     .Select(m => new MessageBubbleViewModel
@@ -144,15 +152,23 @@ namespace EventsApp.Controllers
                 return NotFound();
             }
 
-            if (!await _permissions.CanMessageUserAsync(User, userId))
-            {
-                TempData["StatusMessage"] = "Messaging is limited to organizer questions, organizer replies, or mutual follows.";
-                return Forbid();
-            }
-
             var (one, two) = SortParticipants(currentUserId, userId);
             var conversation = await _db.Conversations
                 .FirstOrDefaultAsync(c => c.ParticipantOneId == one && c.ParticipantTwoId == two);
+            var canMessageDirectly = await _permissions.CanMessageUserAsync(User, userId);
+
+            if (conversation == null && !canMessageDirectly)
+            {
+                var since = DateTime.UtcNow.AddHours(-1);
+                var recentRequests = await _db.Conversations
+                    .AsNoTracking()
+                    .CountAsync(c => c.CreatedAt >= since && c.RequestedByUserId == currentUserId);
+                if (recentRequests >= 5)
+                {
+                    TempData["StatusMessage"] = "Изпрати твърде много заявки за съобщения. Опитай пак след малко.";
+                    return RedirectToAction("Details", "Profiles", new { id = userId });
+                }
+            }
 
             if (conversation == null)
             {
@@ -160,12 +176,85 @@ namespace EventsApp.Controllers
                 {
                     ParticipantOneId = one,
                     ParticipantTwoId = two,
+                    Status = canMessageDirectly ? ConversationStatus.Accepted : ConversationStatus.Pending,
+                    RequestedByUserId = currentUserId,
                 };
                 _db.Conversations.Add(conversation);
                 await _db.SaveChangesAsync();
+
+                if (!canMessageDirectly)
+                {
+                    TempData["StatusMessage"] = "Заявката за съобщение е изпратена. Ще можете да си пишете, когато бъде одобрена.";
+                }
+            }
+            else if (conversation.Status == ConversationStatus.Declined && canMessageDirectly)
+            {
+                conversation.Status = ConversationStatus.Accepted;
+                conversation.RequestedByUserId = currentUserId;
+                conversation.RespondedAt = DateTime.UtcNow;
+                conversation.UpdatedAt = conversation.RespondedAt.Value;
+                await _db.SaveChangesAsync();
+            }
+            else if (conversation.Status == ConversationStatus.Declined)
+            {
+                TempData["StatusMessage"] = "Тази заявка за съобщение е отказана.";
             }
 
             return RedirectToAction(nameof(Details), new { id = conversation.Id });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Approve(int id)
+        {
+            var userId = _userManager.GetUserId(User)!;
+            var conversation = await _db.Conversations
+                .FirstOrDefaultAsync(c => c.Id == id && (c.ParticipantOneId == userId || c.ParticipantTwoId == userId));
+
+            if (conversation == null)
+            {
+                return NotFound();
+            }
+
+            if (conversation.Status != ConversationStatus.Pending || conversation.RequestedByUserId == userId)
+            {
+                return Forbid();
+            }
+
+            conversation.Status = ConversationStatus.Accepted;
+            conversation.RespondedAt = DateTime.UtcNow;
+            conversation.UpdatedAt = conversation.RespondedAt.Value;
+            await _db.SaveChangesAsync();
+
+            TempData["StatusMessage"] = "Заявката е одобрена. Вече можете да си пишете.";
+            return RedirectToAction(nameof(Details), new { id });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Decline(int id)
+        {
+            var userId = _userManager.GetUserId(User)!;
+            var conversation = await _db.Conversations
+                .FirstOrDefaultAsync(c => c.Id == id && (c.ParticipantOneId == userId || c.ParticipantTwoId == userId));
+
+            if (conversation == null)
+            {
+                return NotFound();
+            }
+
+            if (conversation.Status != ConversationStatus.Pending || conversation.RequestedByUserId == userId)
+            {
+                return Forbid();
+            }
+
+            conversation.Status = ConversationStatus.Declined;
+            conversation.RespondedAt = DateTime.UtcNow;
+            conversation.UpdatedAt = conversation.RespondedAt.Value;
+            await _db.SaveChangesAsync();
+
+            TempData["StatusMessage"] = "Заявката за съобщение е отказана.";
+            return RedirectToAction(nameof(Index));
         }
 
         [HttpPost]
@@ -179,6 +268,14 @@ namespace EventsApp.Controllers
             if (conversation == null)
             {
                 return NotFound();
+            }
+
+            if (conversation.Status != ConversationStatus.Accepted)
+            {
+                TempData["StatusMessage"] = conversation.Status == ConversationStatus.Pending
+                    ? "Първо заявката за съобщение трябва да бъде одобрена."
+                    : "Този разговор не е активен.";
+                return RedirectToAction(nameof(Details), new { id });
             }
 
             var otherUserId = conversation.ParticipantOneId == userId

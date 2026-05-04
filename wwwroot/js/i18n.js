@@ -59,12 +59,12 @@
         'home.stamp': { bg: 'Evento', en: 'Evento' },
         'home.live':  { bg: 'на живо',  en: 'live' },
         'home.hero.h1': {
-            bg: 'Дневник за най-<span>шумните</span> нощи в България.',
-            en: 'The diary of the <span>loudest</span> nights in Bulgaria.'
+            bg: 'Открий <span>събития</span> наблизо.',
+            en: 'Discover <span>events</span> nearby.'
         },
         'home.hero.p': {
-            bg: 'Evento е част скрапбук, част карта, част бюро за събития. Организаторите движат сцената, слушателите намират точната вечер, а всеки град получава своите карфици.',
-            en: 'Evento is part scrapbook, part map, part event bureau. Organizers drive the scene, listeners find the right night, and every city gets its own pins.'
+            bg: 'Концерти, театър, клубни вечери и фестивали в една компактна карта.',
+            en: 'Concerts, theatre, club nights and festivals in one compact map.'
         },
 
         // HOME — SEARCH
@@ -150,6 +150,16 @@
         'profile.follow':             { bg: 'Последвай', en: 'Follow' },
         'profile.unfollow':           { bg: 'Спри следването', en: 'Unfollow' },
         'profile.message':            { bg: 'Съобщение', en: 'Message' },
+        'messages.request.sent':       { bg: 'Заявката чака одобрение', en: 'Request awaiting approval' },
+        'messages.request.incoming':   { bg: 'Нова заявка за съобщение', en: 'New message request' },
+        'messages.request.title':      { bg: 'Заявка за съобщение', en: 'Message request' },
+        'messages.request.desc':       { bg: 'Този човек иска да започне разговор с теб. Одобри заявката, за да можете да си пишете.', en: 'This person wants to start a conversation. Approve the request so you can keep chatting.' },
+        'messages.request.waiting':    { bg: 'Заявката е изпратена', en: 'Request sent' },
+        'messages.request.waiting.desc': { bg: 'Ще можете да си пишете, когато човекът отсреща я одобри.', en: 'You can chat after the other person approves it.' },
+        'messages.request.declined':   { bg: 'Заявката е отказана', en: 'Request declined' },
+        'messages.request.declined.desc': { bg: 'Този разговор не е активен.', en: 'This conversation is not active.' },
+        'messages.approve':            { bg: 'Одобри', en: 'Approve' },
+        'messages.decline':            { bg: 'Откажи', en: 'Decline' },
         'profile.edit':               { bg: 'Редактирай профила', en: 'Edit profile' },
         'profile.events.kicker':      { bg: 'Събития', en: 'Events' },
         'profile.events.title':       { bg: 'Предстоящи и минали <span>събития</span>.', en: 'Upcoming and past <span>events</span>.' },
@@ -242,6 +252,9 @@
         'common.signin': { bg: 'Вход', en: 'Sign in' },
         'common.send': { bg: 'Изпрати', en: 'Send' },
         'common.back': { bg: 'Назад', en: 'Back' },
+        'common.clear': { bg: 'Изчисти', en: 'Clear' },
+        'event.price.free': { bg: 'Безплатно', en: 'Free' },
+        'event.price.from': { bg: 'от', en: 'from' },
 
         // RECURRING EVENTS
         'event.schedule.kicker': { bg: 'График', en: 'Schedule' },
@@ -266,6 +279,10 @@
         'home.chip.festivals': { bg: 'Фестивали', en: 'Festivals' },
         'home.chip.free': { bg: 'Безплатни', en: 'Free events' },
         'home.chip.family': { bg: 'Семейни', en: 'Family' },
+        'chip.concerts': { bg: 'Концерти', en: 'Concerts' },
+        'chip.theatre': { bg: 'Театър', en: 'Theatre' },
+        'chip.festivals': { bg: 'Фестивали', en: 'Festivals' },
+        'chip.free': { bg: 'Безплатни', en: 'Free events' },
         'home.results.kicker': { bg: 'Зона с резултати', en: 'Smart search result area' },
         'home.results.title': { bg: 'Резултати за следващото ти събитие', en: 'Results for your next event' },
         'home.results.date': { bg: 'Дата', en: 'Date' },
@@ -351,6 +368,8 @@
         'comments.kicker': { bg: 'Разговор', en: 'Conversation' },
         'comments.title': { bg: 'Коментари', en: 'Comments' },
         'comments.placeholder': { bg: 'Напиши коментар...', en: 'Write a comment...' },
+        'comments.reply': { bg: 'Отговори', en: 'Reply' },
+        'comments.reply.placeholder': { bg: 'Напиши отговор...', en: 'Write a reply...' },
         'comments.empty': { bg: 'Все още няма коментари.', en: 'No comments yet.' },
         'event.location': { bg: 'Локация', en: 'Location' },
         'event.social': { bg: 'Социално', en: 'Social' },
@@ -381,6 +400,10 @@
         'feed.all': { bg: 'Всички', en: 'All' },
         'feed.more': { bg: 'Още', en: 'More' },
         'feed.suggested': { bg: 'Предложени профили', en: 'Suggested profiles' },
+        'feed.search.placeholder': { bg: 'Търси хора, @username или публична страница...', en: 'Search people, @username or public page...' },
+        'feed.search.action': { bg: 'Търси', en: 'Search' },
+        'feed.search.results': { bg: 'Резултати', en: 'Results' },
+        'feed.search.empty': { bg: 'Няма намерени профили или публични страници.', en: 'No profiles or public pages found.' },
         'story.active': { bg: 'Активни сторита', en: 'Active stories' },
         'story.close': { bg: 'Затвори стори', en: 'Close story' },
         'story.viewer': { bg: 'Преглед на стори', en: 'Story viewer' },

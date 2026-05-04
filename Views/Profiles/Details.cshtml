@@ -72,16 +72,13 @@
                         </form>
                     }
 
-                    @if (Model.CanStartConversation)
-                    {
-                        <form asp-controller="Messages" asp-action="Start" method="post">
-                            @Html.AntiForgeryToken()
-                            <input type="hidden" name="userId" value="@Model.Id" />
-                            <button class="groove-button groove-button-paper" type="submit">
-                                <i class="bi bi-chat-dots"></i> <span data-i18n="profile.message">Message</span>
-                            </button>
-                        </form>
-                    }
+                    <form asp-controller="Messages" asp-action="Start" method="post">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="userId" value="@Model.Id" />
+                        <button class="groove-button groove-button-paper" type="submit">
+                            <i class="bi bi-chat-dots"></i> <span data-i18n="profile.message">Message</span>
+                        </button>
+                    </form>
                 }
                 else if (Model.IsCurrentUser)
                 {

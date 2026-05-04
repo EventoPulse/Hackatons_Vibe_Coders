@@ -6,6 +6,7 @@
     var isSignedIn = User.Identity?.IsAuthenticated == true;
     var canCreatePublicContent = await Permissions.CanCreatePostAsync(User);
     var canCreateStory = await Permissions.CanCreateStoryAsync(User);
+    var currentUserId = User.FindFirstValue(System.Security.Claims.ClaimTypes.NameIdentifier);
     var currentStoryInitial = string.IsNullOrWhiteSpace(Model.CurrentUserDisplayName)
         ? "?"
         : Model.CurrentUserDisplayName[..1].ToUpperInvariant();
@@ -24,6 +25,82 @@
             </a>
         }
     </header>
+
+    <section class="social-feed-search">
+        <form asp-controller="Posts" asp-action="Index" method="get" class="social-feed-search__form">
+            <i class="bi bi-search"></i>
+            <input type="search"
+                   name="q"
+                   value="@Model.SearchQuery"
+                   placeholder="Търси хора, @@username или публична страница..."
+                   data-i18n-placeholder="feed.search.placeholder" />
+            <button type="submit" class="groove-button groove-button-primary" data-i18n="feed.search.action">Търси</button>
+            @if (!string.IsNullOrWhiteSpace(Model.SearchQuery))
+            {
+                <a asp-controller="Posts" asp-action="Index" class="groove-button groove-button-paper" data-i18n="common.clear">Изчисти</a>
+            }
+        </form>
+
+        @if (!string.IsNullOrWhiteSpace(Model.SearchQuery))
+        {
+            <div class="social-search-results">
+                <div class="social-search-results__head">
+                    <span class="groove-kicker" data-i18n="feed.search.results">Резултати</span>
+                    <strong>@Model.SearchQuery</strong>
+                </div>
+                @if (Model.SearchResults.Count == 0)
+                {
+                    <div class="social-empty-inline" data-i18n="feed.search.empty">Няма намерени профили или публични страници.</div>
+                }
+                else
+                {
+                    <div class="social-search-results__grid">
+                        @foreach (var result in Model.SearchResults)
+                        {
+                            var resultInitial = string.IsNullOrWhiteSpace(result.DisplayName) ? "?" : result.DisplayName[..1].ToUpperInvariant();
+                            <article class="social-search-card">
+                                <a asp-controller="Profiles" asp-action="Details" asp-route-id="@result.UserId" class="social-search-card__main">
+                                    <span class="social-profile-avatar">
+                                        @if (!string.IsNullOrWhiteSpace(result.ProfileImageUrl))
+                                        {
+                                            <img src="@result.ProfileImageUrl" alt="@result.DisplayName" onerror="this.closest('.social-profile-avatar').classList.add('is-fallback');this.remove();" />
+                                        }
+                                        <span>@resultInitial</span>
+                                    </span>
+                                    <span class="social-search-card__body">
+                                        <strong>@result.DisplayName</strong>
+                                        <small>
+                                            <span data-i18n="@result.TypeKey">@result.TypeText</span>
+                                            @if (!string.IsNullOrWhiteSpace(result.UserName))
+                                            {
+                                                <span>@@@result.UserName</span>
+                                            }
+                                        </small>
+                                        @if (!string.IsNullOrWhiteSpace(result.Bio))
+                                        {
+                                            <span class="social-search-card__bio">@result.Bio</span>
+                                        }
+                                        <span class="social-search-card__meta">
+                                            @result.FollowersCount <span data-i18n="profile.followers">последователи</span>
+                                            · @result.EventsCount <span data-i18n="profile.events">събития</span>
+                                            · @result.PostsCount <span data-i18n="profile.posts">поста</span>
+                                        </span>
+                                    </span>
+                                </a>
+                                @if (isSignedIn && result.UserId != currentUserId && !result.CurrentUserFollows)
+                                {
+                                    <form asp-controller="Profiles" asp-action="Follow" asp-route-id="@result.UserId" asp-route-returnUrl="@returnUrl" method="post">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit" class="btn btn-sm btn-outline-primary" data-i18n="profile.follow">Последвай</button>
+                                    </form>
+                                }
+                            </article>
+                        }
+                    </div>
+                }
+            </div>
+        }
+    </section>
 
     <section class="social-stories-strip" aria-label="Активни сторита" data-i18n-aria-label="story.active">
         @if (isSignedIn && canCreatePublicContent)
@@ -163,9 +240,21 @@
                 @foreach (var ev in Model.RecommendedEvents.Take(3))
                 {
                     <a asp-controller="Events" asp-action="Details" asp-route-id="@ev.Id" class="social-event-mini">
+                        <span class="social-event-mini__thumb">
+                            @if (!string.IsNullOrWhiteSpace(ev.ImageUrl))
+                            {
+                                <img src="@ev.ImageUrl" alt="@ev.Title" />
+                            }
+                            else
+                            {
+                                <i class="bi bi-calendar-event"></i>
+                            }
+                        </span>
                         <span>@ev.StartTime.ToString("dd MMM")</span>
-                        <strong>@ev.Title</strong>
-                        <small>@ev.City</small>
+                        <span class="social-event-mini__body">
+                            <strong>@ev.Title</strong>
+                            <small>@ev.City</small>
+                        </span>
                     </a>
                 }
             </section>
@@ -178,9 +267,21 @@
                 @foreach (var ev in Model.TrendingEvents.Take(3))
                 {
                     <a asp-controller="Events" asp-action="Details" asp-route-id="@ev.Id" class="social-event-mini">
+                        <span class="social-event-mini__thumb">
+                            @if (!string.IsNullOrWhiteSpace(ev.ImageUrl))
+                            {
+                                <img src="@ev.ImageUrl" alt="@ev.Title" />
+                            }
+                            else
+                            {
+                                <i class="bi bi-fire"></i>
+                            }
+                        </span>
                         <span><i class="bi bi-fire"></i></span>
-                        <strong>@ev.Title</strong>
-                        <small>@ev.GoingCount <span data-i18n="event.action.going">Отивам</span> · @ev.InterestedCount <span data-i18n="event.action.interested">Интересува ме</span></small>
+                        <span class="social-event-mini__body">
+                            <strong>@ev.Title</strong>
+                            <small>@ev.GoingCount <span data-i18n="event.action.going">Отивам</span> · @ev.InterestedCount <span data-i18n="event.action.interested">Интересува ме</span></small>
+                        </span>
                     </a>
                 }
             </section>
@@ -192,15 +293,14 @@
                     var profileInitial = string.IsNullOrWhiteSpace(profile.DisplayName) ? "?" : profile.DisplayName[..1].ToUpperInvariant();
                     <article class="social-profile-row">
                         <a asp-controller="Profiles" asp-action="Details" asp-route-id="@profile.Id" class="social-profile-row__main">
-                            @if (!string.IsNullOrWhiteSpace(profile.ProfileImageUrl))
-                            {
-                                <img src="@profile.ProfileImageUrl" alt="@profile.DisplayName" />
-                            }
-                            else
-                            {
+                            <span class="social-profile-avatar">
+                                @if (!string.IsNullOrWhiteSpace(profile.ProfileImageUrl))
+                                {
+                                    <img src="@profile.ProfileImageUrl" alt="@profile.DisplayName" onerror="this.closest('.social-profile-avatar').classList.add('is-fallback');this.remove();" />
+                                }
                                 <span>@profileInitial</span>
-                            }
-                            <div>
+                            </span>
+                            <div class="social-profile-row__text">
                                 <strong>@profile.DisplayName</strong>
                                 <small>
                                     @if (profile.IsOrganizer)

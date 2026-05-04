@@ -1,5 +1,7 @@
 namespace EventsApp.ViewModels.Social
 {
+    using EventsApp.Models;
+
     public class ConversationListItemViewModel
     {
         public int Id { get; set; }
@@ -9,6 +11,8 @@ namespace EventsApp.ViewModels.Social
         public string? LastMessage { get; set; }
         public DateTime UpdatedAt { get; set; }
         public int UnseenCount { get; set; }
+        public ConversationStatus Status { get; set; }
+        public bool IsRequestedByCurrentUser { get; set; }
     }
 
     public class MessagesIndexViewModel
@@ -36,6 +40,10 @@ namespace EventsApp.ViewModels.Social
         public string OtherUserId { get; set; } = null!;
         public string OtherUserName { get; set; } = null!;
         public string? OtherUserImageUrl { get; set; }
+        public ConversationStatus Status { get; set; }
+        public bool IsRequestedByCurrentUser { get; set; }
+        public bool CanRespondToRequest { get; set; }
+        public bool CanSendMessage => Status == ConversationStatus.Accepted;
         public IReadOnlyList<MessageBubbleViewModel> Messages { get; set; } = Array.Empty<MessageBubbleViewModel>();
         public IReadOnlyList<ActingIdentityOptionViewModel> ActingIdentities { get; set; } = Array.Empty<ActingIdentityOptionViewModel>();
     }

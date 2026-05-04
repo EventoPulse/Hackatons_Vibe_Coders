@@ -162,6 +162,11 @@ namespace EventsApp.Controllers
                         .FirstOrDefault(),
                 Latitude = e.Latitude,
                 Longitude = e.Longitude,
+                HasActiveTickets = e.Tickets.Any(t => t.IsActive),
+                HasPaidTickets = e.Tickets.Any(t => t.IsActive && t.Price > 0m),
+                LowestPaidTicketPrice = e.Tickets
+                    .Where(t => t.IsActive && t.Price > 0m)
+                    .Min(t => (decimal?)t.Price),
             });
         }
 
@@ -205,7 +210,7 @@ namespace EventsApp.Controllers
             if (!_ai.IsEnabled)
             {
                 vm.AiHintLevel = "warning";
-                vm.AiHint = "Smart AI is OFF. Add Sirma_key to .env to enable.";
+                vm.AiHint = "Smart AI is OFF. Add OPENAI_API_KEY or AI_API_KEY to .env to enable.";
                 return;
             }
 
@@ -213,15 +218,15 @@ namespace EventsApp.Controllers
             {
                 case AiStatus.MissingProjectId:
                     vm.AiHintLevel = "warning";
-                    vm.AiHint = "AI is configured but no agent is linked. Add Sirma_project_id to .env (or Sirma_agent_id with an existing agent UUID from your Sirma dashboard) and restart.";
+                    vm.AiHint = "AI is configured, but the search assistant is not linked. Check the AI settings and restart.";
                     break;
                 case AiStatus.ProvisionFailed:
                     vm.AiHintLevel = "danger";
-                    vm.AiHint = "Sirma agent provisioning failed: " + (_ai.LastStatusDetail ?? "unknown error");
+                    vm.AiHint = "AI setup failed: " + (_ai.LastStatusDetail ?? "unknown error");
                     break;
                 case AiStatus.CallFailed:
                     vm.AiHintLevel = "danger";
-                    vm.AiHint = "Sirma AI call failed: " + (_ai.LastStatusDetail ?? "unknown error");
+                    vm.AiHint = "AI call failed: " + (_ai.LastStatusDetail ?? "unknown error");
                     break;
                 case AiStatus.ParseFailed:
                     vm.AiHintLevel = "warning";
