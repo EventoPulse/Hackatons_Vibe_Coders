@@ -116,66 +116,84 @@
         </div>
     </section>
 
-    <form id="home-smart-search-form" class="evt-search-panel" autocomplete="off">
-        @Html.AntiForgeryToken()
-
-        <div class="evt-search-tabs" role="tablist">
-            <button type="button" class="evt-search-tab is-active" data-search-tab="events">
-                <i class="bi bi-calendar-event"></i> <span data-i18n="search.tab.events">Събития</span>
-            </button>
-            <button type="button" class="evt-search-tab" data-search-tab="tonight">
+    @{
+        var today = DateTime.UtcNow.Date;
+        var daysUntilSat = ((int)DayOfWeek.Saturday - (int)today.DayOfWeek + 7) % 7;
+        if (daysUntilSat == 0) daysUntilSat = 7;
+        var nextSat = today.AddDays(daysUntilSat);
+        var nextSun = nextSat.AddDays(1);
+        var daysUntilSun = (7 - (int)today.DayOfWeek) % 7;
+        if (daysUntilSun == 0) daysUntilSun = 7;
+        var endOfWeek = today.AddDays(daysUntilSun);
+    }
+    <div class="evt-search-section">
+        <div class="evt-search-tabs-bar">
+            <a class="evt-search-tab-link @(Model.DateFrom == null && string.IsNullOrEmpty(Model.Search) ? "is-active" : "")"
+               asp-action="Index">
+                <i class="bi bi-grid-3x3-gap"></i> <span>Всички</span>
+            </a>
+            <a class="evt-search-tab-link @(Model.DateFrom?.Date == today ? "is-active" : "")"
+               asp-action="Index" asp-route-dateFrom="@today.ToString("yyyy-MM-dd")">
                 <i class="bi bi-moon-stars"></i> <span data-i18n="search.tab.tonight">Тази вечер</span>
-            </button>
-            <button type="button" class="evt-search-tab" data-search-tab="weekend">
+            </a>
+            <a class="evt-search-tab-link @(Model.DateFrom?.Date == nextSat ? "is-active" : "")"
+               asp-action="Index" asp-route-dateFrom="@nextSat.ToString("yyyy-MM-dd")" asp-route-dateTo="@nextSun.ToString("yyyy-MM-dd")">
                 <i class="bi bi-stars"></i> <span data-i18n="search.tab.weekend">Уикенд</span>
-            </button>
-            <button type="button" class="evt-search-tab" data-search-tab="nearby">
-                <i class="bi bi-geo-alt"></i> <span data-i18n="search.tab.nearby">Около мен</span>
-            </button>
+            </a>
+            <a class="evt-search-tab-link"
+               asp-action="Index" asp-route-dateFrom="@today.ToString("yyyy-MM-dd")" asp-route-dateTo="@endOfWeek.ToString("yyyy-MM-dd")">
+                <i class="bi bi-calendar-week"></i> <span>Тази седмица</span>
+            </a>
+            <a class="evt-search-tab-link @(Model.Search == "free" ? "is-active" : "")"
+               asp-action="Index" asp-route-search="free">
+                <i class="bi bi-ticket-perforated"></i> <span data-i18n="chip.free">Безплатни</span>
+            </a>
         </div>
 
-        <div class="evt-search-row">
-            <div class="evt-search-field">
-                <span data-i18n="search.field.what">Какво търсиш</span>
-                <input id="home-smart-search-input" type="text" name="q"
-                       data-i18n-placeholder="home.search.placeholder"
-                       placeholder="техно тази вечер в София · джаз през уикенда" />
+        <form id="home-smart-search-form" class="evt-search-panel" autocomplete="off">
+            @Html.AntiForgeryToken()
+            <div class="evt-search-row">
+                <div class="evt-search-field evt-search-field--main">
+                    <i class="bi bi-search evt-search-field__icon"></i>
+                    <input id="home-smart-search-input" type="text" name="q"
+                           data-i18n-placeholder="home.search.placeholder"
+                           placeholder="техно тази вечер в София · джаз през уикенда" />
+                </div>
+                <div class="evt-search-field">
+                    <span data-i18n="search.field.where">Град</span>
+                    <select form="home-events-filter" name="city">
+                        <option value="" data-i18n="filter.allcities">Всички градове</option>
+                        @foreach (var c in Model.Cities)
+                        {
+                            <option value="@c" selected="@(Model.City == c)">@c</option>
+                        }
+                    </select>
+                </div>
+                <div class="evt-search-field">
+                    <span data-i18n="search.field.when">Дата</span>
+                    <input type="date" form="home-events-filter" name="dateFrom" value="@Model.DateFrom?.ToString("yyyy-MM-dd")" />
+                </div>
+                <div class="evt-search-field">
+                    <span data-i18n="search.field.genre">Жанр</span>
+                    <select form="home-events-filter" name="genre">
+                        <option value="" data-i18n="filter.allgenres">Всички жанрове</option>
+                        @foreach (var g in Enum.GetValues<EventGenre>())
+                        {
+                            <option value="@((int)g)" selected="@(Model.Genre == g)" data-i18n="genre.@g">@g.GetDisplayName()</option>
+                        }
+                    </select>
+                </div>
+                <button class="evt-search-submit" type="submit">
+                    <i class="bi bi-stars"></i>
+                    <span data-i18n="home.search.btn">Търси с AI</span>
+                </button>
             </div>
-            <div class="evt-search-field">
-                <span data-i18n="search.field.where">Град</span>
-                <select form="home-events-filter" name="city">
-                    <option value="" data-i18n="filter.allcities">Всички градове</option>
-                    @foreach (var c in Model.Cities)
-                    {
-                        <option value="@c" selected="@(Model.City == c)">@c</option>
-                    }
-                </select>
+            <div class="evt-search-status">
+                <span id="home-search-status"></span>
+                <button id="home-smart-clear" class="evt-chip" type="button" data-i18n="home.clear" style="display:none;">Изчисти</button>
             </div>
-            <div class="evt-search-field">
-                <span data-i18n="search.field.when">Дата</span>
-                <input type="date" form="home-events-filter" name="dateFrom" value="@Model.DateFrom?.ToString("yyyy-MM-dd")" />
-            </div>
-            <div class="evt-search-field">
-                <span data-i18n="search.field.genre">Жанр</span>
-                <select form="home-events-filter" name="genre">
-                    <option value="" data-i18n="filter.allgenres">Всички жанрове</option>
-                    @foreach (var g in Enum.GetValues<EventGenre>())
-                    {
-                        <option value="@((int)g)" selected="@(Model.Genre == g)" data-i18n="genre.@g">@g.GetDisplayName()</option>
-                    }
-                </select>
-            </div>
-            <button class="evt-search-submit" type="submit">
-                <i class="bi bi-stars"></i>
-                <span data-i18n="home.search.btn">Smart търси</span>
-            </button>
-        </div>
-
-        <div class="evt-search-status">
-            <span id="home-search-status"></span>
-            <button id="home-smart-clear" class="evt-chip" type="button" data-i18n="home.clear" style="display:none;">Изчисти</button>
-        </div>
-    </form>
+        </form>
+    </div>
 
     <section class="evt-section">
         <div class="evt-section__head">
@@ -202,14 +220,20 @@
 
         <div class="evt-toolbar">
             <div class="evt-chips">
-                <a class="evt-chip is-active" asp-action="Index" data-i18n="chip.featured">Featured</a>
-                <a class="evt-chip" asp-action="Index" asp-route-dateFrom="@DateTime.UtcNow.ToString("yyyy-MM-dd")" data-i18n="chip.today">Днес</a>
-                <a class="evt-chip" asp-action="Index" asp-route-dateFrom="@DateTime.UtcNow.AddDays(2).ToString("yyyy-MM-dd")" data-i18n="chip.weekend">Уикенд</a>
-                <a class="evt-chip" asp-action="Index" asp-route-search="concert" data-i18n="chip.concerts">Концерти</a>
-                <a class="evt-chip" asp-action="Index" asp-route-search="festival" data-i18n="chip.festivals">Фестивали</a>
-                <a class="evt-chip" asp-action="Index" asp-route-search="theatre" data-i18n="chip.theatre">Театър</a>
-                <a class="evt-chip" asp-action="Index" asp-route-search="free" data-i18n="chip.free">Безплатни</a>
-                <a class="evt-chip" asp-action="Index" asp-route-search="family" data-i18n="chip.family">Family</a>
+                <a class="evt-chip @(string.IsNullOrEmpty(Model.Search) && Model.DateFrom == null && Model.Genre == null ? "is-active" : "")"
+                   asp-action="Index">Всички</a>
+                <a class="evt-chip @(Model.Search == "concert" ? "is-active" : "")"
+                   asp-action="Index" asp-route-search="concert" data-i18n="chip.concerts">Концерти</a>
+                <a class="evt-chip @(Model.Search == "festival" ? "is-active" : "")"
+                   asp-action="Index" asp-route-search="festival" data-i18n="chip.festivals">Фестивали</a>
+                <a class="evt-chip @(Model.Search == "theatre" ? "is-active" : "")"
+                   asp-action="Index" asp-route-search="theatre" data-i18n="chip.theatre">Театър</a>
+                <a class="evt-chip @(Model.Search == "free" ? "is-active" : "")"
+                   asp-action="Index" asp-route-search="free" data-i18n="chip.free">Безплатни</a>
+                <a class="evt-chip @(Model.Search == "family" ? "is-active" : "")"
+                   asp-action="Index" asp-route-search="family">За деца</a>
+                <a class="evt-chip @(Model.Search == "live" ? "is-active" : "")"
+                   asp-action="Index" asp-route-search="live">Live музика</a>
             </div>
             @if (User.IsInRole(GlobalConstants.Roles.Organizer) || User.IsInRole(GlobalConstants.Roles.Admin))
             {

@@ -7068,4 +7068,66 @@ html[data-theme="dark"] .evt-similar { border-top-color: #262d3d; }
     gap: 16px;
 }
 @media (max-width: 991.98px) { .evt-similar__grid { grid-template-columns: repeat(2, 1fr); } }
+
+/* Search section — sits below the hero map */
+.evt-search-section {
+    padding: 0 36px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* Tab bar — Всички / Тази вечер / Уикенд / Тази седмица / Безплатни */
+.evt-search-tabs-bar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+.evt-search-tab-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 16px;
+    border-radius: 999px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--evt-ink-soft, #5a6175);
+    background: var(--evt-surface-2, #f3f4f8);
+    border: 1.5px solid transparent;
+    text-decoration: none;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+    white-space: nowrap;
+}
+.evt-search-tab-link:hover {
+    background: var(--evt-accent-subtle, #ede9ff);
+    color: var(--evt-accent, #6c5ce7);
+}
+.evt-search-tab-link.is-active {
+    background: var(--evt-accent, #6c5ce7);
+    color: #fff;
+    border-color: var(--evt-accent, #6c5ce7);
+}
+html[data-theme="dark"] .evt-search-tab-link {
+    background: #1e2436;
+    color: #a0aabe;
+}
+html[data-theme="dark"] .evt-search-tab-link:hover {
+    background: #2a2f45;
+    color: #c5b8ff;
+}
+html[data-theme="dark"] .evt-search-tab-link.is-active {
+    background: var(--evt-accent, #6c5ce7);
+    color: #fff;
+}
+
+@media (max-width: 991.98px) {
+    .evt-search-section { padding: 0 16px 8px; }
+    .evt-search-tabs-bar { gap: 4px; }
+    .evt-search-tab-link { font-size: 0.8rem; padding: 6px 12px; }
+}
+@media (max-width: 575.98px) {
+    .evt-search-section { padding: 0 8px 8px; }
+    .evt-search-tabs-bar { gap: 4px; }
+}
 @media (max-width: 575.98px) { .evt-similar__grid { grid-template-columns: 1fr; } }

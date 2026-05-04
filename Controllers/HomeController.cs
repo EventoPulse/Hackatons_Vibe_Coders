@@ -26,7 +26,7 @@ namespace EventsApp.Controllers
             _logger = logger;
         }
 
-        public async Task<IActionResult> Index(string? search, string? city, EventGenre? genre, DateTime? dateFrom)
+        public async Task<IActionResult> Index(string? search, string? city, EventGenre? genre, DateTime? dateFrom, DateTime? dateTo)
         {
             var isAdmin = User.IsInRole(GlobalConstants.Roles.Admin);
             var userId = _userManager.GetUserId(User);
@@ -61,6 +61,12 @@ namespace EventsApp.Controllers
             {
                 var from = dateFrom.Value.Date;
                 query = query.Where(e => e.StartTime >= from);
+            }
+
+            if (dateTo.HasValue)
+            {
+                var to = dateTo.Value.Date.AddDays(1);
+                query = query.Where(e => e.StartTime < to);
             }
 
             var events = await query
@@ -189,6 +195,7 @@ namespace EventsApp.Controllers
                 City = city,
                 Genre = genre,
                 DateFrom = dateFrom,
+                DateTo = dateTo,
                 Events = events,
                 MapMarkers = markers,
                 Cities = cities,
