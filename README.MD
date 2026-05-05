@@ -42,7 +42,7 @@ Current visible project stack:
 - **Razor Views / MVC structure**
 - **HTML**
 - **CSS**
-- **SQL Server / LocalDB**
+- **PostgreSQL** for local development and hosting
 
 The repository currently includes typical ASP.NET project folders such as:
 
@@ -54,6 +54,44 @@ The repository currently includes typical ASP.NET project folders such as:
 - `Data`
 - `Migrations`
 - `wwwroot`
+
+---
+
+## Local Development Setup
+
+Use the `postgres-migration` branch when working with the PostgreSQL version:
+
+```powershell
+git checkout postgres-migration
+dotnet restore
+docker compose up -d postgres
+dotnet ef database update
+dotnet run
+```
+
+Local database connection:
+
+```text
+Host=localhost
+Port=5432
+Database=evento_dev
+Username=evento
+Password=evento_dev_password
+```
+
+The local PostgreSQL database runs in Docker and stores its data in the `evento-postgres-data` volume, so the database state is preserved between container restarts.
+
+For production/Railway, set at least these environment variables:
+
+```text
+DATABASE_URL=<provided by Railway Postgres>
+ADMIN_EMAIL=<your admin email>
+ADMIN_PASSWORD=<strong admin password>
+OPENAI_API_KEY=<optional, for AI features>
+GOOGLE_MAPS_KEY=<optional, for maps>
+```
+
+`ADMIN_PASSWORD` must satisfy the production password rules: at least 10 characters, uppercase, lowercase, number, and symbol.
 
 ---
 

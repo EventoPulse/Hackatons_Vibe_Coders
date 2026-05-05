@@ -8913,3 +8913,219 @@ html[data-theme="dark"] .social-feed-aside--overview::-webkit-scrollbar-thumb {
         padding-right: 0;
     }
 }
+
+/* =====================================================
+   Production responsive guardrails
+   ===================================================== */
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    max-width: 100%;
+    overflow-x: clip;
+}
+
+img,
+video,
+canvas,
+svg,
+iframe {
+    max-width: 100%;
+}
+
+img,
+video {
+    height: auto;
+}
+
+.site-content {
+    width: min(100% - 24px, 1180px);
+    max-width: 1180px;
+    margin-inline: auto;
+    padding-inline: 0;
+}
+
+.card,
+.evt-card,
+.evt-hero,
+.evt-map-card,
+.evt-search-panel,
+.social-feed-section,
+.social-side-panel,
+.social-feed-topbar,
+.social-post-card,
+.social-profile-hero,
+.layout-editor-shell,
+.messages-shell {
+    max-width: 100%;
+    min-width: 0;
+}
+
+.table-responsive,
+.groove-table-wrap,
+.admin-table-wrap {
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.site-navbar > .container-fluid {
+    min-width: 0;
+    gap: 0.65rem;
+}
+
+.site-brand {
+    min-width: 0;
+}
+
+.site-brand__name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.navbar-collapse {
+    min-width: 0;
+}
+
+.site-navbar .navbar-nav .nav-link {
+    min-width: 0;
+}
+
+.evt-layout,
+.evt-discover,
+.evt-hero,
+.evt-results-shell,
+.event-details-shell,
+.social-feed-shell,
+.social-profile-layout,
+.account-shell,
+.organizer-dashboard-grid,
+.messages-shell,
+.layout-editor-shell {
+    min-width: 0;
+}
+
+@media (max-width: 991.98px) {
+    .evt-layout,
+    .evt-discover,
+    .evt-hero,
+    .evt-results-shell,
+    .event-details-shell,
+    .social-profile-layout,
+    .account-shell,
+    .organizer-dashboard-grid,
+    .messages-shell,
+    .layout-editor-shell {
+        grid-template-columns: minmax(0, 1fr) !important;
+    }
+
+    .site-navbar .navbar-collapse {
+        max-height: calc(100vh - 72px);
+        overflow-y: auto;
+        padding-top: 0.75rem;
+    }
+
+    .site-navbar .navbar-nav {
+        align-items: stretch !important;
+        width: 100%;
+    }
+
+    .site-navbar .navbar-nav .nav-item,
+    .site-navbar .navbar-nav .nav-link {
+        width: 100%;
+    }
+
+    .site-navbar .navbar-nav .nav-link {
+        justify-content: flex-start;
+        white-space: normal;
+    }
+}
+
+@media (max-width: 767.98px) {
+    body {
+        margin-bottom: 0;
+    }
+
+    .site-content {
+        width: min(100% - 16px, 100%);
+        padding-top: 0.75rem;
+    }
+
+    .footer {
+        position: static;
+        white-space: normal;
+        line-height: 1.4;
+    }
+
+    .evt-hero,
+    .social-feed-topbar,
+    .social-profile-hero {
+        border-radius: 18px !important;
+        padding: 18px !important;
+    }
+
+    .evt-hero h1,
+    .evt-hero__title,
+    .social-feed-topbar h1,
+    .social-profile-hero__body h1 {
+        font-size: clamp(2rem, 12vw, 3.1rem) !important;
+        line-height: 0.98 !important;
+        overflow-wrap: anywhere;
+    }
+
+    .evt-search-row,
+    .evt-filter-row,
+    .home-result-row,
+    .social-feed-search__form,
+    .messages-compose,
+    .account-actions,
+    .organizer-actions {
+        grid-template-columns: minmax(0, 1fr) !important;
+    }
+
+    .evt-search-row > *,
+    .evt-filter-row > *,
+    .messages-compose > *,
+    .account-actions > *,
+    .organizer-actions > * {
+        width: 100%;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .site-navbar > .container-fluid {
+        flex-wrap: wrap;
+    }
+
+    .site-brand {
+        max-width: calc(100% - 132px);
+    }
+
+    #app-theme-btn,
+    #app-lang-btn {
+        flex: 0 0 auto;
+    }
+
+    .btn,
+    button,
+    input,
+    select,
+    textarea {
+        max-width: 100%;
+    }
+
+    .evt-card__actions,
+    .social-post-actions,
+    .ticket-actions {
+        gap: 0.45rem;
+    }
+
+    .evt-card__actions > *,
+    .social-post-actions > *,
+    .ticket-actions > * {
+        min-width: 0;
+    }
+}

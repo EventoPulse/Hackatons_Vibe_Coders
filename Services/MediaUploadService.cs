@@ -27,6 +27,12 @@ namespace EventsApp.Services
             ".mp4", ".webm", ".mov", ".m4v",
         };
 
+        private static readonly HashSet<string> AllowedContentTypes = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "image/jpeg", "image/png", "image/gif", "image/webp",
+            "video/mp4", "video/webm", "video/quicktime", "video/x-m4v",
+        };
+
         private const long MaxImageBytes = 5L * 1024 * 1024;
         private const long MaxVideoBytes = 100L * 1024 * 1024;
 
@@ -62,6 +68,11 @@ namespace EventsApp.Services
                 throw new InvalidOperationException($"Unsupported file type: {ext}");
             }
 
+            if (!string.IsNullOrWhiteSpace(file.ContentType) && !AllowedContentTypes.Contains(file.ContentType))
+            {
+                throw new InvalidOperationException($"Unsupported content type: {file.ContentType}");
+            }
+
             if (file.Length > maxBytes)
             {
                 throw new InvalidOperationException(
@@ -74,7 +85,7 @@ namespace EventsApp.Services
                 webRoot = Path.Combine(_env.ContentRootPath, "wwwroot");
             }
 
-            var dir = Path.Combine(webRoot, "uploads", subfolder);
+            var dir = ResolveUploadDirectory(webRoot, subfolder);
             Directory.CreateDirectory(dir);
 
             var fileName = $"{Guid.NewGuid():N}{ext}";
@@ -120,7 +131,7 @@ namespace EventsApp.Services
                 webRoot = Path.Combine(_env.ContentRootPath, "wwwroot");
             }
 
-            var dir = Path.Combine(webRoot, "uploads", subfolder);
+            var dir = ResolveUploadDirectory(webRoot, subfolder);
             Directory.CreateDirectory(dir);
 
             var safeExt = ext;
@@ -134,6 +145,26 @@ namespace EventsApp.Services
             var url = $"/uploads/{subfolder}/{fileNameFinal}";
             _logger.LogInformation("Stored upload (bytes) {Url} ({Bytes} bytes, {Type})", url, data.Length, mediaType);
             return new MediaUploadResult { Url = url, MediaType = mediaType };
+        }
+
+        private static string ResolveUploadDirectory(string webRoot, string subfolder)
+        {
+            if (string.IsNullOrWhiteSpace(subfolder) ||
+                subfolder.Contains("..", StringComparison.Ordinal) ||
+                subfolder.IndexOfAny(Path.GetInvalidPathChars()) >= 0)
+            {
+                throw new InvalidOperationException("Invalid upload folder.");
+            }
+
+            var uploadsRoot = Path.GetFullPath(Path.Combine(webRoot, "uploads"));
+            var uploadDir = Path.GetFullPath(Path.Combine(uploadsRoot, subfolder));
+
+            if (!uploadDir.StartsWith(uploadsRoot, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException("Invalid upload folder.");
+            }
+
+            return uploadDir;
         }
     }
 }

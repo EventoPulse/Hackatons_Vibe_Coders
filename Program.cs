@@ -7,6 +7,7 @@ using EventsApp.Services.AI;
 using EventsApp.Services.Geocoding;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.AspNetCore.RateLimiting;
@@ -14,6 +15,7 @@ using System.Security.Claims;
 using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
+var isDevelopment = builder.Environment.IsDevelopment();
 
 DotEnvLoader.LoadIntoConfiguration(
     Path.Combine(builder.Environment.ContentRootPath, ".env"),
@@ -29,6 +31,13 @@ if (!string.IsNullOrWhiteSpace(port))
 
 var connectionString = DatabaseConnection.GetPostgresConnectionString(builder.Configuration);
 
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
+});
+
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options
         .UseNpgsql(connectionString)
@@ -38,15 +47,31 @@ builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
 builder.Services.AddDefaultIdentity<ApplicationUser>(options =>
     {
-        options.SignIn.RequireConfirmedAccount = false;
-        options.Password.RequireDigit = false;
-        options.Password.RequireLowercase = false;
-        options.Password.RequireUppercase = false;
-        options.Password.RequireNonAlphanumeric = false;
-        options.Password.RequiredLength = 5;
+        options.SignIn.RequireConfirmedAccount = builder.Configuration.GetValue("Identity:RequireConfirmedAccount", false);
+        options.User.RequireUniqueEmail = true;
+        options.Password.RequiredLength = builder.Configuration.GetValue("Identity:Password:RequiredLength", isDevelopment ? 5 : 10);
+        options.Password.RequireDigit = builder.Configuration.GetValue("Identity:Password:RequireDigit", !isDevelopment);
+        options.Password.RequireLowercase = builder.Configuration.GetValue("Identity:Password:RequireLowercase", !isDevelopment);
+        options.Password.RequireUppercase = builder.Configuration.GetValue("Identity:Password:RequireUppercase", !isDevelopment);
+        options.Password.RequireNonAlphanumeric = builder.Configuration.GetValue("Identity:Password:RequireNonAlphanumeric", !isDevelopment);
+        options.Lockout.MaxFailedAccessAttempts = builder.Configuration.GetValue("Identity:Lockout:MaxFailedAccessAttempts", 5);
+        options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(builder.Configuration.GetValue("Identity:Lockout:Minutes", 15));
+        options.Lockout.AllowedForNewUsers = true;
     })
     .AddRoles<IdentityRole>()
     .AddEntityFrameworkStores<ApplicationDbContext>();
+
+builder.Services.ConfigureApplicationCookie(options =>
+{
+    options.Cookie.Name = ".Evento.Auth";
+    options.Cookie.HttpOnly = true;
+    options.Cookie.SameSite = SameSiteMode.Lax;
+    options.Cookie.SecurePolicy = isDevelopment ? CookieSecurePolicy.SameAsRequest : CookieSecurePolicy.Always;
+    options.ExpireTimeSpan = TimeSpan.FromHours(8);
+    options.SlidingExpiration = true;
+    options.LoginPath = "/Identity/Account/Login";
+    options.AccessDeniedPath = "/Identity/Account/AccessDenied";
+});
 
 builder.Services.AddSingleton<IMediaUploadService, MediaUploadService>();
 builder.Services.AddSingleton<ITicketDocumentService, TicketDocumentService>();
@@ -73,7 +98,14 @@ builder.Services.Configure<FormOptions>(options =>
 
 builder.Services.AddLocalization();
 builder.Services.AddControllersWithViews();
-builder.Services.AddAntiforgery(opts => opts.HeaderName = "RequestVerificationToken");
+builder.Services.AddAntiforgery(opts =>
+{
+    opts.HeaderName = "RequestVerificationToken";
+    opts.Cookie.Name = ".Evento.Antiforgery";
+    opts.Cookie.HttpOnly = true;
+    opts.Cookie.SameSite = SameSiteMode.Strict;
+    opts.Cookie.SecurePolicy = isDevelopment ? CookieSecurePolicy.SameAsRequest : CookieSecurePolicy.Always;
+});
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
@@ -109,7 +141,7 @@ using (var scope = app.Services.CreateScope())
     dbContext.Database.Migrate();
 
     await RoleSeeder.SeedRolesAsync(services);
-    await AdminSeeder.SeedAdminAsync(services);
+    await AdminSeeder.SeedAdminAsync(services, app.Configuration, app.Environment);
 
     if (app.Environment.IsDevelopment() && app.Configuration.GetValue("SeedDemoData", false))
     {
@@ -126,6 +158,19 @@ else
     app.UseExceptionHandler("/Home/Error");
     app.UseHsts();
 }
+
+app.UseForwardedHeaders();
+app.Use(async (context, next) =>
+{
+    var headers = context.Response.Headers;
+    headers.TryAdd("X-Content-Type-Options", "nosniff");
+    headers.TryAdd("X-Frame-Options", "SAMEORIGIN");
+    headers.TryAdd("Referrer-Policy", "strict-origin-when-cross-origin");
+    headers.TryAdd("X-Permitted-Cross-Domain-Policies", "none");
+    headers.TryAdd("Permissions-Policy", "camera=(), microphone=(), geolocation=(self), payment=(self), usb=()");
+
+    await next();
+});
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
