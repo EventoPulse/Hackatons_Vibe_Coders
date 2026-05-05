@@ -80,17 +80,17 @@
 
         @if (Model.OrganizerProfileId.HasValue)
         {
+            <a asp-controller="Profiles" asp-action="Page" asp-route-id="@Model.OrganizerProfileId" class="evt-card__organizer">
+                <span class="evt-card__organizer-avatar">@organizerInitial</span>
+                <span>@Model.OrganizerName</span>
+            </a>
+        }
+        else
+        {
             <span class="evt-card__organizer">
                 <span class="evt-card__organizer-avatar">@organizerInitial</span>
                 <span>@Model.OrganizerName</span>
             </span>
-        }
-        else
-        {
-            <a asp-controller="Profiles" asp-action="Details" asp-route-id="@Model.OrganizerId" class="evt-card__organizer">
-                <span class="evt-card__organizer-avatar">@organizerInitial</span>
-                <span>@Model.OrganizerName</span>
-            </a>
         }
 
         <div class="evt-card__actions">

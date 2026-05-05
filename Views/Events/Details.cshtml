@@ -93,15 +93,17 @@
                 <dd>@Model.StartTime.ToString("dd.MM.yyyy HH:mm")</dd>
                 <dt data-i18n="ticket.end">Край</dt>
                 <dd>@Model.EndTime.ToString("dd.MM.yyyy HH:mm")</dd>
-                <dt data-i18n="profile.type.organizer">Организатор</dt>
+                <dt data-i18n="profile.public.page">Public page</dt>
                 <dd>
                     @if (Model.OrganizerProfileId.HasValue)
                     {
-                        <span>@Model.OrganizerName</span>
+                        <a asp-controller="Profiles" asp-action="Page" asp-route-id="@Model.OrganizerProfileId" class="groove-link">
+                            <i class="bi bi-person-badge"></i> @Model.OrganizerName
+                        </a>
                     }
                     else
                     {
-                        <a asp-controller="Profiles" asp-action="Details" asp-route-id="@Model.OrganizerId">@Model.OrganizerName</a>
+                        <span class="text-muted">Public page</span>
                     }
                 </dd>
                 <dt data-i18n="event.social">Социално</dt>

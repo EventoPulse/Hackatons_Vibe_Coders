@@ -30,7 +30,7 @@
         <div class="social-post-card__author">
             @if (Model.OrganizerProfileId.HasValue)
             {
-                <span class="social-author-link">
+                <a asp-controller="Profiles" asp-action="Page" asp-route-id="@Model.OrganizerProfileId" class="social-author-link">
                     @if (!string.IsNullOrWhiteSpace(Model.AuthorImageUrl))
                     {
                         <img src="@Model.AuthorImageUrl" alt="@Model.OrganizerName" class="social-avatar-xs" />
@@ -43,7 +43,7 @@
                         <strong>@Model.OrganizerName</strong>
                         <small><i class="bi bi-patch-check-fill"></i> Public page</small>
                     </span>
-                </span>
+                </a>
             }
             else
             {

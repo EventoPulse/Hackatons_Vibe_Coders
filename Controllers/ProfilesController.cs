@@ -289,6 +289,120 @@ namespace EventsApp.Controllers
             return View(vm);
         }
 
+        public async Task<IActionResult> Page(int id)
+        {
+            var currentUserId = _userManager.GetUserId(User);
+            var isAdmin = User.IsInRole(GlobalConstants.Roles.Admin);
+
+            var page = await _db.OrganizerProfiles
+                .AsNoTracking()
+                .FirstOrDefaultAsync(p => p.Id == id);
+
+            if (page == null)
+            {
+                return NotFound();
+            }
+
+            var canViewPrivatePage = isAdmin || currentUserId == page.OwnerId;
+            if ((!page.IsActive || !page.IsApproved) && !canViewPrivatePage)
+            {
+                return NotFound();
+            }
+
+            var eventsQuery = _db.Events
+                .AsNoTracking()
+                .Where(e => e.OrganizerProfileId == page.Id);
+
+            if (!canViewPrivatePage)
+            {
+                eventsQuery = eventsQuery.Where(e => e.IsApproved);
+            }
+
+            var events = await eventsQuery
+                .OrderBy(e => e.StartTime)
+                .Take(12)
+                .Select(e => new EventCardViewModel
+                {
+                    Id = e.Id,
+                    Title = e.Title,
+                    ImageUrl = e.ImageUrl,
+                    Address = e.Address,
+                    City = e.City,
+                    StartTime = e.StartTime,
+                    Genre = e.Genre,
+                    IsApproved = e.IsApproved,
+                    OrganizerId = e.OrganizerId,
+                    OrganizerProfileId = page.Id,
+                    OrganizerName = page.DisplayName,
+                    LikesCount = e.Likes.Count,
+                    CommentsCount = e.Comments.Count,
+                    SavesCount = e.Saves.Count,
+                    GoingCount = e.Attendances.Count(a => a.Status == EventAttendanceStatus.Going),
+                    InterestedCount = e.Attendances.Count(a => a.Status == EventAttendanceStatus.Interested),
+                    CurrentUserLiked = currentUserId != null && e.Likes.Any(l => l.UserId == currentUserId),
+                    CurrentUserSaved = currentUserId != null && e.Saves.Any(s => s.UserId == currentUserId),
+                    CurrentUserAttendanceStatus = currentUserId == null
+                        ? null
+                        : e.Attendances
+                            .Where(a => a.UserId == currentUserId)
+                            .Select(a => (EventAttendanceStatus?)a.Status)
+                            .FirstOrDefault(),
+                    HasActiveTickets = e.Tickets.Any(t => t.IsActive),
+                    HasPaidTickets = e.Tickets.Any(t => t.IsActive && t.Price > 0m),
+                    LowestPaidTicketPrice = e.Tickets
+                        .Where(t => t.IsActive && t.Price > 0m)
+                        .Min(t => (decimal?)t.Price),
+                })
+                .ToListAsync();
+
+            var posts = await _db.Posts
+                .AsNoTracking()
+                .Where(p => p.OrganizerProfileId == page.Id)
+                .OrderByDescending(p => p.CreatedAt)
+                .Take(12)
+                .Select(p => new PostCardViewModel
+                {
+                    Id = p.Id,
+                    OrganizerId = p.OrganizerId,
+                    OrganizerProfileId = page.Id,
+                    OrganizerName = page.DisplayName,
+                    Content = p.Content,
+                    CreatedAt = p.CreatedAt,
+                    EventId = p.EventId,
+                    EventTitle = p.Event != null ? p.Event.Title : null,
+                    FirstMediaUrl = p.Images.Select(i => i.ImageUrl).FirstOrDefault(),
+                    FirstMediaType = p.Images.Select(i => i.MediaType).FirstOrDefault(),
+                    LikesCount = p.Likes.Count,
+                    CommentsCount = p.Comments.Count,
+                    SavesCount = p.Saves.Count,
+                    CurrentUserLiked = currentUserId != null && p.Likes.Any(l => l.UserId == currentUserId),
+                    CurrentUserSaved = currentUserId != null && p.Saves.Any(s => s.UserId == currentUserId),
+                    AuthorImageUrl = page.AvatarImageUrl,
+                    AuthorIsOrganizer = true,
+                })
+                .ToListAsync();
+
+            var vm = new PublicOrganizerPageViewModel
+            {
+                Id = page.Id,
+                DisplayName = page.DisplayName,
+                Tagline = page.Tagline,
+                Description = page.Description,
+                City = page.City,
+                AvatarImageUrl = page.AvatarImageUrl,
+                CoverImageUrl = page.CoverImageUrl,
+                Website = page.Website,
+                InstagramUrl = page.InstagramUrl,
+                FacebookUrl = page.FacebookUrl,
+                TikTokUrl = page.TikTokUrl,
+                CanMessagePage = User.Identity?.IsAuthenticated == true && currentUserId != page.OwnerId,
+                Events = events,
+                Posts = posts,
+            };
+
+            return View(vm);
+        }
+
         [Authorize]
         [HttpPost]
         [ValidateAntiForgeryToken]

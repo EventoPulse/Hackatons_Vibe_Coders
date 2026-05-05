@@ -1,0 +1,134 @@
+@model PublicOrganizerPageViewModel
+@{
+    ViewData["Title"] = Model.DisplayName;
+    var initial = string.IsNullOrWhiteSpace(Model.DisplayName) ? "?" : Model.DisplayName[..1].ToUpperInvariant();
+}
+
+<section class="groove-app-page social-profile-page">
+    <article class="social-profile-hero social-profile-hero--page">
+        @if (!string.IsNullOrWhiteSpace(Model.CoverImageUrl))
+        {
+            <div class="social-profile-cover">
+                <img src="@Model.CoverImageUrl" alt="@Model.DisplayName" />
+            </div>
+        }
+
+        <div class="social-profile-hero__avatar">
+            @if (!string.IsNullOrWhiteSpace(Model.AvatarImageUrl))
+            {
+                <img src="@Model.AvatarImageUrl" alt="@Model.DisplayName" />
+            }
+            else
+            {
+                <span>@initial</span>
+            }
+        </div>
+
+        <div class="social-profile-hero__body">
+            <span class="groove-stamp groove-stamp-teal" data-i18n="profile.public.page">Public page</span>
+            <h1>@Model.DisplayName</h1>
+            @if (!string.IsNullOrWhiteSpace(Model.Tagline))
+            {
+                <p class="social-profile-username">@Model.Tagline</p>
+            }
+            @if (!string.IsNullOrWhiteSpace(Model.Description))
+            {
+                <p>@Model.Description</p>
+            }
+
+            <div class="social-profile-stats">
+                <span><strong>@Model.Events.Count</strong><span data-i18n="profile.events">events</span></span>
+                <span><strong>@Model.Posts.Count</strong><span data-i18n="profile.posts">posts</span></span>
+                @if (!string.IsNullOrWhiteSpace(Model.City))
+                {
+                    <span><strong><i class="bi bi-geo-alt"></i></strong><span>@Model.City</span></span>
+                }
+            </div>
+
+            <div class="groove-cta-row">
+                @if (Model.CanMessagePage)
+                {
+                    <form asp-controller="Messages" asp-action="StartPage" method="post">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="organizerProfileId" value="@Model.Id" />
+                        <button class="groove-button groove-button-dark" type="submit">
+                            <i class="bi bi-chat-dots"></i> <span data-i18n="messages.message.page">Message page</span>
+                        </button>
+                    </form>
+                }
+                @if (!string.IsNullOrWhiteSpace(Model.Website))
+                {
+                    <a href="@Model.Website" target="_blank" rel="noopener" class="groove-button groove-button-paper">
+                        <i class="bi bi-box-arrow-up-right"></i> <span data-i18n="profile.website">Website</span>
+                    </a>
+                }
+                @if (!string.IsNullOrWhiteSpace(Model.InstagramUrl))
+                {
+                    <a href="@Model.InstagramUrl" target="_blank" rel="noopener" class="groove-button groove-button-paper">
+                        <i class="bi bi-instagram"></i> Instagram
+                    </a>
+                }
+                @if (!string.IsNullOrWhiteSpace(Model.FacebookUrl))
+                {
+                    <a href="@Model.FacebookUrl" target="_blank" rel="noopener" class="groove-button groove-button-paper">
+                        <i class="bi bi-facebook"></i> Facebook
+                    </a>
+                }
+                @if (!string.IsNullOrWhiteSpace(Model.TikTokUrl))
+                {
+                    <a href="@Model.TikTokUrl" target="_blank" rel="noopener" class="groove-button groove-button-paper">
+                        <i class="bi bi-music-note-beamed"></i> TikTok
+                    </a>
+                }
+            </div>
+        </div>
+    </article>
+
+    <section class="groove-page-section">
+        <div class="groove-section-bar">
+            <div>
+                <span class="groove-kicker" data-i18n="profile.events.kicker">Events</span>
+                <h2 data-i18n-html="profile.events.title">Upcoming and past <span>events</span>.</h2>
+            </div>
+        </div>
+        @if (Model.Events.Any())
+        {
+            <div class="social-card-grid">
+                @foreach (var ev in Model.Events)
+                {
+                    <partial name="_EventCard" model="ev" />
+                }
+            </div>
+        }
+        else
+        {
+            <div class="evt-empty">
+                <p data-i18n="page.events.empty">This public page has no published events yet.</p>
+            </div>
+        }
+    </section>
+
+    <section class="groove-page-section">
+        <div class="groove-section-bar">
+            <div>
+                <span class="groove-kicker" data-i18n="profile.posts">Posts</span>
+                <h2 data-i18n-html="profile.posts.title">Latest <span>posts</span>.</h2>
+            </div>
+        </div>
+        @if (Model.Posts.Any())
+        {
+            <div class="social-card-grid">
+                @foreach (var post in Model.Posts)
+                {
+                    <partial name="_PostCard" model="post" />
+                }
+            </div>
+        }
+        else
+        {
+            <div class="evt-empty">
+                <p data-i18n="page.posts.empty">This public page has no posts yet.</p>
+            </div>
+        }
+    </section>
+</section>

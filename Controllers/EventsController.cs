@@ -172,7 +172,7 @@ namespace EventsApp.Controllers
                 OrganizerProfileId = ev.OrganizerProfileId,
                 OrganizerName = ev.OrganizerProfile != null
                     ? ev.OrganizerProfile.DisplayName
-                    : ev.Organizer.UserName ?? string.Empty,
+                    : "Public page",
                 ImageUrls = ev.Images.Select(i => i.ImageUrl).ToList(),
                 LikesCount = ev.Likes.Count,
                 SavesCount = ev.Saves.Count,
@@ -283,7 +283,7 @@ namespace EventsApp.Controllers
                     IsApproved = e.IsApproved,
                     OrganizerId = e.OrganizerId,
                     OrganizerProfileId = e.OrganizerProfileId,
-                    OrganizerName = e.OrganizerProfile != null ? e.OrganizerProfile.DisplayName : e.Organizer.UserName ?? string.Empty,
+                    OrganizerName = e.OrganizerProfile != null ? e.OrganizerProfile.DisplayName : "Public page",
                     LikesCount = e.Likes.Count,
                     SavesCount = e.Saves.Count,
                     GoingCount = e.Attendances.Count(a => a.Status == EventAttendanceStatus.Going),
@@ -1021,7 +1021,7 @@ namespace EventsApp.Controllers
                     IsApproved = e.IsApproved,
                     OrganizerId = e.OrganizerId,
                     OrganizerProfileId = e.OrganizerProfileId,
-                    OrganizerName = e.OrganizerProfile != null ? e.OrganizerProfile.DisplayName : e.Organizer.UserName ?? string.Empty,
+                    OrganizerName = e.OrganizerProfile != null ? e.OrganizerProfile.DisplayName : "Public page",
                     LikesCount = e.Likes.Count,
                     CommentsCount = e.Comments.Count,
                     SavesCount = e.Saves.Count,

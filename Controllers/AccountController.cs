@@ -219,7 +219,7 @@ namespace EventsApp.Controllers
                     IsApproved = s.Event.IsApproved,
                     OrganizerId = s.Event.OrganizerId,
                     OrganizerProfileId = s.Event.OrganizerProfileId,
-                    OrganizerName = s.Event.OrganizerProfile != null ? s.Event.OrganizerProfile.DisplayName : s.Event.Organizer.UserName ?? string.Empty,
+                    OrganizerName = s.Event.OrganizerProfile != null ? s.Event.OrganizerProfile.DisplayName : "Public page",
                     LikesCount = s.Event.Likes.Count,
                     CommentsCount = s.Event.Comments.Count,
                     SavesCount = s.Event.Saves.Count,
