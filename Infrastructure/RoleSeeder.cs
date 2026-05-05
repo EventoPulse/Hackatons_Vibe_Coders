@@ -13,6 +13,7 @@ namespace EventsApp.Infrastructure
             {
                 GlobalConstants.Roles.Admin,
                 GlobalConstants.Roles.Organizer,
+                GlobalConstants.Roles.Validator,
                 GlobalConstants.Roles.User,
             };
 

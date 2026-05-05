@@ -155,7 +155,14 @@
                                 <div>
                                     <strong>@conversation.OtherUserName</strong>
                                     <small>
-                                        <span>@conversation.ScopeLabel</span>
+                                        @if (conversation.CurrentUserOwnsPage)
+                                        {
+                                            <span><span data-i18n="messages.scope.page.inbox">Page inbox</span>: @conversation.PageName</span>
+                                        }
+                                        else
+                                        {
+                                            <span><span data-i18n="messages.scope.to.page">To page</span>: @conversation.PageName</span>
+                                        }
                                         @if (conversation.Status == ConversationStatus.Pending && conversation.IsRequestedByCurrentUser && !conversation.HasMessages)
                                         {
                                             <span> - <span data-i18n="messages.request.draft">Write first message</span></span>

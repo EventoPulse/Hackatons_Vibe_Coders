@@ -12,6 +12,7 @@ namespace EventsApp.ViewModels.Events
         public DateTime StartTime { get; set; }
         public EventGenre Genre { get; set; }
         public bool IsApproved { get; set; }
+        public bool HasPendingChanges { get; set; }
         public string OrganizerId { get; set; } = null!;
         public int? OrganizerProfileId { get; set; }
         public string OrganizerName { get; set; } = null!;

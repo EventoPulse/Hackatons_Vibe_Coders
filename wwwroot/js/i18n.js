@@ -256,6 +256,9 @@
         'common.send': { bg: 'Изпрати', en: 'Send' },
         'common.back': { bg: 'Назад', en: 'Back' },
         'common.clear': { bg: 'Изчисти', en: 'Clear' },
+        'common.open': { bg: 'Отвори', en: 'Open' },
+        'common.edit': { bg: 'Редакция', en: 'Edit' },
+        'common.delete': { bg: 'Изтрий', en: 'Delete' },
         'event.price.free': { bg: 'Безплатно', en: 'Free' },
         'event.price.from': { bg: 'от', en: 'from' },
 
@@ -690,6 +693,8 @@
         'messages.pages.empty': { bg: 'Никой още не е писал на страниците ти.', en: 'No one has written to your pages yet.' },
         'messages.requests.panel': { bg: 'Заявки', en: 'Requests' },
         'messages.requests.title': { bg: 'Чакат одобрение', en: 'Needs approval' },
+        'messages.scope.page.inbox': { bg: 'Входящи на страница', en: 'Page inbox' },
+        'messages.scope.to.page': { bg: 'Към страница', en: 'To page' },
         'messages.page.thread': { bg: 'Разговор със страница', en: 'Page conversation' },
         'messages.replying.for.page': { bg: 'Отговаряш за', en: 'Replying for' },
         'messages.request.first.title': { bg: 'Изпрати първото съобщение', en: 'Send the first message' },

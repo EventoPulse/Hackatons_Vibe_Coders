@@ -51,8 +51,9 @@ namespace EventsApp.Controllers
                 return NotFound();
             }
 
-            var displayName = GetDisplayName(user);
             var isCurrentUser = currentUserId == id;
+            var canViewOrganizerDataOnPersonalProfile = isCurrentUser || isAdmin;
+            var displayName = canViewOrganizerDataOnPersonalProfile ? GetDisplayName(user) : GetPersonalDisplayName(user);
 
             var eventsQuery = _db.Events
                 .AsNoTracking()
@@ -60,13 +61,15 @@ namespace EventsApp.Controllers
 
             if (!isAdmin && !isCurrentUser)
             {
-                eventsQuery = eventsQuery.Where(e => e.IsApproved);
+                eventsQuery = eventsQuery.Where(e => e.IsApproved && e.OrganizerProfileId == null);
             }
 
             var posts = await _db.Posts
                 .AsNoTracking()
                 .Where(p => p.OrganizerId == id)
-                .Where(p => user.OrganizerData != null && user.OrganizerData.Approved)
+                .Where(p => canViewOrganizerDataOnPersonalProfile
+                    ? user.OrganizerData != null && user.OrganizerData.Approved
+                    : user.OrganizerData == null || !user.OrganizerData.Approved)
                 .OrderByDescending(p => p.CreatedAt)
                 .Take(12)
                 .Select(p => new PostCardViewModel
@@ -248,11 +251,11 @@ namespace EventsApp.Controllers
                 Id = user.Id,
                 DisplayName = displayName,
                 UserName = user.UserName,
-                Bio = user.Bio ?? user.OrganizerData?.Description,
+                Bio = canViewOrganizerDataOnPersonalProfile ? user.Bio ?? user.OrganizerData?.Description : user.Bio,
                 ProfileImageUrl = user.ProfileImageUrl,
-                IsOrganizer = user.OrganizerData?.Approved ?? false,
-                OrganizationName = user.OrganizerData?.OrganizationName,
-                Website = user.OrganizerData?.Website,
+                IsOrganizer = canViewOrganizerDataOnPersonalProfile && (user.OrganizerData?.Approved ?? false),
+                OrganizationName = canViewOrganizerDataOnPersonalProfile ? user.OrganizerData?.OrganizationName : null,
+                Website = canViewOrganizerDataOnPersonalProfile ? user.OrganizerData?.Website : null,
                 ProfileStatusText = canViewStatus ? user.ProfileStatusText : null,
                 ProfileStatusEmoji = canViewStatus ? user.ProfileStatusEmoji : null,
                 ProfileStatusUpdatedAt = canViewStatus ? user.ProfileStatusUpdatedAt : null,
@@ -260,7 +263,7 @@ namespace EventsApp.Controllers
                 PinnedEventId = user.PinnedEventId,
                 FollowersCount = await _db.Follows.CountAsync(f => f.FollowingId == id),
                 FollowingCount = await _db.Follows.CountAsync(f => f.FollowerId == id),
-                PostsCount = user.OrganizerData?.Approved == true ? await _db.Posts.CountAsync(p => p.OrganizerId == id) : 0,
+                PostsCount = canViewOrganizerDataOnPersonalProfile && user.OrganizerData?.Approved == true ? await _db.Posts.CountAsync(p => p.OrganizerId == id) : 0,
                 EventsCount = await eventsQuery.CountAsync(),
                 SavedEventsCount = await _db.EventSaves.CountAsync(s => s.UserId == id),
                 GoingEventsCount = await _db.EventAttendances.CountAsync(a => a.UserId == id && a.Status == EventAttendanceStatus.Going),
@@ -582,21 +585,25 @@ namespace EventsApp.Controllers
             }
 
             var currentUserId = _userManager.GetUserId(User);
+            var adminUserIds = _db.UserRoles
+                .Where(ur => _db.Roles.Any(r => r.Id == ur.RoleId && r.Name == GlobalConstants.Roles.Admin))
+                .Select(ur => ur.UserId);
             var query = followers
                 ? _db.Follows.AsNoTracking().Where(f => f.FollowingId == id).Select(f => f.Follower)
                 : _db.Follows.AsNoTracking().Where(f => f.FollowerId == id).Select(f => f.Following);
 
             var profiles = await query
+                .Where(u => !adminUserIds.Contains(u.Id))
                 .OrderBy(u => u.UserName)
                 .Select(u => new ProfileSummaryViewModel
                 {
                     Id = u.Id,
-                    DisplayName = u.OrganizerData != null && u.OrganizerData.Approved
-                        ? u.OrganizerData.OrganizationName
+                    DisplayName = ((u.FirstName ?? string.Empty) + " " + (u.LastName ?? string.Empty)).Trim() != string.Empty
+                        ? ((u.FirstName ?? string.Empty) + " " + (u.LastName ?? string.Empty)).Trim()
                         : u.UserName ?? string.Empty,
-                    Bio = u.Bio ?? (u.OrganizerData != null ? u.OrganizerData.Description : null),
+                    Bio = u.Bio,
                     ProfileImageUrl = u.ProfileImageUrl,
-                    IsOrganizer = u.OrganizerData != null && u.OrganizerData.Approved,
+                    IsOrganizer = false,
                     FollowersCount = u.Followers.Count,
                     FollowingCount = u.Following.Count,
                     PostsCount = u.Posts.Count,
@@ -628,8 +635,10 @@ namespace EventsApp.Controllers
                 IsApproved = e.IsApproved,
                 OrganizerId = e.OrganizerId,
                 OrganizerProfileId = e.OrganizerProfileId,
-                OrganizerName = e.Organizer.OrganizerData != null && e.Organizer.OrganizerData.Approved
-                    ? e.Organizer.OrganizerData.OrganizationName
+                OrganizerName = e.OrganizerProfile != null
+                    ? e.OrganizerProfile.DisplayName
+                    : e.Organizer.OrganizerData != null && e.Organizer.OrganizerData.Approved
+                    ? "Public page"
                     : e.Organizer.UserName ?? string.Empty,
                 LikesCount = e.Likes.Count,
                 CommentsCount = e.Comments.Count,
@@ -661,6 +670,11 @@ namespace EventsApp.Controllers
                 return user.OrganizerData.OrganizationName;
             }
 
+            return GetPersonalDisplayName(user);
+        }
+
+        private static string GetPersonalDisplayName(ApplicationUser user)
+        {
             var name = string.Join(" ", new[] { user.FirstName, user.LastName }.Where(v => !string.IsNullOrWhiteSpace(v)));
             return string.IsNullOrWhiteSpace(name) ? user.UserName ?? string.Empty : name;
         }

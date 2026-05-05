@@ -35,7 +35,7 @@
 <section class="groove-app-page">
     <div class="groove-page-actions mb-4">
         <a asp-action="Index" class="groove-button groove-button-paper">
-            <i class="bi bi-arrow-left"></i> Back
+            <i class="bi bi-arrow-left"></i> <span data-i18n="common.back">Back</span>
         </a>
         <partial name="_ShareDropdown" model="@(new EventsApp.ViewModels.Shared.ShareModel { Url = shareUrl, Title = ogTitle, ChatShareAction = "SharePost", ChatShareId = Model.Id })" />
         @if (User.Identity?.IsAuthenticated == true && Model.OrganizerProfileId.HasValue && User.FindFirstValue(ClaimTypes.NameIdentifier) != Model.OrganizerId)
@@ -51,13 +51,13 @@
         @if (Model.CanEdit)
         {
             <a asp-action="Edit" asp-route-id="@Model.Id" class="groove-button groove-button-paper">
-                <i class="bi bi-pencil"></i> Edit
+                <i class="bi bi-pencil"></i> <span data-i18n="common.edit">Edit</span>
             </a>
         }
         @if (Model.CanDelete)
         {
             <a asp-action="Delete" asp-route-id="@Model.Id" class="groove-button groove-button-paper">
-                <i class="bi bi-trash"></i> Delete
+                <i class="bi bi-trash"></i> <span data-i18n="common.delete">Delete</span>
             </a>
         }
     </div>
@@ -77,9 +77,26 @@
                     }
                     <span>
                         <strong>@Model.OrganizerName</strong>
-                        <small><i class="bi bi-patch-check-fill"></i> Public page</small>
+                        <small><i class="bi bi-patch-check-fill"></i> <span data-i18n="profile.public.page">Public page</span></small>
                     </span>
                 </a>
+            }
+            else if (Model.OrganizerIsOrganizer)
+            {
+                <span class="social-author-link social-author-link--static">
+                    @if (!string.IsNullOrWhiteSpace(Model.OrganizerImageUrl))
+                    {
+                        <img src="@Model.OrganizerImageUrl" alt="@Model.OrganizerName" class="social-avatar-xs" />
+                    }
+                    else
+                    {
+                        <span class="social-avatar-xs social-avatar-xs--fallback">@authorInitial</span>
+                    }
+                    <span>
+                        <strong>@Model.OrganizerName</strong>
+                        <small><i class="bi bi-patch-check-fill"></i> <span data-i18n="profile.public.page">Public page</span></small>
+                    </span>
+                </span>
             }
             else
             {
@@ -96,7 +113,7 @@
                         <strong>@Model.OrganizerName</strong>
                         @if (Model.OrganizerIsOrganizer)
                         {
-                            <small><i class="bi bi-patch-check-fill"></i> Organizer</small>
+                            <small><i class="bi bi-patch-check-fill"></i> <span data-i18n="profile.type.organizer">Organizer</span></small>
                         }
                     </span>
                 </a>

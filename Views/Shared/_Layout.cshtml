@@ -107,6 +107,7 @@
                         var isAuthed = User.Identity?.IsAuthenticated == true;
                         var isAdmin = User.IsInRole(GlobalConstants.Roles.Admin);
                         var isOrganizer = User.IsInRole(GlobalConstants.Roles.Organizer);
+                        var isValidator = User.IsInRole(GlobalConstants.Roles.Validator);
                     }
                     <ul class="navbar-nav me-auto mb-2 mb-md-0 site-navbar__primary">
                         <li class="nav-item">
@@ -140,6 +141,14 @@
                             <li class="nav-item">
                                 <a class="nav-link" asp-controller="Organizer" asp-action="Dashboard">
                                     <i class="bi bi-speedometer2"></i> <span data-i18n="nav.organizer.panel">Organizer Panel</span>
+                                </a>
+                            </li>
+                        }
+                        else if (isValidator)
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link" asp-controller="Tickets" asp-action="Validate">
+                                    <i class="bi bi-qr-code-scan"></i> <span data-i18n="nav.validate">Validate tickets</span>
                                 </a>
                             </li>
                         }

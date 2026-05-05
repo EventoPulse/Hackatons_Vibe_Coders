@@ -1,3 +1,4 @@
+using EventsApp.Common;
 using EventsApp.Data;
 using EventsApp.Models;
 using EventsApp.ViewModels.Events;
@@ -33,6 +34,7 @@ namespace EventsApp.Services
                     .Where(f => f.FollowerId == userId)
                     .Select(f => f.FollowingId)
                     .ToListAsync(cancellationToken);
+            var adminUserIds = AdminUserIdsQuery();
 
             var prefs = userId == null
                 ? null
@@ -80,8 +82,8 @@ namespace EventsApp.Services
                     .Where(u => u.Id == userId)
                     .Select(u => new
                     {
-                        DisplayName = u.OrganizerData != null && u.OrganizerData.Approved
-                            ? u.OrganizerData.OrganizationName
+                        DisplayName = ((u.FirstName ?? string.Empty) + " " + (u.LastName ?? string.Empty)).Trim() != string.Empty
+                            ? ((u.FirstName ?? string.Empty) + " " + (u.LastName ?? string.Empty)).Trim()
                             : u.UserName ?? u.Email ?? string.Empty,
                         u.ProfileImageUrl,
                     })
@@ -163,10 +165,12 @@ namespace EventsApp.Services
                     AuthorName = s.OrganizerProfile != null
                         ? s.OrganizerProfile.DisplayName
                         : s.Author.OrganizerData != null && s.Author.OrganizerData.Approved
-                        ? s.Author.OrganizerData.OrganizationName
+                        ? "Public page"
                         : s.Author.UserName ?? string.Empty,
                     AuthorImageUrl = s.OrganizerProfile != null && !string.IsNullOrWhiteSpace(s.OrganizerProfile.AvatarImageUrl)
                         ? s.OrganizerProfile.AvatarImageUrl
+                        : s.Author.OrganizerData != null && s.Author.OrganizerData.Approved
+                        ? null
                         : s.Author.ProfileImageUrl,
                     MediaUrl = s.MediaUrl,
                     MediaType = s.MediaType,
@@ -179,30 +183,19 @@ namespace EventsApp.Services
             var suggestedProfiles = await _db.Users
                 .AsNoTracking()
                 .Where(u => userId == null || u.Id != userId)
+                .Where(u => !adminUserIds.Contains(u.Id))
                 .Where(u => userId == null || !followedIds.Contains(u.Id))
                 .OrderByDescending(u => u.Followers.Count + u.Events.Count + u.Posts.Count)
                 .Take(6)
                 .Select(u => new ProfileSummaryViewModel
                 {
                     Id = u.Id,
-                    DisplayName = u.OrganizerData != null && u.OrganizerData.Approved
-                        ? u.OrganizerData.OrganizationName
+                    DisplayName = ((u.FirstName ?? string.Empty) + " " + (u.LastName ?? string.Empty)).Trim() != string.Empty
+                        ? ((u.FirstName ?? string.Empty) + " " + (u.LastName ?? string.Empty)).Trim()
                         : u.UserName ?? string.Empty,
-                    Bio = u.Bio ?? (u.OrganizerData != null ? u.OrganizerData.Description : null),
-                    ProfileImageUrl = u.OrganizerProfiles
-                        .Where(p => p.IsActive && p.IsApproved && p.AvatarImageUrl != null && p.AvatarImageUrl != string.Empty)
-                        .OrderByDescending(p => p.IsDefault)
-                        .ThenByDescending(p => p.CreatedAt)
-                        .Select(p => p.AvatarImageUrl)
-                        .FirstOrDefault()
-                        ?? u.ProfileImageUrl
-                        ?? u.OrganizerProfiles
-                            .Where(p => p.IsActive && p.IsApproved && p.CoverImageUrl != null && p.CoverImageUrl != string.Empty)
-                            .OrderByDescending(p => p.IsDefault)
-                            .ThenByDescending(p => p.CreatedAt)
-                            .Select(p => p.CoverImageUrl)
-                            .FirstOrDefault(),
-                    IsOrganizer = u.OrganizerData != null && u.OrganizerData.Approved,
+                    Bio = u.Bio,
+                    ProfileImageUrl = u.ProfileImageUrl,
+                    IsOrganizer = false,
                     FollowersCount = u.Followers.Count,
                     FollowingCount = u.Following.Count,
                     PostsCount = u.Posts.Count,
@@ -255,31 +248,30 @@ namespace EventsApp.Services
         private async Task<List<FeedSearchResultViewModel>> SearchProfilesAsync(string searchTerm, string? currentUserId, CancellationToken cancellationToken)
         {
             var term = searchTerm.ToLowerInvariant();
+            var adminUserIds = AdminUserIdsQuery();
 
             var users = await _db.Users
                 .AsNoTracking()
+                .Where(u => !adminUserIds.Contains(u.Id))
                 .Where(u =>
                     (u.UserName ?? string.Empty).ToLower().Contains(term)
                     || (u.FirstName ?? string.Empty).ToLower().Contains(term)
                     || (u.LastName ?? string.Empty).ToLower().Contains(term)
-                    || (u.Bio ?? string.Empty).ToLower().Contains(term)
-                    || (u.OrganizerData != null && (
-                        (u.OrganizerData.OrganizationName ?? string.Empty).ToLower().Contains(term)
-                        || (u.OrganizerData.Description ?? string.Empty).ToLower().Contains(term))))
+                    || (u.Bio ?? string.Empty).ToLower().Contains(term))
                 .OrderByDescending(u => u.Followers.Count + u.Events.Count + u.Posts.Count)
                 .Take(8)
                 .Select(u => new FeedSearchResultViewModel
                 {
                     Id = "user:" + u.Id,
                     UserId = u.Id,
-                    DisplayName = u.OrganizerData != null && u.OrganizerData.Approved
-                        ? u.OrganizerData.OrganizationName
-                        : u.UserName ?? ((u.FirstName ?? string.Empty) + " " + (u.LastName ?? string.Empty)).Trim(),
+                    DisplayName = ((u.FirstName ?? string.Empty) + " " + (u.LastName ?? string.Empty)).Trim() != string.Empty
+                        ? ((u.FirstName ?? string.Empty) + " " + (u.LastName ?? string.Empty)).Trim()
+                        : u.UserName ?? string.Empty,
                     UserName = u.UserName,
-                    Bio = u.Bio ?? (u.OrganizerData != null ? u.OrganizerData.Description : null),
+                    Bio = u.Bio,
                     ProfileImageUrl = u.ProfileImageUrl,
-                    TypeKey = u.OrganizerData != null && u.OrganizerData.Approved ? "profile.type.organizer" : "profile.type.profile",
-                    TypeText = u.OrganizerData != null && u.OrganizerData.Approved ? "Organizer" : "Profile",
+                    TypeKey = "profile.type.profile",
+                    TypeText = "Profile",
                     FollowersCount = u.Followers.Count,
                     PostsCount = u.Posts.Count,
                     EventsCount = u.Events.Count(e => e.IsApproved),
@@ -294,8 +286,7 @@ namespace EventsApp.Services
                     p.DisplayName.ToLower().Contains(term)
                     || (p.Tagline ?? string.Empty).ToLower().Contains(term)
                     || (p.Description ?? string.Empty).ToLower().Contains(term)
-                    || (p.City ?? string.Empty).ToLower().Contains(term)
-                    || (p.Owner.UserName ?? string.Empty).ToLower().Contains(term))
+                    || (p.City ?? string.Empty).ToLower().Contains(term))
                 .OrderByDescending(p => p.Events.Count + p.Posts.Count)
                 .Take(8)
                 .Select(p => new FeedSearchResultViewModel
@@ -304,9 +295,9 @@ namespace EventsApp.Services
                     UserId = p.OwnerId,
                     OrganizerProfileId = p.Id,
                     DisplayName = p.DisplayName,
-                    UserName = p.Owner.UserName,
+                    UserName = null,
                     Bio = p.Tagline ?? p.Description,
-                    ProfileImageUrl = p.AvatarImageUrl != null && p.AvatarImageUrl != string.Empty ? p.AvatarImageUrl : p.Owner.ProfileImageUrl,
+                    ProfileImageUrl = p.AvatarImageUrl != null && p.AvatarImageUrl != string.Empty ? p.AvatarImageUrl : p.CoverImageUrl,
                     TypeKey = "organizer.pages.public",
                     TypeText = "Public page",
                     FollowersCount = p.Owner.Followers.Count,
@@ -322,6 +313,13 @@ namespace EventsApp.Services
                 .Select(g => g.First())
                 .Take(12)
                 .ToList();
+        }
+
+        private IQueryable<string> AdminUserIdsQuery()
+        {
+            return _db.UserRoles
+                .Where(ur => _db.Roles.Any(r => r.Id == ur.RoleId && r.Name == GlobalConstants.Roles.Admin))
+                .Select(ur => ur.UserId);
         }
 
         private static async Task<List<EventCardViewModel>> QueryEventCards(IQueryable<Event> query, string? userId, CancellationToken cancellationToken)
@@ -342,7 +340,7 @@ namespace EventsApp.Services
                     OrganizerName = e.OrganizerProfile != null
                         ? e.OrganizerProfile.DisplayName
                         : e.Organizer.OrganizerData != null && e.Organizer.OrganizerData.Approved
-                        ? e.Organizer.OrganizerData.OrganizationName
+                        ? "Public page"
                         : e.Organizer.UserName ?? string.Empty,
                     LikesCount = e.Likes.Count,
                     CommentsCount = e.Comments.Count,
@@ -379,10 +377,12 @@ namespace EventsApp.Services
                     OrganizerName = p.OrganizerProfile != null
                         ? p.OrganizerProfile.DisplayName
                         : p.Organizer.OrganizerData != null && p.Organizer.OrganizerData.Approved
-                        ? p.Organizer.OrganizerData.OrganizationName
+                        ? "Public page"
                         : p.Organizer.UserName ?? string.Empty,
                     AuthorImageUrl = p.OrganizerProfile != null && !string.IsNullOrWhiteSpace(p.OrganizerProfile.AvatarImageUrl)
                         ? p.OrganizerProfile.AvatarImageUrl
+                        : p.Organizer.OrganizerData != null && p.Organizer.OrganizerData.Approved
+                        ? null
                         : p.Organizer.ProfileImageUrl,
                     AuthorIsOrganizer = (p.OrganizerProfile != null && p.OrganizerProfile.IsActive && p.OrganizerProfile.IsApproved)
                         || (p.Organizer.OrganizerData != null && p.Organizer.OrganizerData.Approved),

@@ -21,6 +21,7 @@ namespace EventsApp.ViewModels.Social
         public string? PageName { get; set; }
         public string? PageImageUrl { get; set; }
         public bool CurrentUserOwnsPage { get; set; }
+        public bool CurrentUserCanActAsPage { get; set; }
         public string ScopeLabel => IsPageConversation
             ? CurrentUserOwnsPage
                 ? $"Page inbox: {PageName}"

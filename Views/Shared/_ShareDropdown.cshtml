@@ -28,7 +28,7 @@
         @if (!string.IsNullOrWhiteSpace(Model.ChatShareAction) && Model.ChatShareId.HasValue)
         {
             <a class="evt-share__item" asp-controller="Messages" asp-action="@Model.ChatShareAction" asp-route-id="@Model.ChatShareId.Value">
-                <i class="bi bi-chat-dots"></i> <span data-i18n="share.chat">Send in chat</span>
+                <i class="bi bi-chat-dots"></i> <span data-i18n="share.chat">Изпрати в чат</span>
             </a>
         }
         <button type="button" class="evt-share__item" data-share-copy data-share-url="@Model.Url">

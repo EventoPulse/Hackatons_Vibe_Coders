@@ -1,10 +1,12 @@
 using EventsApp.Common;
 using EventsApp.Data;
 using EventsApp.Models;
+using EventsApp.Services;
 using EventsApp.ViewModels.Admin;
 using EventsApp.ViewModels.Events;
 using EventsApp.ViewModels.Posts;
 using EventsApp.ViewModels.Tickets;
+using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -17,11 +19,19 @@ namespace EventsApp.Controllers
     {
         private readonly ApplicationDbContext _db;
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly IRecurringEventService _recurringEvents;
+        private readonly ILayoutService _layouts;
 
-        public AdminController(ApplicationDbContext db, UserManager<ApplicationUser> userManager)
+        public AdminController(
+            ApplicationDbContext db,
+            UserManager<ApplicationUser> userManager,
+            IRecurringEventService recurringEvents,
+            ILayoutService layouts)
         {
             _db = db;
             _userManager = userManager;
+            _recurringEvents = recurringEvents;
+            _layouts = layouts;
         }
 
         public async Task<IActionResult> Index()
@@ -56,7 +66,7 @@ namespace EventsApp.Controllers
                 OrganizersCount = await _db.OrganizerData.CountAsync(),
                 EventsCount = await _db.Events.CountAsync(),
                 PendingOrganizersCount = await _db.OrganizerData.CountAsync(o => !o.Approved),
-                PendingEventsCount = await _db.Events.CountAsync(e => !e.IsApproved),
+                PendingEventsCount = await _db.Events.CountAsync(e => !e.IsApproved || e.ChangeRequests.Any(r => r.Status == EventChangeRequestStatus.Pending)),
                 RecentPosts = recentPosts,
             };
 
@@ -128,7 +138,7 @@ namespace EventsApp.Controllers
         {
             var query = _db.Events.AsNoTracking().AsQueryable();
             if (pending == true)
-                query = query.Where(e => !e.IsApproved);
+                query = query.Where(e => !e.IsApproved || e.ChangeRequests.Any(r => r.Status == EventChangeRequestStatus.Pending));
 
             var events = await query
                 .OrderByDescending(e => e.CreatedAt)
@@ -142,6 +152,7 @@ namespace EventsApp.Controllers
                     StartTime = e.StartTime,
                     Genre = e.Genre,
                     IsApproved = e.IsApproved,
+                    HasPendingChanges = e.ChangeRequests.Any(r => r.Status == EventChangeRequestStatus.Pending),
                     OrganizerId = e.OrganizerId,
                     OrganizerProfileId = e.OrganizerProfileId,
                     OrganizerName = e.OrganizerProfile != null ? e.OrganizerProfile.DisplayName : e.Organizer.UserName ?? string.Empty,
@@ -166,13 +177,189 @@ namespace EventsApp.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ApproveEvent(int id)
         {
-            var ev = await _db.Events.FirstOrDefaultAsync(e => e.Id == id);
+            var ev = await _db.Events
+                .Include(e => e.EventSeries)
+                .FirstOrDefaultAsync(e => e.Id == id);
             if (ev == null) return NotFound();
+
+            var pendingChange = await _db.EventChangeRequests
+                .Where(r => r.EventId == id && r.Status == EventChangeRequestStatus.Pending)
+                .OrderByDescending(r => r.SubmittedAt)
+                .FirstOrDefaultAsync();
+
+            if (pendingChange != null)
+            {
+                var payload = JsonSerializer.Deserialize<EventPendingChangePayload>(pendingChange.ChangeJson);
+                if (payload == null)
+                {
+                    pendingChange.Status = EventChangeRequestStatus.Rejected;
+                    pendingChange.ReviewedAt = DateTime.UtcNow;
+                    pendingChange.ReviewedByAdminId = _userManager.GetUserId(User);
+                    await _db.SaveChangesAsync();
+                    TempData["StatusMessage"] = "Промените не могат да бъдат прочетени и бяха отхвърлени.";
+                    return RedirectToAction(nameof(Events), new { pending = true });
+                }
+
+                await ApplyEventChangePayloadAsync(ev, payload);
+                pendingChange.Status = EventChangeRequestStatus.Approved;
+                pendingChange.ReviewedAt = DateTime.UtcNow;
+                pendingChange.ReviewedByAdminId = _userManager.GetUserId(User);
+                await _db.SaveChangesAsync();
+
+                TempData["StatusMessage"] = "Промените по събитието са одобрени и публикувани.";
+                return RedirectToAction(nameof(Events), new { pending = true });
+            }
 
             ev.IsApproved = !ev.IsApproved;
             await _db.SaveChangesAsync();
             TempData["StatusMessage"] = ev.IsApproved ? "Event approved." : "Event unapproved.";
             return RedirectToAction(nameof(Events));
+        }
+
+        public async Task<IActionResult> EventChange(int id)
+        {
+            var request = await _db.EventChangeRequests
+                .AsNoTracking()
+                .Include(r => r.Event)
+                .Where(r => r.EventId == id && r.Status == EventChangeRequestStatus.Pending)
+                .OrderByDescending(r => r.SubmittedAt)
+                .FirstOrDefaultAsync();
+
+            if (request == null)
+            {
+                return NotFound();
+            }
+
+            var payload = JsonSerializer.Deserialize<EventPendingChangePayload>(request.ChangeJson);
+            if (payload == null)
+            {
+                return NotFound();
+            }
+
+            var vm = new EventChangeReviewViewModel
+            {
+                EventId = request.EventId,
+                CurrentTitle = request.Event.Title,
+                CurrentCity = request.Event.City,
+                CurrentAddress = request.Event.Address,
+                CurrentStartTime = request.Event.StartTime,
+                CurrentEndTime = request.Event.EndTime,
+                CurrentGenre = request.Event.Genre,
+                CurrentImageUrl = request.Event.ImageUrl,
+                SubmittedAt = request.SubmittedAt,
+                Pending = payload,
+            };
+
+            return View(vm);
+        }
+
+        private async Task ApplyEventChangePayloadAsync(Event ev, EventPendingChangePayload payload)
+        {
+            ev.Title = payload.Title;
+            ev.Description = payload.Description;
+            ev.City = payload.City;
+            ev.Address = payload.Address;
+            ev.StartTime = payload.StartTime;
+            ev.EndTime = payload.EndTime;
+            ev.Genre = payload.Genre;
+            ev.OrganizerProfileId = payload.OrganizerProfileId;
+            ev.BusinessWorkspaceId = payload.BusinessWorkspaceId;
+            ev.ImageUrl = payload.ImageUrl;
+            ev.Latitude = payload.Latitude;
+            ev.Longitude = payload.Longitude;
+            ev.TicketingMode = payload.TicketingMode;
+            ev.VenueLayoutId = payload.TicketingMode == EventTicketingMode.GeneralAdmission ? null : payload.VenueLayoutId;
+            ev.IsApproved = true;
+
+            if (!string.IsNullOrWhiteSpace(payload.ImageUrl)
+                && !await _db.EventImages.AnyAsync(i => i.EventId == ev.Id && i.ImageUrl == payload.ImageUrl))
+            {
+                _db.EventImages.Add(new EventImage { EventId = ev.Id, ImageUrl = payload.ImageUrl });
+            }
+
+            if (payload.RecurrenceType == EventRecurrenceType.None)
+            {
+                if (ev.EventSeries != null)
+                {
+                    ev.EventSeries.RecurrenceType = EventRecurrenceType.None;
+                    ev.EventSeries.Status = EventSeriesStatus.Archived;
+                    ev.EventSeries.UpdatedAt = DateTime.UtcNow;
+                }
+            }
+            else if (payload.RecurrenceStartDate.HasValue
+                     && payload.RecurrenceEndDate.HasValue
+                     && payload.RecurrenceStartTime.HasValue
+                     && payload.RecurrenceEndTime.HasValue)
+            {
+                if (ev.EventSeries == null)
+                {
+                    ev.EventSeries = new EventSeries
+                    {
+                        EventId = ev.Id,
+                        OrganizerId = ev.OrganizerId,
+                    };
+                    _db.EventSeries.Add(ev.EventSeries);
+                    await _db.SaveChangesAsync();
+                }
+
+                ApplySeriesPayload(ev.EventSeries, ev, payload);
+                await _db.SaveChangesAsync();
+                await _recurringEvents.RegenerateOccurrencesAsync(ev.EventSeries, payload.RecurringEditScope);
+            }
+
+            await EnsureSeatInventoriesForEventAsync(ev.Id);
+        }
+
+        private static void ApplySeriesPayload(EventSeries series, Event ev, EventPendingChangePayload payload)
+        {
+            series.Title = ev.Title;
+            series.Description = ev.Description;
+            series.Category = ev.Genre;
+            series.Location = ev.Address;
+            series.City = ev.City;
+            series.ImageUrl = ev.ImageUrl;
+            series.RecurrenceType = payload.RecurrenceType;
+            series.Interval = Math.Max(1, payload.RecurrenceInterval);
+            series.DaysOfWeek = SerializeDays(payload.SelectedDaysOfWeek);
+            series.StartDate = payload.RecurrenceStartDate!.Value.Date;
+            series.EndDate = payload.RecurrenceEndDate!.Value.Date;
+            series.StartTime = payload.RecurrenceStartTime!.Value;
+            series.EndTime = payload.RecurrenceEndTime!.Value;
+            series.TimeZone = string.IsNullOrWhiteSpace(payload.TimeZone) ? "Europe/Sofia" : payload.TimeZone.Trim();
+            series.Status = EventSeriesStatus.Published;
+            series.UpdatedAt = DateTime.UtcNow;
+        }
+
+        private async Task EnsureSeatInventoriesForEventAsync(int eventId)
+        {
+            var ev = await _db.Events
+                .AsNoTracking()
+                .Include(e => e.EventSeries)
+                    .ThenInclude(s => s!.Occurrences)
+                .FirstOrDefaultAsync(e => e.Id == eventId);
+
+            if (ev?.VenueLayoutId == null || ev.TicketingMode == EventTicketingMode.GeneralAdmission)
+            {
+                return;
+            }
+
+            if (ev.EventSeries?.Occurrences.Any() == true)
+            {
+                foreach (var occurrence in ev.EventSeries.Occurrences)
+                {
+                    await _layouts.EnsureInventoryAsync(eventId, occurrence.Id, ev.VenueLayoutId.Value);
+                }
+            }
+            else
+            {
+                await _layouts.EnsureInventoryAsync(eventId, null, ev.VenueLayoutId.Value);
+            }
+        }
+
+        private static string? SerializeDays(IEnumerable<DayOfWeek> days)
+        {
+            var value = string.Join(",", days.Distinct().OrderBy(d => d).Select(d => d.ToString()));
+            return string.IsNullOrWhiteSpace(value) ? null : value;
         }
 
         public async Task<IActionResult> Posts()

@@ -24,105 +24,83 @@ namespace EventsApp.Services
         public async Task ReleaseExpiredReservationsAsync()
         {
             var now = DateTime.UtcNow;
-            var expired = await _db.EventSeatInventories
+            await _db.EventSeatInventories
                 .Where(i => i.Status == EventSeatInventoryStatus.Reserved
                             && i.ReservedUntil.HasValue
                             && i.ReservedUntil <= now
                             && i.TicketId == null)
-                .ToListAsync();
-
-            foreach (var item in expired)
-            {
-                item.Status = EventSeatInventoryStatus.Available;
-                item.ReservedUntil = null;
-                item.ReservedByUserId = null;
-            }
-
-            if (expired.Count > 0)
-            {
-                await _db.SaveChangesAsync();
-            }
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(i => i.Status, EventSeatInventoryStatus.Available)
+                    .SetProperty(i => i.ReservedUntil, (DateTime?)null)
+                    .SetProperty(i => i.ReservedByUserId, (string?)null));
         }
 
         public async Task<EventSeatInventory?> ReserveSeatAsync(int eventId, int? occurrenceId, int seatId, string userId, TimeSpan holdFor)
         {
             await ReleaseExpiredReservationsAsync();
 
-            var inventory = await FindInventoryAsync(eventId, occurrenceId, seatId);
-            if (inventory == null)
-            {
-                return null;
-            }
-
             var now = DateTime.UtcNow;
-            var reservedBySameUser = inventory.Status == EventSeatInventoryStatus.Reserved
-                                     && inventory.ReservedByUserId == userId
-                                     && inventory.ReservedUntil > now;
+            var reservedUntil = now.Add(holdFor);
+            var affected = await FindInventoryQuery(eventId, occurrenceId, seatId)
+                .Where(i => i.Status == EventSeatInventoryStatus.Available
+                            || (i.Status == EventSeatInventoryStatus.Reserved
+                                && i.ReservedByUserId == userId
+                                && i.ReservedUntil > now))
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(i => i.Status, EventSeatInventoryStatus.Reserved)
+                    .SetProperty(i => i.ReservedByUserId, userId)
+                    .SetProperty(i => i.ReservedUntil, reservedUntil));
 
-            if (inventory.Status != EventSeatInventoryStatus.Available && !reservedBySameUser)
-            {
-                return null;
-            }
-
-            inventory.Status = EventSeatInventoryStatus.Reserved;
-            inventory.ReservedByUserId = userId;
-            inventory.ReservedUntil = now.Add(holdFor);
-            await _db.SaveChangesAsync();
-            return inventory;
+            return affected == 0
+                ? null
+                : await FindInventoryAsync(eventId, occurrenceId, seatId);
         }
 
         public async Task<bool> ReleaseReservationAsync(int inventoryId, string userId, bool isAdmin)
         {
-            var inventory = await _db.EventSeatInventories.FirstOrDefaultAsync(i => i.Id == inventoryId);
-            if (inventory == null || inventory.Status != EventSeatInventoryStatus.Reserved)
+            var query = _db.EventSeatInventories
+                .Where(i => i.Id == inventoryId && i.Status == EventSeatInventoryStatus.Reserved);
+
+            if (!isAdmin)
             {
-                return false;
+                query = query.Where(i => i.ReservedByUserId == userId);
             }
 
-            if (!isAdmin && inventory.ReservedByUserId != userId)
-            {
-                return false;
-            }
+            var affected = await query.ExecuteUpdateAsync(s => s
+                .SetProperty(i => i.Status, EventSeatInventoryStatus.Available)
+                .SetProperty(i => i.ReservedUntil, (DateTime?)null)
+                .SetProperty(i => i.ReservedByUserId, (string?)null));
 
-            inventory.Status = EventSeatInventoryStatus.Available;
-            inventory.ReservedUntil = null;
-            inventory.ReservedByUserId = null;
-            await _db.SaveChangesAsync();
-            return true;
+            return affected > 0;
         }
 
         public async Task<bool> MarkSeatSoldAsync(int eventId, int? occurrenceId, int seatId, Guid userTicketId, string userId)
         {
-            var inventory = await FindInventoryAsync(eventId, occurrenceId, seatId);
-            if (inventory == null)
-            {
-                return false;
-            }
+            var now = DateTime.UtcNow;
+            var affected = await FindInventoryQuery(eventId, occurrenceId, seatId)
+                .Where(i => i.Status == EventSeatInventoryStatus.Available
+                            || (i.Status == EventSeatInventoryStatus.Reserved
+                                && i.ReservedByUserId == userId
+                                && i.ReservedUntil > now))
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(i => i.Status, EventSeatInventoryStatus.Sold)
+                    .SetProperty(i => i.TicketId, (Guid?)userTicketId)
+                    .SetProperty(i => i.ReservedUntil, (DateTime?)null)
+                    .SetProperty(i => i.ReservedByUserId, (string?)null));
 
-            var canUseReservation = inventory.Status == EventSeatInventoryStatus.Reserved
-                                    && inventory.ReservedByUserId == userId
-                                    && inventory.ReservedUntil > DateTime.UtcNow;
-
-            if (inventory.Status == EventSeatInventoryStatus.Sold
-                || inventory.Status == EventSeatInventoryStatus.Blocked
-                || (inventory.Status == EventSeatInventoryStatus.Reserved && !canUseReservation))
-            {
-                return false;
-            }
-
-            inventory.Status = EventSeatInventoryStatus.Sold;
-            inventory.TicketId = userTicketId;
-            inventory.ReservedUntil = null;
-            inventory.ReservedByUserId = null;
-            await _db.SaveChangesAsync();
-            return true;
+            return affected > 0;
         }
 
         private Task<EventSeatInventory?> FindInventoryAsync(int eventId, int? occurrenceId, int seatId)
         {
+            return FindInventoryQuery(eventId, occurrenceId, seatId).FirstOrDefaultAsync();
+        }
+
+        private IQueryable<EventSeatInventory> FindInventoryQuery(int eventId, int? occurrenceId, int seatId)
+        {
             return occurrenceId.HasValue
-                ? _db.EventSeatInventories.FirstOrDefaultAsync(i => i.EventOccurrenceId == occurrenceId.Value && i.SeatId == seatId)
-                : _db.EventSeatInventories.FirstOrDefaultAsync(i => i.EventId == eventId && i.EventOccurrenceId == null && i.SeatId == seatId);
+                ? _db.EventSeatInventories.Where(i => i.EventOccurrenceId == occurrenceId.Value && i.SeatId == seatId)
+                : _db.EventSeatInventories.Where(i => i.EventId == eventId && i.EventOccurrenceId == null && i.SeatId == seatId);
         }
     }
 }

@@ -126,9 +126,12 @@
                     </button>
                 </form>
 
-                <a asp-controller="Messages" asp-action="ShareEvent" asp-route-id="@Model.Id" class="evt-card__action" title="Send in chat" data-i18n-title="share.chat">
-                    <i class="bi bi-send"></i>
-                </a>
+                @if (Model.IsApproved)
+                {
+                    <a asp-controller="Messages" asp-action="ShareEvent" asp-route-id="@Model.Id" class="evt-card__action" title="Send in chat" data-i18n-title="share.chat">
+                        <i class="bi bi-send"></i>
+                    </a>
+                }
             }
             else
             {

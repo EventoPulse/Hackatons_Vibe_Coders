@@ -84,14 +84,15 @@ namespace EventsApp.Controllers
                 OrganizerName = !string.IsNullOrWhiteSpace(post.OrganizerProfile?.DisplayName)
                     ? post.OrganizerProfile.DisplayName
                     : post.Organizer?.OrganizerData?.Approved == true
-                    ? post.Organizer.OrganizerData.OrganizationName
+                    ? "Public page"
                     : post.Organizer?.UserName ?? string.Empty,
                 Content = post.Content,
                 CreatedAt = post.CreatedAt,
                 UpdatedAt = post.UpdatedAt,
                 EventId = post.EventId,
                 EventTitle = post.Event?.Title,
-                OrganizerImageUrl = post.OrganizerProfile?.AvatarImageUrl ?? post.Organizer?.ProfileImageUrl,
+                OrganizerImageUrl = post.OrganizerProfile?.AvatarImageUrl
+                    ?? (post.Organizer?.OrganizerData?.Approved == true ? null : post.Organizer?.ProfileImageUrl),
                 OrganizerIsOrganizer = post.Organizer?.OrganizerData?.Approved ?? false,
                 Media = post.Images
                     .Select(i => new PostMediaItemViewModel { Url = i.ImageUrl, MediaType = i.MediaType })

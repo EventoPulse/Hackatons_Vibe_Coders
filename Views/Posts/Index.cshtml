@@ -59,7 +59,36 @@
                         {
                             var resultInitial = string.IsNullOrWhiteSpace(result.DisplayName) ? "?" : result.DisplayName[..1].ToUpperInvariant();
                             <article class="social-search-card">
-                                <a asp-controller="Profiles" asp-action="Details" asp-route-id="@result.UserId" class="social-search-card__main">
+                                @if (result.OrganizerProfileId.HasValue)
+                                {
+                                    <a asp-controller="Profiles" asp-action="Page" asp-route-id="@result.OrganizerProfileId" class="social-search-card__main">
+                                        <span class="social-profile-avatar">
+                                            @if (!string.IsNullOrWhiteSpace(result.ProfileImageUrl))
+                                            {
+                                                <img src="@result.ProfileImageUrl" alt="@result.DisplayName" onerror="this.closest('.social-profile-avatar').classList.add('is-fallback');this.remove();" />
+                                            }
+                                            <span>@resultInitial</span>
+                                        </span>
+                                        <span class="social-search-card__body">
+                                            <strong>@result.DisplayName</strong>
+                                            <small>
+                                                <span data-i18n="@result.TypeKey">@result.TypeText</span>
+                                            </small>
+                                            @if (!string.IsNullOrWhiteSpace(result.Bio))
+                                            {
+                                                <span class="social-search-card__bio">@result.Bio</span>
+                                            }
+                                            <span class="social-search-card__meta">
+                                                @result.FollowersCount <span data-i18n="profile.followers">Ð¿Ð¾ÑÐ»ÐµÐ´Ð¾Ð²Ð°Ñ‚ÐµÐ»Ð¸</span>
+                                                Â· @result.EventsCount <span data-i18n="profile.events">ÑÑŠÐ±Ð¸Ñ‚Ð¸Ñ</span>
+                                                Â· @result.PostsCount <span data-i18n="profile.posts">Ð¿Ð¾ÑÑ‚Ð°</span>
+                                            </span>
+                                        </span>
+                                    </a>
+                                }
+                                else
+                                {
+                                    <a asp-controller="Profiles" asp-action="Details" asp-route-id="@result.UserId" class="social-search-card__main">
                                     <span class="social-profile-avatar">
                                         @if (!string.IsNullOrWhiteSpace(result.ProfileImageUrl))
                                         {
@@ -86,8 +115,9 @@
                                             · @result.PostsCount <span data-i18n="profile.posts">поста</span>
                                         </span>
                                     </span>
-                                </a>
-                                @if (isSignedIn && result.UserId != currentUserId && !result.CurrentUserFollows)
+                                    </a>
+                                }
+                                @if (isSignedIn && !result.OrganizerProfileId.HasValue && result.UserId != currentUserId && !result.CurrentUserFollows)
                                 {
                                     <form asp-controller="Profiles" asp-action="Follow" asp-route-id="@result.UserId" asp-route-returnUrl="@returnUrl" method="post">
                                         @Html.AntiForgeryToken()

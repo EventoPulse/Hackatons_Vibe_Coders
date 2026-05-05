@@ -192,7 +192,11 @@ namespace EventsApp.Controllers
                 Id = p.Id,
                 OrganizerId = p.OrganizerId,
                 OrganizerProfileId = p.OrganizerProfileId,
-                OrganizerName = p.OrganizerProfile != null ? p.OrganizerProfile.DisplayName : p.Organizer.UserName ?? string.Empty,
+                OrganizerName = p.OrganizerProfile != null
+                    ? p.OrganizerProfile.DisplayName
+                    : p.Organizer.OrganizerData != null && p.Organizer.OrganizerData.Approved
+                    ? "Public page"
+                    : p.Organizer.UserName ?? string.Empty,
                 Content = p.Content,
                 CreatedAt = p.CreatedAt,
                 EventId = p.EventId,
@@ -206,6 +210,8 @@ namespace EventsApp.Controllers
                 CurrentUserSaved = userId != null && p.Saves.Any(s => s.UserId == userId),
                 AuthorImageUrl = p.OrganizerProfile != null && !string.IsNullOrWhiteSpace(p.OrganizerProfile.AvatarImageUrl)
                     ? p.OrganizerProfile.AvatarImageUrl
+                    : p.Organizer.OrganizerData != null && p.Organizer.OrganizerData.Approved
+                    ? null
                     : p.Organizer.ProfileImageUrl,
                 AuthorIsOrganizer = (p.OrganizerProfile != null && p.OrganizerProfile.IsActive && p.OrganizerProfile.IsApproved)
                     || (p.Organizer.OrganizerData != null && p.Organizer.OrganizerData.Approved),

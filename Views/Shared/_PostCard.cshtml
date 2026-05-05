@@ -41,9 +41,26 @@
                     }
                     <span>
                         <strong>@Model.OrganizerName</strong>
-                        <small><i class="bi bi-patch-check-fill"></i> Public page</small>
+                        <small><i class="bi bi-patch-check-fill"></i> <span data-i18n="profile.public.page">Public page</span></small>
                     </span>
                 </a>
+            }
+            else if (Model.AuthorIsOrganizer)
+            {
+                <span class="social-author-link social-author-link--static">
+                    @if (!string.IsNullOrWhiteSpace(Model.AuthorImageUrl))
+                    {
+                        <img src="@Model.AuthorImageUrl" alt="@Model.OrganizerName" class="social-avatar-xs" />
+                    }
+                    else
+                    {
+                        <span class="social-avatar-xs social-avatar-xs--fallback">@initial</span>
+                    }
+                    <span>
+                        <strong>@Model.OrganizerName</strong>
+                        <small><i class="bi bi-patch-check-fill"></i> <span data-i18n="profile.public.page">Public page</span></small>
+                    </span>
+                </span>
             }
             else
             {
@@ -60,7 +77,7 @@
                         <strong>@Model.OrganizerName</strong>
                         @if (Model.AuthorIsOrganizer)
                         {
-                            <small><i class="bi bi-patch-check-fill"></i> Organizer</small>
+                            <small><i class="bi bi-patch-check-fill"></i> <span data-i18n="profile.type.organizer">Organizer</span></small>
                         }
                     </span>
                 </a>
@@ -88,7 +105,7 @@
                     <form asp-controller="Posts" asp-action="@likeAction" asp-route-id="@Model.Id"
                           asp-route-returnUrl="@returnUrl" method="post" class="d-inline">
                         @Html.AntiForgeryToken()
-                        <button class="btn btn-sm @btnClass" type="submit" title="Like">
+                        <button class="btn btn-sm @btnClass" type="submit" title="Like" data-i18n-title="post.like">
                             <i class="bi @iconClass"></i> @Model.LikesCount
                         </button>
                     </form>
@@ -98,7 +115,7 @@
                     <form asp-controller="Posts" asp-action="@saveAction" asp-route-id="@Model.Id"
                           asp-route-returnUrl="@returnUrl" method="post" class="d-inline">
                         @Html.AntiForgeryToken()
-                        <button class="btn btn-sm @saveClass" type="submit" title="Save">
+                        <button class="btn btn-sm @saveClass" type="submit" title="Save" data-i18n-title="post.save">
                             <i class="bi @saveIcon"></i> @Model.SavesCount
                         </button>
                     </form>
@@ -109,10 +126,10 @@
                     <span class="small text-muted"><i class="bi bi-bookmark"></i> @Model.SavesCount</span>
                 }
 
-                <a asp-controller="Posts" asp-action="Details" asp-route-id="@Model.Id" asp-fragment="comments" class="btn btn-sm btn-outline-secondary" title="Comments">
+                <a asp-controller="Posts" asp-action="Details" asp-route-id="@Model.Id" asp-fragment="comments" class="btn btn-sm btn-outline-secondary" title="Comments" data-i18n-title="social.comments">
                     <i class="bi bi-chat"></i> @Model.CommentsCount
                 </a>
-                <button class="btn btn-sm btn-outline-secondary social-share-button" type="button" data-share-url="@shareUrl" data-share-title="Post by @Model.OrganizerName" title="Share">
+                <button class="btn btn-sm btn-outline-secondary social-share-button" type="button" data-share-url="@shareUrl" data-share-title="Post by @Model.OrganizerName" title="Share" data-i18n-title="social.share">
                     <i class="bi bi-share"></i>
                 </button>
                 @if (User.Identity?.IsAuthenticated == true)
@@ -124,13 +141,13 @@
             </div>
 
             <div class="social-card-actions__manage">
-                <a asp-controller="Posts" asp-action="Details" asp-route-id="@Model.Id" class="btn btn-sm btn-outline-primary">Open</a>
+                <a asp-controller="Posts" asp-action="Details" asp-route-id="@Model.Id" class="btn btn-sm btn-outline-primary" data-i18n="common.open">Open</a>
                 @if (canManage)
                 {
-                    <a asp-controller="Posts" asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-sm btn-outline-secondary" title="Edit">
+                    <a asp-controller="Posts" asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-sm btn-outline-secondary" title="Edit" data-i18n-title="common.edit">
                         <i class="bi bi-pencil"></i>
                     </a>
-                    <a asp-controller="Posts" asp-action="Delete" asp-route-id="@Model.Id" class="btn btn-sm btn-outline-danger" title="Delete">
+                    <a asp-controller="Posts" asp-action="Delete" asp-route-id="@Model.Id" class="btn btn-sm btn-outline-danger" title="Delete" data-i18n-title="common.delete">
                         <i class="bi bi-trash"></i>
                     </a>
                 }

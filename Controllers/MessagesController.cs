@@ -6,11 +6,13 @@ using EventsApp.ViewModels.Social;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 
 namespace EventsApp.Controllers
 {
     [Authorize]
+    [EnableRateLimiting("messages")]
     public class MessagesController : Controller
     {
         private readonly ApplicationDbContext _db;
@@ -33,6 +35,7 @@ namespace EventsApp.Controllers
         public async Task<IActionResult> Index()
         {
             var userId = _userManager.GetUserId(User)!;
+            var canUseOrganizerIdentity = User.IsInRole(GlobalConstants.Roles.Organizer);
 
             var conversationRows = await _db.Conversations
                 .AsNoTracking()
@@ -48,6 +51,15 @@ namespace EventsApp.Controllers
                     PageName = c.OrganizerProfile != null ? c.OrganizerProfile.DisplayName : null,
                     PageImageUrl = c.OrganizerProfile != null ? c.OrganizerProfile.AvatarImageUrl : null,
                     PageOwnerId = c.OrganizerProfile != null ? c.OrganizerProfile.OwnerId : null,
+                    PageCanActAsCurrentUser = c.OrganizerProfile != null
+                        && c.OrganizerProfile.OwnerId == userId
+                        && canUseOrganizerIdentity
+                        && c.OrganizerProfile.IsActive
+                        && c.OrganizerProfile.IsApproved
+                        && c.OrganizerProfile.Owner.OrganizerData != null
+                        && c.OrganizerProfile.Owner.OrganizerData.Approved
+                        && (c.OrganizerProfile.BusinessWorkspace == null
+                            || c.OrganizerProfile.BusinessWorkspace.Status == BusinessWorkspaceStatus.Active),
                     Other = c.ParticipantOneId == userId ? c.ParticipantTwo : c.ParticipantOne,
                     LastMessage = c.Messages
                         .OrderByDescending(m => m.CreatedAt)
@@ -62,6 +74,7 @@ namespace EventsApp.Controllers
                 .Select(c =>
                 {
                     var currentUserOwnsPage = c.OrganizerProfileId.HasValue && c.PageOwnerId == userId;
+                    var currentUserCanActAsPage = currentUserOwnsPage && c.PageCanActAsCurrentUser;
                     var displayName = c.OrganizerProfileId.HasValue && !currentUserOwnsPage
                         ? c.PageName ?? GetDisplayName(c.Other)
                         : GetDisplayName(c.Other);
@@ -85,6 +98,7 @@ namespace EventsApp.Controllers
                         PageName = c.PageName,
                         PageImageUrl = c.PageImageUrl,
                         CurrentUserOwnsPage = currentUserOwnsPage,
+                        CurrentUserCanActAsPage = currentUserCanActAsPage,
                     };
                 })
                 .ToList();
@@ -95,13 +109,13 @@ namespace EventsApp.Controllers
                 RequestConversations = conversations
                     .Where(c => c.IsIncomingRequest
                         && c.HasMessages
-                        && (!c.IsPageConversation || !c.CurrentUserOwnsPage || hasOrganizerPages))
+                        && (!c.IsPageConversation || !c.CurrentUserOwnsPage || c.CurrentUserCanActAsPage))
                     .ToList(),
                 PersonalConversations = conversations
                     .Where(c => !c.IsPageConversation && !c.IsIncomingRequest)
                     .ToList(),
                 PageConversations = conversations
-                    .Where(c => c.IsPageConversation && !c.IsIncomingRequest && (!c.CurrentUserOwnsPage || hasOrganizerPages))
+                    .Where(c => c.IsPageConversation && !c.IsIncomingRequest && (!c.CurrentUserOwnsPage || c.CurrentUserCanActAsPage))
                     .ToList(),
                 HasOrganizerPages = hasOrganizerPages,
             };
@@ -134,6 +148,17 @@ namespace EventsApp.Controllers
                 return NotFound();
             }
 
+            var other = conversation.ParticipantOneId == userId
+                ? conversation.ParticipantTwo
+                : conversation.ParticipantOne;
+            var currentUserOwnsPage = conversation.OrganizerProfile?.OwnerId == userId;
+            if (conversation.OrganizerProfileId.HasValue
+                && currentUserOwnsPage
+                && !await _permissions.CanActAsOrganizerPageAsync(User, conversation.OrganizerProfileId.Value))
+            {
+                return Forbid();
+            }
+
             var now = DateTime.UtcNow;
             var unseen = conversation.Messages.Where(m => m.SenderId != userId && m.SeenAt == null).ToList();
             foreach (var message in unseen)
@@ -144,17 +169,6 @@ namespace EventsApp.Controllers
             if (unseen.Count > 0)
             {
                 await _db.SaveChangesAsync();
-            }
-
-            var other = conversation.ParticipantOneId == userId
-                ? conversation.ParticipantTwo
-                : conversation.ParticipantOne;
-            var currentUserOwnsPage = conversation.OrganizerProfile?.OwnerId == userId;
-            if (conversation.OrganizerProfileId.HasValue
-                && currentUserOwnsPage
-                && !await _permissions.CanActAsOrganizerPageAsync(User, conversation.OrganizerProfileId.Value))
-            {
-                return Forbid();
             }
 
             var displayName = conversation.OrganizerProfileId.HasValue && !currentUserOwnsPage
@@ -392,10 +406,16 @@ namespace EventsApp.Controllers
         {
             var evt = await _db.Events
                 .AsNoTracking()
-                .FirstOrDefaultAsync(e => e.Id == id && e.IsApproved);
+                .FirstOrDefaultAsync(e => e.Id == id);
             if (evt == null)
             {
                 return NotFound();
+            }
+
+            if (!evt.IsApproved)
+            {
+                TempData["StatusMessage"] = "Събитието трябва да е одобрено, преди да се изпраща в чат.";
+                return RedirectToAction("Details", "Events", new { id });
             }
 
             var userId = _userManager.GetUserId(User)!;
@@ -745,7 +765,7 @@ namespace EventsApp.Controllers
 
         private async Task<IReadOnlyList<ConversationListItemViewModel>> BuildShareTargetsAsync(string userId)
         {
-            var hasOrganizerPages = await CurrentUserHasActiveOrganizerPageAsync(userId);
+            var canUseOrganizerIdentity = User.IsInRole(GlobalConstants.Roles.Organizer);
             var rows = await _db.Conversations
                 .AsNoTracking()
                 .Where(c => c.ParticipantOneId == userId || c.ParticipantTwoId == userId)
@@ -760,6 +780,15 @@ namespace EventsApp.Controllers
                     PageName = c.OrganizerProfile != null ? c.OrganizerProfile.DisplayName : null,
                     PageImageUrl = c.OrganizerProfile != null ? c.OrganizerProfile.AvatarImageUrl : null,
                     PageOwnerId = c.OrganizerProfile != null ? c.OrganizerProfile.OwnerId : null,
+                    PageCanActAsCurrentUser = c.OrganizerProfile != null
+                        && c.OrganizerProfile.OwnerId == userId
+                        && canUseOrganizerIdentity
+                        && c.OrganizerProfile.IsActive
+                        && c.OrganizerProfile.IsApproved
+                        && c.OrganizerProfile.Owner.OrganizerData != null
+                        && c.OrganizerProfile.Owner.OrganizerData.Approved
+                        && (c.OrganizerProfile.BusinessWorkspace == null
+                            || c.OrganizerProfile.BusinessWorkspace.Status == BusinessWorkspaceStatus.Active),
                     Other = c.ParticipantOneId == userId ? c.ParticipantTwo : c.ParticipantOne,
                     LastMessage = c.Messages
                         .OrderByDescending(m => m.CreatedAt)
@@ -773,10 +802,11 @@ namespace EventsApp.Controllers
             return rows
                 .Where(c => c.Status == ConversationStatus.Accepted
                     || (c.Status == ConversationStatus.Pending && c.RequestedByUserId == userId && !c.HasMessages))
-                .Where(c => !c.OrganizerProfileId.HasValue || c.PageOwnerId != userId || hasOrganizerPages)
+                .Where(c => !c.OrganizerProfileId.HasValue || c.PageOwnerId != userId || c.PageCanActAsCurrentUser)
                 .Select(c =>
                 {
                     var currentUserOwnsPage = c.OrganizerProfileId.HasValue && c.PageOwnerId == userId;
+                    var currentUserCanActAsPage = currentUserOwnsPage && c.PageCanActAsCurrentUser;
                     var displayName = c.OrganizerProfileId.HasValue && !currentUserOwnsPage
                         ? c.PageName ?? GetDisplayName(c.Other)
                         : GetDisplayName(c.Other);
@@ -800,6 +830,7 @@ namespace EventsApp.Controllers
                         PageName = c.PageName,
                         PageImageUrl = c.PageImageUrl,
                         CurrentUserOwnsPage = currentUserOwnsPage,
+                        CurrentUserCanActAsPage = currentUserCanActAsPage,
                     };
                 })
                 .ToList();
@@ -903,11 +934,6 @@ namespace EventsApp.Controllers
 
         private static string GetDisplayName(ApplicationUser user)
         {
-            if (user.OrganizerData?.Approved == true && !string.IsNullOrWhiteSpace(user.OrganizerData.OrganizationName))
-            {
-                return user.OrganizerData.OrganizationName;
-            }
-
             var name = string.Join(" ", new[] { user.FirstName, user.LastName }.Where(v => !string.IsNullOrWhiteSpace(v)));
             return string.IsNullOrWhiteSpace(name) ? user.UserName ?? string.Empty : name;
         }

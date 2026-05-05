@@ -15,6 +15,17 @@ namespace EventsApp.Services
         Task<MediaUploadResult?> SaveBytesAsync(byte[] data, string fileName, string subfolder, CancellationToken cancellationToken = default);
     }
 
+    public interface IRemoteMediaService
+    {
+        Task<string?> CreateReadUrlAsync(string mediaKey, CancellationToken cancellationToken = default);
+    }
+
+    public sealed class NullRemoteMediaService : IRemoteMediaService
+    {
+        public Task<string?> CreateReadUrlAsync(string mediaKey, CancellationToken cancellationToken = default)
+            => Task.FromResult<string?>(null);
+    }
+
     public class MediaUploadService : IMediaUploadService
     {
         private static readonly HashSet<string> ImageExtensions = new(StringComparer.OrdinalIgnoreCase)
@@ -38,6 +49,7 @@ namespace EventsApp.Services
 
         private readonly IWebHostEnvironment _env;
         private readonly ILogger<MediaUploadService> _logger;
+        private bool _warnedAboutLocalProductionStorage;
 
         public MediaUploadService(IWebHostEnvironment env, ILogger<MediaUploadService> logger)
         {
@@ -84,6 +96,7 @@ namespace EventsApp.Services
             {
                 webRoot = Path.Combine(_env.ContentRootPath, "wwwroot");
             }
+            WarnIfEphemeralStorage();
 
             var dir = ResolveUploadDirectory(webRoot, subfolder);
             Directory.CreateDirectory(dir);
@@ -130,6 +143,7 @@ namespace EventsApp.Services
             {
                 webRoot = Path.Combine(_env.ContentRootPath, "wwwroot");
             }
+            WarnIfEphemeralStorage();
 
             var dir = ResolveUploadDirectory(webRoot, subfolder);
             Directory.CreateDirectory(dir);
@@ -165,6 +179,17 @@ namespace EventsApp.Services
             }
 
             return uploadDir;
+        }
+
+        private void WarnIfEphemeralStorage()
+        {
+            if (_env.IsDevelopment() || _warnedAboutLocalProductionStorage)
+            {
+                return;
+            }
+
+            _warnedAboutLocalProductionStorage = true;
+            _logger.LogWarning("Local upload storage is active outside Development. Use object storage before production deploys with ephemeral disks.");
         }
     }
 }

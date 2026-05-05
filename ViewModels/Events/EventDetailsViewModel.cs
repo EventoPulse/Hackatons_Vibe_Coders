@@ -15,6 +15,7 @@ namespace EventsApp.ViewModels.Events
         public EventGenre Genre { get; set; }
         public string? ImageUrl { get; set; }
         public bool IsApproved { get; set; }
+        public bool HasPendingChanges { get; set; }
         public string Address { get; set; } = null!;
         public string City { get; set; } = null!;
         public double? Latitude { get; set; }

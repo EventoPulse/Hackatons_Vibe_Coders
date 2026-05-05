@@ -2,11 +2,15 @@
 @{
     ViewData["Title"] = "Валидиране на билет";
     var result = ViewBag.Result as TicketValidationResultViewModel;
-    var dashboardController = User.IsInRole(GlobalConstants.Roles.Admin) ? "Admin" : "Organizer";
+    var dashboardController = User.IsInRole(GlobalConstants.Roles.Admin) ? "Admin" : (User.IsInRole(GlobalConstants.Roles.Organizer) ? "Organizer" : "Account");
     var dashboardAction = "Index";
     var dashboardLabel = "Админ";
 
-    if (dashboardController == "Organizer")
+    if (dashboardController == "Account")
+    {
+        dashboardLabel = "Profile";
+    }
+    else if (dashboardController == "Organizer")
     {
         dashboardAction = "Dashboard";
         dashboardLabel = "Организатор";

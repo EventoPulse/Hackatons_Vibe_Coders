@@ -6,6 +6,7 @@ using EventsApp.ViewModels.Layouts;
 using EventsApp.Services;
 using EventsApp.Services.AI;
 using EventsApp.Services.Geocoding;
+using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -107,6 +108,7 @@ namespace EventsApp.Controllers
                 .Include(e => e.Organizer)
                 .Include(e => e.OrganizerProfile)
                 .Include(e => e.Images)
+                .Include(e => e.ChangeRequests)
                 .Include(e => e.EventSeries)
                     .ThenInclude(s => s!.Occurrences)
                         .ThenInclude(o => o.UserTickets)
@@ -164,6 +166,7 @@ namespace EventsApp.Controllers
                 Genre = ev.Genre,
                 ImageUrl = ev.ImageUrl,
                 IsApproved = ev.IsApproved,
+                HasPendingChanges = ev.ChangeRequests.Any(r => r.Status == EventChangeRequestStatus.Pending),
                 Address = ev.Address,
                 City = ev.City,
                 Latitude = ev.Latitude,
@@ -618,6 +621,68 @@ namespace EventsApp.Controllers
                 {
                     eventEnd = eventEnd.AddDays(1);
                 }
+            }
+
+            if (!isAdmin && ev.IsApproved)
+            {
+                var pendingImageUrl = ev.ImageUrl;
+                if (input.Photo != null && input.Photo.Length > 0)
+                {
+                    var uploadResult = await _mediaUploadService.SaveAsync(input.Photo, "events");
+                    if (uploadResult != null)
+                    {
+                        pendingImageUrl = uploadResult.Url;
+                    }
+                }
+
+                var pendingLatitude = input.Latitude;
+                var pendingLongitude = input.Longitude;
+                if (!pendingLatitude.HasValue || !pendingLongitude.HasValue)
+                {
+                    var geo = await _geocoder.GeocodeAsync(input.Address, input.City);
+                    if (geo != null)
+                    {
+                        pendingLatitude = geo.Latitude;
+                        pendingLongitude = geo.Longitude;
+                    }
+                    else if (CityCoordinates.TryGetCoordinates(input.City, out var cityLat, out var cityLng))
+                    {
+                        pendingLatitude = cityLat;
+                        pendingLongitude = cityLng;
+                    }
+                }
+
+                var payload = BuildPendingChangePayload(
+                    input,
+                    eventStart,
+                    eventEnd,
+                    profile!.Id,
+                    profile.BusinessWorkspaceId,
+                    pendingImageUrl,
+                    pendingLatitude,
+                    pendingLongitude);
+
+                var request = await _db.EventChangeRequests
+                    .FirstOrDefaultAsync(r => r.EventId == ev.Id && r.Status == EventChangeRequestStatus.Pending);
+                if (request == null)
+                {
+                    request = new EventChangeRequest
+                    {
+                        EventId = ev.Id,
+                        OrganizerId = userId,
+                    };
+                    _db.EventChangeRequests.Add(request);
+                }
+
+                request.ChangeJson = JsonSerializer.Serialize(payload);
+                request.SubmittedAt = DateTime.UtcNow;
+                request.ReviewedAt = null;
+                request.ReviewedByAdminId = null;
+                request.Status = EventChangeRequestStatus.Pending;
+                await _db.SaveChangesAsync();
+
+                TempData["StatusMessage"] = "Промените са изпратени за админ одобрение. Публикуваната версия остава активна до одобрение.";
+                return RedirectToAction(nameof(Details), new { id = ev.Id });
             }
 
             var addressChanged = !string.Equals(ev.Address, input.Address, StringComparison.Ordinal)
@@ -1197,6 +1262,44 @@ namespace EventsApp.Controllers
             {
                 ModelState.AddModelError(nameof(input.VenueLayoutId), "Този layout не е наличен.");
             }
+        }
+
+        private static EventPendingChangePayload BuildPendingChangePayload(
+            EventCreateEditViewModel input,
+            DateTime eventStart,
+            DateTime eventEnd,
+            int? organizerProfileId,
+            int? businessWorkspaceId,
+            string? imageUrl,
+            double? latitude,
+            double? longitude)
+        {
+            return new EventPendingChangePayload
+            {
+                Title = input.Title,
+                Description = input.Description,
+                City = input.City,
+                Address = input.Address,
+                StartTime = eventStart,
+                EndTime = eventEnd,
+                Genre = input.Genre,
+                OrganizerProfileId = organizerProfileId,
+                BusinessWorkspaceId = businessWorkspaceId,
+                ImageUrl = imageUrl,
+                Latitude = latitude,
+                Longitude = longitude,
+                RecurrenceType = input.RecurrenceType,
+                RecurrenceInterval = Math.Max(1, input.RecurrenceInterval),
+                SelectedDaysOfWeek = input.SelectedDaysOfWeek.Distinct().OrderBy(d => d).ToList(),
+                RecurrenceStartDate = input.RecurrenceStartDate,
+                RecurrenceEndDate = input.RecurrenceEndDate,
+                RecurrenceStartTime = input.RecurrenceStartTime,
+                RecurrenceEndTime = input.RecurrenceEndTime,
+                TimeZone = string.IsNullOrWhiteSpace(input.TimeZone) ? "Europe/Sofia" : input.TimeZone.Trim(),
+                RecurringEditScope = input.RecurringEditScope,
+                TicketingMode = input.TicketingMode,
+                VenueLayoutId = input.TicketingMode == EventTicketingMode.GeneralAdmission ? null : input.VenueLayoutId,
+            };
         }
 
         private EventSeries ToEventSeries(Event ev, EventCreateEditViewModel input)

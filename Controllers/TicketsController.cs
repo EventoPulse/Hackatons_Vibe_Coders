@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Data;
 
 namespace EventsApp.Controllers
 {
@@ -326,48 +327,6 @@ namespace EventsApp.Controllers
                 return RedirectToAction("Details", "Events", new { id = ticket.EventId, occurrenceId });
             }
 
-            if (occurrence != null)
-            {
-                var paid = GlobalConstants.TransactionStatuses.Paid;
-                var soldForOccurrence = await _db.UserTickets
-                    .CountAsync(ut => ut.TicketId == ticket.Id
-                                      && ut.EventOccurrenceId == occurrence.Id
-                                      && ut.Transaction.Status == paid);
-                var occurrenceCapacity = occurrence.CapacityOverride ?? ticket.QuantityTotal;
-                if (soldForOccurrence >= occurrenceCapacity)
-                {
-                    occurrence.Status = EventOccurrenceStatus.SoldOut;
-                    await _db.SaveChangesAsync();
-                    TempData["StatusMessage"] = "Съжаляваме, тази дата е разпродадена.";
-                    return RedirectToAction("Details", "Events", new { id = ticket.EventId, occurrenceId });
-                }
-            }
-
-            if (occurrence != null)
-            {
-                var paid = GlobalConstants.TransactionStatuses.Paid;
-                var soldForOccurrence = await _db.UserTickets
-                    .CountAsync(ut => ut.TicketId == ticket.Id
-                                      && ut.EventOccurrenceId == occurrence.Id
-                                      && ut.Transaction.Status == paid);
-                var occurrenceCapacity = occurrence.CapacityOverride ?? ticket.QuantityTotal;
-                var occurrenceRemaining = occurrenceCapacity - soldForOccurrence;
-                if (occurrenceRemaining < quantity)
-                {
-                    TempData["StatusMessage"] = occurrenceRemaining <= 0
-                        ? "Съжаляваме, тази дата е разпродадена."
-                        : $"Остават само {occurrenceRemaining} билета за тази дата.";
-                    return RedirectToAction("Details", "Events", new { id = ticket.EventId, occurrenceId });
-                }
-            }
-            else if (ticket.QuantityRemaining < quantity)
-            {
-                TempData["StatusMessage"] = ticket.QuantityRemaining <= 0
-                    ? "Съжаляваме, този билет е разпродаден."
-                    : $"Остават само {ticket.QuantityRemaining} билета.";
-                return RedirectToAction("Details", "Events", new { id = ticket.EventId });
-            }
-
             Seat? selectedSeat = null;
             if (requiresSeat)
             {
@@ -403,18 +362,6 @@ namespace EventsApp.Controllers
                     return RedirectToAction("Details", "Events", new { id = ticket.EventId, occurrenceId });
                 }
 
-                var reservation = await _seatReservations.ReserveSeatAsync(
-                    ticket.EventId,
-                    occurrence?.Id,
-                    selectedSeat.Id,
-                    userId,
-                    TimeSpan.FromMinutes(10));
-
-                if (reservation == null)
-                {
-                    TempData["StatusMessage"] = "Това място току-що беше заето. Избери друго.";
-                    return RedirectToAction("Details", "Events", new { id = ticket.EventId, occurrenceId });
-                }
             }
 
             var cleanedAttendeeNames = NormalizeAttendeeNames(
@@ -429,58 +376,122 @@ namespace EventsApp.Controllers
                 return RedirectToAction("Details", "Events", new { id = ticket.EventId, occurrenceId });
             }
 
-            var unitPrice = ticket.Price + (selectedSeat?.Section.PriceModifier ?? 0m);
-            var purchaseGroupId = Guid.NewGuid();
-            var transaction = new Transaction
+            List<UserTicket> userTickets;
+            await using var purchaseDbTransaction = await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable);
+            try
             {
-                UserId = userId,
-                BusinessWorkspaceId = ticket.Event.BusinessWorkspaceId ?? ticket.Event.OrganizerProfile?.BusinessWorkspaceId,
-                TotalAmount = unitPrice * quantity,
-                Status = GlobalConstants.TransactionStatuses.Paid,
-            };
-
-            var userTickets = Enumerable.Range(0, quantity)
-                .Select(index => new UserTicket
+                if (occurrence != null)
                 {
-                    TicketId = ticket.Id,
-                    EventOccurrenceId = occurrence?.Id,
-                    SeatId = selectedSeat?.Id,
-                    TransactionId = transaction.Id,
-                    PurchaseGroupId = purchaseGroupId,
-                    IsPrimaryInPurchase = index == 0,
-                    AttendeeName = cleanedAttendeeNames[index],
-                    QrCode = Guid.NewGuid().ToString("N"),
-                    PricePaid = unitPrice,
-                    IsUsed = false,
-                })
-                .ToList();
+                    var paid = GlobalConstants.TransactionStatuses.Paid;
+                    var soldForOccurrence = await _db.UserTickets
+                        .CountAsync(ut => ut.TicketId == ticket.Id
+                                          && ut.EventOccurrenceId == occurrence.Id
+                                          && ut.Transaction.Status == paid);
+                    var occurrenceCapacity = occurrence.CapacityOverride ?? ticket.QuantityTotal;
+                    var occurrenceRemaining = occurrenceCapacity - soldForOccurrence;
+                    if (occurrenceRemaining < quantity)
+                    {
+                        if (occurrenceRemaining <= 0)
+                        {
+                            occurrence.Status = EventOccurrenceStatus.SoldOut;
+                            await _db.SaveChangesAsync();
+                        }
 
-            if (occurrence == null)
-            {
-                ticket.QuantityRemaining -= quantity;
-            }
-
-            _db.Transactions.Add(transaction);
-            _db.UserTickets.AddRange(userTickets);
-            await _db.SaveChangesAsync();
-
-            if (selectedSeat != null)
-            {
-                var sold = await _seatReservations.MarkSeatSoldAsync(
-                    ticket.EventId,
-                    occurrence?.Id,
-                    selectedSeat.Id,
-                    userTickets[0].Id,
-                    userId);
-
-                if (!sold)
-                {
-                    TempData["StatusMessage"] = "Покупката на мястото не можа да бъде завършена.";
-                    return RedirectToAction("Details", "Events", new { id = ticket.EventId, occurrenceId });
+                        await purchaseDbTransaction.RollbackAsync();
+                        TempData["StatusMessage"] = occurrenceRemaining <= 0
+                            ? "Съжаляваме, тази дата е разпродадена."
+                            : $"Остават само {occurrenceRemaining} билета за тази дата.";
+                        return RedirectToAction("Details", "Events", new { id = ticket.EventId, occurrenceId });
+                    }
                 }
+                else
+                {
+                    await _db.Entry(ticket).ReloadAsync();
+                    if (ticket.QuantityRemaining < quantity)
+                    {
+                        await purchaseDbTransaction.RollbackAsync();
+                        TempData["StatusMessage"] = ticket.QuantityRemaining <= 0
+                            ? "Съжаляваме, този билет е разпродаден."
+                            : $"Остават само {ticket.QuantityRemaining} билета.";
+                        return RedirectToAction("Details", "Events", new { id = ticket.EventId });
+                    }
+
+                    ticket.QuantityRemaining -= quantity;
+                }
+
+                if (selectedSeat != null)
+                {
+                    var reservation = await _seatReservations.ReserveSeatAsync(
+                        ticket.EventId,
+                        occurrence?.Id,
+                        selectedSeat.Id,
+                        userId,
+                        TimeSpan.FromMinutes(10));
+
+                    if (reservation == null)
+                    {
+                        await purchaseDbTransaction.RollbackAsync();
+                        TempData["StatusMessage"] = "Това място току-що беше заето. Избери друго.";
+                        return RedirectToAction("Details", "Events", new { id = ticket.EventId, occurrenceId });
+                    }
+                }
+
+                var unitPrice = ticket.Price + (selectedSeat?.Section.PriceModifier ?? 0m);
+                var purchaseGroupId = Guid.NewGuid();
+                var purchaseTransaction = new Transaction
+                {
+                    UserId = userId,
+                    BusinessWorkspaceId = ticket.Event.BusinessWorkspaceId ?? ticket.Event.OrganizerProfile?.BusinessWorkspaceId,
+                    TotalAmount = unitPrice * quantity,
+                    Status = GlobalConstants.TransactionStatuses.Paid,
+                };
+
+                userTickets = Enumerable.Range(0, quantity)
+                    .Select(index => new UserTicket
+                    {
+                        TicketId = ticket.Id,
+                        EventOccurrenceId = occurrence?.Id,
+                        SeatId = selectedSeat?.Id,
+                        TransactionId = purchaseTransaction.Id,
+                        PurchaseGroupId = purchaseGroupId,
+                        IsPrimaryInPurchase = index == 0,
+                        AttendeeName = cleanedAttendeeNames[index],
+                        QrCode = Guid.NewGuid().ToString("N"),
+                        PricePaid = unitPrice,
+                        IsUsed = false,
+                    })
+                    .ToList();
+
+                _db.Transactions.Add(purchaseTransaction);
+                _db.UserTickets.AddRange(userTickets);
+                await _db.SaveChangesAsync();
+
+                if (selectedSeat != null)
+                {
+                    var sold = await _seatReservations.MarkSeatSoldAsync(
+                        ticket.EventId,
+                        occurrence?.Id,
+                        selectedSeat.Id,
+                        userTickets[0].Id,
+                        userId);
+
+                    if (!sold)
+                    {
+                        await purchaseDbTransaction.RollbackAsync();
+                        TempData["StatusMessage"] = "Покупката на мястото не можа да бъде завършена.";
+                        return RedirectToAction("Details", "Events", new { id = ticket.EventId, occurrenceId });
+                    }
+                }
+
+                await purchaseDbTransaction.CommitAsync();
+            }
+            catch (DbUpdateException)
+            {
+                await purchaseDbTransaction.RollbackAsync();
+                TempData["StatusMessage"] = "Този билет или място току-що беше заето. Опитай отново.";
+                return RedirectToAction("Details", "Events", new { id = ticket.EventId, occurrenceId });
             }
 
-            TempData["StatusMessage"] = "Демо покупката е завършена - билетът е готов.";
             TempData["StatusMessage"] = quantity == 1
                 ? "Покупката е завършена - билетът е готов."
                 : $"Покупката е завършена - {quantity} билета са готови.";
@@ -570,7 +581,7 @@ namespace EventsApp.Controllers
         // ---------- VALIDATION ----------
 
         [HttpGet]
-        [Authorize(Roles = GlobalConstants.Roles.Admin + "," + GlobalConstants.Roles.Organizer)]
+        [Authorize(Roles = GlobalConstants.Roles.Admin + "," + GlobalConstants.Roles.Organizer + "," + GlobalConstants.Roles.Validator)]
         public IActionResult Validate()
         {
             return View(new TicketValidationViewModel());
@@ -578,7 +589,7 @@ namespace EventsApp.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Roles = GlobalConstants.Roles.Admin + "," + GlobalConstants.Roles.Organizer)]
+        [Authorize(Roles = GlobalConstants.Roles.Admin + "," + GlobalConstants.Roles.Organizer + "," + GlobalConstants.Roles.Validator)]
         public async Task<IActionResult> Validate(TicketValidationViewModel input)
         {
             var result = new TicketValidationResultViewModel();
@@ -612,10 +623,10 @@ namespace EventsApp.Controllers
                 return View(input);
             }
 
-            if (!isAdmin && ut.Ticket.Event.OrganizerId != userId)
+            if (!isAdmin && !await CanValidateEventAsync(userId, ut.Ticket.Event))
             {
                 result.NotAllowed = true;
-                result.Message = "You are not the organizer of this event.";
+                result.Message = "You do not have validator access for this event.";
                 result.Ticket = ToDetails(ut);
                 ViewBag.Result = result;
                 return View(input);
@@ -633,7 +644,7 @@ namespace EventsApp.Controllers
             if (ut.EventOccurrence?.Status == EventOccurrenceStatus.Cancelled)
             {
                 result.NotAllowed = true;
-                result.Message = "This ticket belongs to a cancelled occurrence.";
+                result.Message = "Билетът е за отменена дата.";
                 result.Ticket = ToDetails(ut);
                 ViewBag.Result = result;
                 return View(input);
@@ -652,6 +663,27 @@ namespace EventsApp.Controllers
         }
 
         // ---------- HELPERS ----------
+
+        private async Task<bool> CanValidateEventAsync(string userId, Event ev)
+        {
+            if (ev.OrganizerId == userId)
+            {
+                return true;
+            }
+
+            if (!ev.OrganizerProfileId.HasValue)
+            {
+                return false;
+            }
+
+            return await _db.OrganizerValidatorAssignments
+                .AsNoTracking()
+                .AnyAsync(a =>
+                    a.OrganizerId == ev.OrganizerId &&
+                    a.ValidatorUserId == userId &&
+                    a.IsActive &&
+                    a.OrganizerProfileId == ev.OrganizerProfileId.Value);
+        }
 
         private static UserTicketDetailsViewModel ToDetails(UserTicket ut)
         {

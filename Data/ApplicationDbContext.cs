@@ -18,6 +18,8 @@ namespace EventsApp.Data
 
         public DbSet<Event> Events { get; set; } = null!;
 
+        public DbSet<EventChangeRequest> EventChangeRequests { get; set; } = null!;
+
         public DbSet<Post> Posts { get; set; } = null!;
 
         public DbSet<PostImage> PostImages { get; set; } = null!;
@@ -71,6 +73,8 @@ namespace EventsApp.Data
         public DbSet<UserProfileSharedEvent> UserProfileSharedEvents { get; set; } = null!;
 
         public DbSet<BusinessWorkspace> BusinessWorkspaces { get; set; } = null!;
+
+        public DbSet<OrganizerValidatorAssignment> OrganizerValidatorAssignments { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -158,6 +162,50 @@ namespace EventsApp.Data
                       .HasForeignKey(e => e.VenueLayoutId)
                       .OnDelete(DeleteBehavior.SetNull);
 
+            });
+
+            builder.Entity<OrganizerValidatorAssignment>(entity =>
+            {
+                entity.HasOne(v => v.Organizer)
+                      .WithMany()
+                      .HasForeignKey(v => v.OrganizerId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(v => v.ValidatorUser)
+                      .WithMany()
+                      .HasForeignKey(v => v.ValidatorUserId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(v => v.OrganizerProfile)
+                      .WithMany()
+                      .HasForeignKey(v => v.OrganizerProfileId)
+                      .OnDelete(DeleteBehavior.NoAction);
+
+                entity.HasIndex(v => new { v.OrganizerId, v.ValidatorUserId }).IsUnique();
+                entity.HasIndex(v => new { v.OrganizerId, v.IsActive });
+                entity.HasIndex(v => new { v.OrganizerProfileId, v.IsActive });
+                entity.HasIndex(v => new { v.ValidatorUserId, v.IsActive });
+            });
+
+            builder.Entity<EventChangeRequest>(entity =>
+            {
+                entity.HasOne(r => r.Event)
+                      .WithMany(e => e.ChangeRequests)
+                      .HasForeignKey(r => r.EventId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(r => r.Organizer)
+                      .WithMany()
+                      .HasForeignKey(r => r.OrganizerId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(r => r.ReviewedByAdmin)
+                      .WithMany()
+                      .HasForeignKey(r => r.ReviewedByAdminId)
+                      .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasIndex(r => new { r.EventId, r.Status });
+                entity.HasIndex(r => new { r.OrganizerId, r.Status });
             });
 
             builder.Entity<EventSeries>(entity =>

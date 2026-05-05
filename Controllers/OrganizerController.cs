@@ -288,6 +288,36 @@ namespace EventsApp.Controllers
             return View(vm);
         }
 
+        public async Task<IActionResult> Events()
+        {
+            var userId = _userManager.GetUserId(User)!;
+            if (!await _db.OrganizerData.AnyAsync(o => o.OrganizerId == userId))
+            {
+                return RedirectToAction(nameof(Profile));
+            }
+
+            var paid = GlobalConstants.TransactionStatuses.Paid;
+            var rows = await _db.Events
+                .AsNoTracking()
+                .Where(e => e.OrganizerId == userId)
+                .OrderByDescending(e => e.CreatedAt)
+                .Select(e => new OrganizerEventRowViewModel
+                {
+                    Id = e.Id,
+                    Title = e.Title,
+                    City = e.City,
+                    StartTime = e.StartTime,
+                    IsApproved = e.IsApproved,
+                    HasPendingChanges = e.ChangeRequests.Any(r => r.Status == EventChangeRequestStatus.Pending),
+                    OrganizerPageName = e.OrganizerProfile != null ? e.OrganizerProfile.DisplayName : "Публична страница",
+                    TicketsCount = e.Tickets.Count,
+                    SoldTicketsCount = e.Tickets.SelectMany(t => t.UserTickets).Count(ut => ut.Transaction.Status == paid),
+                })
+                .ToListAsync();
+
+            return View(new OrganizerEventsViewModel { Events = rows });
+        }
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> SwitchContext(int workspaceId, int? pageId)
@@ -295,6 +325,149 @@ namespace EventsApp.Controllers
             await _businessContext.SetActiveContextAsync(HttpContext, workspaceId, pageId);
             TempData["StatusMessage"] = "Активният workspace/page е обновен.";
             return RedirectToAction(nameof(Dashboard));
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> Validators()
+        {
+            var userId = _userManager.GetUserId(User)!;
+            if (!await _db.OrganizerData.AnyAsync(o => o.OrganizerId == userId))
+            {
+                return RedirectToAction(nameof(Profile));
+            }
+
+            return View(await BuildValidatorsModelAsync(userId));
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> AddValidator(OrganizerValidatorCreateViewModel input)
+        {
+            var organizerId = _userManager.GetUserId(User)!;
+            if (!await _db.OrganizerData.AnyAsync(o => o.OrganizerId == organizerId))
+            {
+                return RedirectToAction(nameof(Profile));
+            }
+
+            var organizerProfileId = await GetOwnedProfileIdAsync(organizerId, input.OrganizerProfileId);
+            if (!organizerProfileId.HasValue)
+            {
+                TempData["StatusMessage"] = "Избери публична страница за този валидатор.";
+                return RedirectToAction(nameof(Validators));
+            }
+
+            var lookup = input.UserLookup?.Trim();
+            if (string.IsNullOrWhiteSpace(lookup))
+            {
+                TempData["StatusMessage"] = "Въведи имейл, потребителско име или телефон.";
+                return RedirectToAction(nameof(Validators));
+            }
+
+            var validator = await FindValidatorUserAsync(lookup);
+            if (validator == null)
+            {
+                TempData["StatusMessage"] = "Не е намерен такъв потребител. Първо създай служебен акаунт на телефона.";
+                return RedirectToAction(nameof(Validators));
+            }
+
+            if (validator.Id == organizerId)
+            {
+                TempData["StatusMessage"] = "Използвай отделен служебен акаунт за валидиране.";
+                return RedirectToAction(nameof(Validators));
+            }
+
+            var assignment = await _db.OrganizerValidatorAssignments
+                .FirstOrDefaultAsync(a => a.OrganizerId == organizerId && a.ValidatorUserId == validator.Id);
+
+            var isNewOrInactive = assignment == null || !assignment.IsActive;
+            if (isNewOrInactive && await CountActiveValidatorsAsync(organizerId) >= 3)
+            {
+                TempData["StatusMessage"] = "Можеш да имаш до 3 активни валидатора.";
+                return RedirectToAction(nameof(Validators));
+            }
+
+            if (assignment == null)
+            {
+                assignment = new OrganizerValidatorAssignment
+                {
+                    OrganizerId = organizerId,
+                    ValidatorUserId = validator.Id,
+                };
+                _db.OrganizerValidatorAssignments.Add(assignment);
+            }
+
+            assignment.IsActive = true;
+            assignment.OrganizerProfileId = organizerProfileId.Value;
+            assignment.UpdatedAt = DateTime.UtcNow;
+
+            if (!await _userManager.IsInRoleAsync(validator, GlobalConstants.Roles.Validator))
+            {
+                await _userManager.AddToRoleAsync(validator, GlobalConstants.Roles.Validator);
+            }
+
+            await _db.SaveChangesAsync();
+            TempData["StatusMessage"] = "Достъпът за валидатора е запазен.";
+            return RedirectToAction(nameof(Validators));
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> UpdateValidatorPage(int id, int organizerProfileId)
+        {
+            var organizerId = _userManager.GetUserId(User)!;
+            var assignment = await _db.OrganizerValidatorAssignments
+                .FirstOrDefaultAsync(a => a.Id == id && a.OrganizerId == organizerId);
+
+            if (assignment == null)
+            {
+                return NotFound();
+            }
+
+            var ownedProfileId = await GetOwnedProfileIdAsync(organizerId, organizerProfileId);
+            if (!ownedProfileId.HasValue)
+            {
+                TempData["StatusMessage"] = "Избери публична страница. Ако акаунтът вече не трябва да валидира, премахни достъпа.";
+                return RedirectToAction(nameof(Validators));
+            }
+
+            assignment.OrganizerProfileId = ownedProfileId.Value;
+            assignment.IsActive = true;
+            assignment.UpdatedAt = DateTime.UtcNow;
+            await _db.SaveChangesAsync();
+
+            TempData["StatusMessage"] = "Достъпът към публичната страница е обновен.";
+            return RedirectToAction(nameof(Validators));
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> RemoveValidator(int id)
+        {
+            var organizerId = _userManager.GetUserId(User)!;
+            var assignment = await _db.OrganizerValidatorAssignments
+                .FirstOrDefaultAsync(a => a.Id == id && a.OrganizerId == organizerId);
+
+            if (assignment == null)
+            {
+                return NotFound();
+            }
+
+            assignment.IsActive = false;
+            assignment.UpdatedAt = DateTime.UtcNow;
+            await _db.SaveChangesAsync();
+
+            var validator = await _userManager.FindByIdAsync(assignment.ValidatorUserId);
+            if (validator != null &&
+                await _userManager.IsInRoleAsync(validator, GlobalConstants.Roles.Validator) &&
+                !await _db.OrganizerValidatorAssignments.AnyAsync(a =>
+                    a.ValidatorUserId == validator.Id &&
+                    a.IsActive))
+            {
+                await _userManager.RemoveFromRoleAsync(validator, GlobalConstants.Roles.Validator);
+            }
+
+            TempData["StatusMessage"] = "Достъпът за валидатора е премахнат.";
+            return RedirectToAction(nameof(Validators));
         }
 
         public async Task<IActionResult> Workspaces()
@@ -684,6 +857,84 @@ namespace EventsApp.Controllers
             }
 
             return RedirectToAction(nameof(Profiles));
+        }
+
+        private async Task<OrganizerValidatorsViewModel> BuildValidatorsModelAsync(string organizerId)
+        {
+            var pages = await _db.OrganizerProfiles
+                .AsNoTracking()
+                .Where(p => p.OwnerId == organizerId && p.IsActive)
+                .OrderByDescending(p => p.IsDefault)
+                .ThenBy(p => p.DisplayName)
+                .Select(p => new OrganizerValidatorPageOptionViewModel
+                {
+                    Id = p.Id,
+                    DisplayName = p.DisplayName,
+                    IsDefault = p.IsDefault,
+                })
+                .ToListAsync();
+
+            var assignments = await _db.OrganizerValidatorAssignments
+                .AsNoTracking()
+                .Where(a => a.OrganizerId == organizerId)
+                .Include(a => a.ValidatorUser)
+                .Include(a => a.OrganizerProfile)
+                .OrderByDescending(a => a.IsActive)
+                .ThenBy(a => a.ValidatorUser.UserName)
+                .ToListAsync();
+
+            return new OrganizerValidatorsViewModel
+            {
+                ActiveValidatorsCount = assignments.Count(a => a.IsActive),
+                Pages = pages,
+                Validators = assignments.Select(a =>
+                {
+                    var fullName = string.Join(" ", new[] { a.ValidatorUser.FirstName, a.ValidatorUser.LastName }
+                        .Where(s => !string.IsNullOrWhiteSpace(s)));
+
+                    return new OrganizerValidatorRowViewModel
+                    {
+                        Id = a.Id,
+                        ValidatorUserId = a.ValidatorUserId,
+                        DisplayName = !string.IsNullOrWhiteSpace(fullName)
+                            ? fullName
+                            : a.ValidatorUser.UserName ?? a.ValidatorUser.Email ?? "Validator",
+                        Email = a.ValidatorUser.Email,
+                        PhoneNumber = a.ValidatorUser.PhoneNumber,
+                        IsActive = a.IsActive,
+                        CreatedAt = a.CreatedAt,
+                        OrganizerProfileId = a.OrganizerProfileId,
+                        OrganizerProfileName = a.OrganizerProfile?.DisplayName,
+                    };
+                }).ToList(),
+            };
+        }
+
+        private async Task<ApplicationUser?> FindValidatorUserAsync(string lookup)
+        {
+            var user = await _userManager.FindByEmailAsync(lookup);
+            if (user != null) return user;
+
+            user = await _userManager.FindByNameAsync(lookup);
+            if (user != null) return user;
+
+            return await _db.Users.FirstOrDefaultAsync(u => u.PhoneNumber == lookup);
+        }
+
+        private async Task<int?> GetOwnedProfileIdAsync(string organizerId, int organizerProfileId)
+        {
+            if (organizerProfileId <= 0) return null;
+
+            return await _db.OrganizerProfiles
+                .Where(p => p.OwnerId == organizerId && p.IsActive && p.Id == organizerProfileId)
+                .Select(p => (int?)p.Id)
+                .FirstOrDefaultAsync();
+        }
+
+        private async Task<int> CountActiveValidatorsAsync(string organizerId)
+        {
+            return await _db.OrganizerValidatorAssignments
+                .CountAsync(a => a.OrganizerId == organizerId && a.IsActive);
         }
 
         private static OrganizerProfileViewModel ToProfileInput(OrganizerProfile profile, bool approved)

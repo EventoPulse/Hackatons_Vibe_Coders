@@ -79,6 +79,24 @@ namespace EventsApp.ViewModels.Organizer
         public int Sold { get; set; }
     }
 
+    public class OrganizerEventsViewModel
+    {
+        public IReadOnlyList<OrganizerEventRowViewModel> Events { get; set; } = Array.Empty<OrganizerEventRowViewModel>();
+    }
+
+    public class OrganizerEventRowViewModel
+    {
+        public int Id { get; set; }
+        public string Title { get; set; } = null!;
+        public string City { get; set; } = null!;
+        public DateTime StartTime { get; set; }
+        public bool IsApproved { get; set; }
+        public bool HasPendingChanges { get; set; }
+        public string OrganizerPageName { get; set; } = null!;
+        public int TicketsCount { get; set; }
+        public int SoldTicketsCount { get; set; }
+    }
+
     public class TopEventStat
     {
         public int EventId { get; set; }

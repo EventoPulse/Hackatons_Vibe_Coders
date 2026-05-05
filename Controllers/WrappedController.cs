@@ -52,7 +52,11 @@ namespace EventsApp.Controllers
                     e.Genre,
                     e.ImageUrl,
                     e.OrganizerId,
-                    OrganizerName = e.Organizer.UserName,
+                    OrganizerName = e.OrganizerProfile != null
+                        ? e.OrganizerProfile.DisplayName
+                        : e.Organizer.OrganizerData != null && e.Organizer.OrganizerData.Approved
+                        ? "Public page"
+                        : e.Organizer.UserName,
                     LikesCount = e.Likes.Count,
                 })
                 .ToListAsync();

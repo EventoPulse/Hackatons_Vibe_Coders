@@ -22,6 +22,14 @@
             @Html.AntiForgeryToken()
             <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
 
+            @if (!Model.CanEditApproval && Model.IsApproved)
+            {
+                <div class="groove-note mb-3">
+                    <strong>Публикувано събитие</strong>
+                    <span>Промените ще се изпратят за админ одобрение. Старата публична версия остава активна, докато бъдат одобрени.</span>
+                </div>
+            }
+
             @if (!string.IsNullOrWhiteSpace(Model.ActiveWorkspaceName) || !string.IsNullOrWhiteSpace(Model.ActivePageName))
             {
                 <div class="groove-note mb-3">

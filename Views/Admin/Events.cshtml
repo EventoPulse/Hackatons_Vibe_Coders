@@ -61,7 +61,11 @@
                                 <td>@ev.StartTime.ToString("dd.MM.yyyy HH:mm")</td>
                                 <td><span class="groove-badge">@ev.Genre.GetDisplayName()</span></td>
                                 <td>
-                                    @if (ev.IsApproved)
+                                    @if (ev.HasPendingChanges)
+                                    {
+                                        <span class="groove-status-badge groove-status-badge-warning">Чака промени</span>
+                                    }
+                                    else if (ev.IsApproved)
                                     {
                                         <span class="groove-status-badge groove-status-badge-success">Одобрено</span>
                                     }
@@ -81,9 +85,21 @@
                                         <a asp-controller="Tickets" asp-action="Manage" asp-route-id="@ev.Id" class="groove-button groove-button-paper">
                                             <i class="bi bi-ticket-perforated"></i> Билети
                                         </a>
+                                        @if (ev.HasPendingChanges)
+                                        {
+                                            <a asp-action="EventChange" asp-route-id="@ev.Id" class="groove-button groove-button-paper">
+                                                <i class="bi bi-file-earmark-diff"></i> Промени
+                                            </a>
+                                        }
                                         <form asp-action="ApproveEvent" asp-route-id="@ev.Id" method="post">
                                             @Html.AntiForgeryToken()
-                                            @if (ev.IsApproved)
+                                            @if (ev.HasPendingChanges)
+                                            {
+                                                <button class="groove-button groove-button-dark" type="submit">
+                                                    <i class="bi bi-check-circle"></i> Одобри промени
+                                                </button>
+                                            }
+                                            else if (ev.IsApproved)
                                             {
                                                 <button class="groove-button groove-button-paper" type="submit">
                                                     <i class="bi bi-pause-circle"></i> Свали одобрение

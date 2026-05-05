@@ -69,6 +69,81 @@ namespace EventsApp.Infrastructure
                 {
                     mapped["GoogleMaps:ApiKey"] = kv.Value;
                 }
+                if (string.Equals(kv.Key, "SMTP_HOST", StringComparison.OrdinalIgnoreCase))
+                {
+                    mapped["Email:Smtp:Host"] = kv.Value;
+                    mapped["Email:Enabled"] = "true";
+                }
+                if (string.Equals(kv.Key, "SMTP_PORT", StringComparison.OrdinalIgnoreCase))
+                {
+                    mapped["Email:Smtp:Port"] = kv.Value;
+                }
+                if (string.Equals(kv.Key, "SMTP_USERNAME", StringComparison.OrdinalIgnoreCase))
+                {
+                    mapped["Email:Smtp:Username"] = kv.Value;
+                }
+                if (string.Equals(kv.Key, "SMTP_PASSWORD", StringComparison.OrdinalIgnoreCase))
+                {
+                    mapped["Email:Smtp:Password"] = kv.Value;
+                }
+                if (string.Equals(kv.Key, "SMTP_FROM_EMAIL", StringComparison.OrdinalIgnoreCase))
+                {
+                    mapped["Email:From:Email"] = kv.Value;
+                }
+                if (string.Equals(kv.Key, "SMTP_FROM_NAME", StringComparison.OrdinalIgnoreCase))
+                {
+                    mapped["Email:From:Name"] = kv.Value;
+                }
+                if (string.Equals(kv.Key, "MEDIA_STORAGE", StringComparison.OrdinalIgnoreCase))
+                {
+                    mapped["Media:Storage"] = kv.Value;
+                }
+                if (string.Equals(kv.Key, "S3_ENDPOINT", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(kv.Key, "ENDPOINT", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(kv.Key, "AWS_ENDPOINT_URL", StringComparison.OrdinalIgnoreCase))
+                {
+                    mapped["Media:S3:Endpoint"] = kv.Value;
+                }
+                if (string.Equals(kv.Key, "S3_BUCKET", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(kv.Key, "BUCKET", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(kv.Key, "AWS_S3_BUCKET", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(kv.Key, "AWS_S3_BUCKET_NAME", StringComparison.OrdinalIgnoreCase))
+                {
+                    mapped["Media:S3:Bucket"] = kv.Value;
+                }
+                if (string.Equals(kv.Key, "S3_ACCESS_KEY_ID", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(kv.Key, "S3_ACCESS_KEY", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(kv.Key, "ACCESS_KEY_ID", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(kv.Key, "AWS_ACCESS_KEY_ID", StringComparison.OrdinalIgnoreCase))
+                {
+                    mapped["Media:S3:AccessKeyId"] = kv.Value;
+                }
+                if (string.Equals(kv.Key, "S3_SECRET_ACCESS_KEY", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(kv.Key, "S3_SECRET_KEY", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(kv.Key, "SECRET_ACCESS_KEY", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(kv.Key, "AWS_SECRET_ACCESS_KEY", StringComparison.OrdinalIgnoreCase))
+                {
+                    mapped["Media:S3:SecretAccessKey"] = kv.Value;
+                }
+                if (string.Equals(kv.Key, "S3_REGION", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(kv.Key, "REGION", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(kv.Key, "AWS_REGION", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(kv.Key, "AWS_DEFAULT_REGION", StringComparison.OrdinalIgnoreCase))
+                {
+                    mapped["Media:S3:Region"] = kv.Value;
+                }
+                if (string.Equals(kv.Key, "S3_FORCE_PATH_STYLE", StringComparison.OrdinalIgnoreCase))
+                {
+                    mapped["Media:S3:ForcePathStyle"] = kv.Value;
+                }
+                if (string.Equals(kv.Key, "S3_KEY_PREFIX", StringComparison.OrdinalIgnoreCase))
+                {
+                    mapped["Media:S3:KeyPrefix"] = kv.Value;
+                }
+                if (string.Equals(kv.Key, "S3_SIGNED_URL_MINUTES", StringComparison.OrdinalIgnoreCase))
+                {
+                    mapped["Media:S3:SignedUrlMinutes"] = kv.Value;
+                }
             }
 
             configBuilder.AddInMemoryCollection(mapped);

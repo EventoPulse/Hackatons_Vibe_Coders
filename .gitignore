@@ -48,3 +48,6 @@ Thumbs.db
 *.log
 logs/
 .env
+
+## Local user uploads
+wwwroot/uploads/

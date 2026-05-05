@@ -8,6 +8,8 @@
     var ogImage = !string.IsNullOrWhiteSpace(Model.ImageUrl)
         ? (Model.ImageUrl.StartsWith("http") ? Model.ImageUrl : $"{Context.Request.Scheme}://{Context.Request.Host}{Model.ImageUrl}")
         : null;
+    var chatShareAction = Model.IsApproved ? "ShareEvent" : null;
+    int? chatShareId = Model.IsApproved ? Model.Id : null;
 }
 
 @section Head {
@@ -34,7 +36,16 @@
         <a asp-controller="Home" asp-action="Index" class="groove-button groove-button-paper">
             <i class="bi bi-arrow-left"></i> <span data-i18n="common.back">Назад</span>
         </a>
-        <partial name="_ShareDropdown" model="@(new EventsApp.ViewModels.Shared.ShareModel { Url = shareUrl, Title = Model.Title, ChatShareAction = "ShareEvent", ChatShareId = Model.Id })" />
+        @if (Model.IsApproved)
+        {
+            <partial name="_ShareDropdown" model="@(new EventsApp.ViewModels.Shared.ShareModel { Url = shareUrl, Title = Model.Title, ChatShareAction = chatShareAction, ChatShareId = chatShareId })" />
+        }
+        else
+        {
+            <button class="groove-button groove-button-paper" type="button" disabled title="Събитието може да се споделя след одобрение.">
+                <i class="bi bi-share"></i> Споделяне след одобрение
+            </button>
+        }
         @if (Model.CanEdit)
         {
             <a asp-action="Edit" asp-route-id="@Model.Id" class="groove-button groove-button-paper">
@@ -59,6 +70,13 @@
     {
         <div class="groove-alert groove-alert-warning mb-4">
             <strong data-i18n="event.status.waiting.approval">Това събитие чака одобрение.</strong>
+        </div>
+    }
+    else if (Model.HasPendingChanges && Model.CanEdit)
+    {
+        <div class="groove-alert groove-alert-warning mb-4">
+            <strong>Има изпратени промени за одобрение.</strong>
+            <span>Публичната версия остава активна, докато админ ги прегледа.</span>
         </div>
     }
 
@@ -93,7 +111,7 @@
                 <dd>@Model.StartTime.ToString("dd.MM.yyyy HH:mm")</dd>
                 <dt data-i18n="ticket.end">Край</dt>
                 <dd>@Model.EndTime.ToString("dd.MM.yyyy HH:mm")</dd>
-                <dt data-i18n="profile.public.page">Public page</dt>
+                <dt data-i18n="profile.public.page">Публична страница</dt>
                 <dd>
                     @if (Model.OrganizerProfileId.HasValue)
                     {
@@ -103,7 +121,7 @@
                     }
                     else
                     {
-                        <span class="text-muted">Public page</span>
+                        <span class="text-muted">Публична страница</span>
                     }
                 </dd>
                 <dt data-i18n="event.social">Социално</dt>
@@ -113,16 +131,25 @@
             </dl>
 
             <div class="groove-form-actions">
-                <button class="groove-button groove-button-paper social-share-button" type="button" data-share-url="@shareUrl" data-share-title="@Model.Title">
-                    <i class="bi bi-share"></i> <span data-i18n="social.share">Сподели</span>
-                </button>
+                @if (Model.IsApproved)
+                {
+                    <button class="groove-button groove-button-paper social-share-button" type="button" data-share-url="@shareUrl" data-share-title="@Model.Title">
+                        <i class="bi bi-share"></i> <span data-i18n="social.share">Сподели</span>
+                    </button>
+                }
+                else
+                {
+                    <button class="groove-button groove-button-paper" type="button" disabled>
+                        <i class="bi bi-share"></i> Споделяне след одобрение
+                    </button>
+                }
                 @if (User.Identity?.IsAuthenticated == true && Model.OrganizerProfileId.HasValue && User.FindFirstValue(ClaimTypes.NameIdentifier) != Model.OrganizerId)
                 {
                     <form asp-controller="Messages" asp-action="StartPage" method="post">
                         @Html.AntiForgeryToken()
                         <input type="hidden" name="organizerProfileId" value="@Model.OrganizerProfileId" />
                         <button class="groove-button groove-button-paper" type="submit">
-                            <i class="bi bi-chat-dots"></i> <span data-i18n="messages.message.page">Message page</span>
+                            <i class="bi bi-chat-dots"></i> <span data-i18n="messages.message.page">Пиши на страницата</span>
                         </button>
                     </form>
                 }
@@ -176,14 +203,14 @@
                         @Html.AntiForgeryToken()
                         <button class="groove-button groove-button-paper" type="submit">
                             <i class="bi bi-pin-angle"></i>
-                            @(Model.CurrentUserPinned ? "Unpin" : "Pin to profile")
+                            @(Model.CurrentUserPinned ? "Премахни от профила" : "Закачи в профила")
                         </button>
                     </form>
                     <form asp-controller="Profiles" asp-action="@(Model.CurrentUserSharedToProfile ? "RemoveSharedEvent" : "ShareEvent")" asp-route-eventId="@Model.Id" asp-route-returnUrl="@($"{Context.Request.Path}{Context.Request.QueryString}")" method="post">
                         @Html.AntiForgeryToken()
                         <button class="groove-button groove-button-paper" type="submit">
                             <i class="bi bi-person-bounding-box"></i>
-                            @(Model.CurrentUserSharedToProfile ? "Remove profile share" : "Share on profile")
+                            @(Model.CurrentUserSharedToProfile ? "Премахни от профила" : "Сподели в профила")
                         </button>
                     </form>
                 </div>
@@ -193,37 +220,59 @@
 
     @if (Model.IsRecurring && Model.Occurrences.Count > 0)
     {
+        var selectedOccurrence = Model.Occurrences.FirstOrDefault(o => o.Id == Model.SelectedOccurrenceId) ?? Model.Occurrences.First();
+        var firstOccurrence = Model.Occurrences.First();
+        var lastOccurrence = Model.Occurrences.Last();
+        var selectedStatusText = selectedOccurrence.Status switch
+        {
+            EventOccurrenceStatus.Cancelled => "Отменена",
+            EventOccurrenceStatus.SoldOut => "Разпродадена",
+            _ => "Планирана",
+        };
         <section class="groove-page-section event-occurrence-selector">
             <div class="groove-section-bar">
                 <div>
                     <span class="groove-kicker" data-i18n="event.dates.kicker">Дати</span>
-                    <h2 data-i18n-html="event.dates.title">Избери <span>конкретна дата</span>.</h2>
+                    <h2>Избери дата.</h2>
                 </div>
             </div>
-            <div class="event-occurrence-list">
-                @foreach (var occurrence in Model.Occurrences)
-                {
-                    var selected = occurrence.Id == Model.SelectedOccurrenceId;
-                    var cancelled = occurrence.Status == EventOccurrenceStatus.Cancelled;
-                    var statusKey = $"status.occurrence.{occurrence.Status}";
-                    var statusText = occurrence.Status switch
-                    {
-                        EventOccurrenceStatus.Cancelled => "Отменена",
-                        EventOccurrenceStatus.SoldOut => "Разпродадена",
-                        _ => "Планирана",
-                    };
-                    <a asp-action="Details"
-                       asp-route-id="@Model.Id"
-                       asp-route-occurrenceId="@occurrence.Id"
-                       class="event-occurrence-card @(selected ? "is-selected" : "") @(cancelled ? "is-cancelled" : "")">
-                        <strong>@occurrence.StartDateTime.ToString("ddd, dd.MM.yyyy HH:mm")</strong>
-                        <span>
-                            @occurrence.EndDateTime.ToString("HH:mm")
-                            · <span data-i18n="@statusKey">@statusText</span>
-                            · @occurrence.SoldCount <span data-i18n="ticket.sold.lower">продадени</span>
-                        </span>
-                    </a>
-                }
+            <div class="groove-info-card">
+                <div class="row g-3 align-items-end">
+                    <div class="col-12 col-lg-5">
+                        <span class="groove-kicker">Период</span>
+                        <p class="mb-0">
+                            @firstOccurrence.StartDateTime.ToString("dd.MM.yyyy") - @lastOccurrence.StartDateTime.ToString("dd.MM.yyyy")
+                            · @Model.Occurrences.Count дати
+                        </p>
+                    </div>
+                    <div class="col-12 col-lg-7">
+                        <form asp-action="Details" asp-route-id="@Model.Id" method="get">
+                            <label class="form-label" for="occurrenceId">Конкретна дата</label>
+                            <select id="occurrenceId" name="occurrenceId" class="form-select" onchange="this.form.submit()">
+                                @foreach (var occurrence in Model.Occurrences)
+                                {
+                                    var statusText = occurrence.Status switch
+                                    {
+                                        EventOccurrenceStatus.Cancelled => "отменена",
+                                        EventOccurrenceStatus.SoldOut => "разпродадена",
+                                        _ => "планирана",
+                                    };
+                                    <option value="@occurrence.Id" selected="@(occurrence.Id == Model.SelectedOccurrenceId)">
+                                        @occurrence.StartDateTime.ToString("dd.MM.yyyy HH:mm") - @occurrence.EndDateTime.ToString("HH:mm") · @statusText · @occurrence.SoldCount продадени
+                                    </option>
+                                }
+                            </select>
+                        </form>
+                    </div>
+                </div>
+                <div class="d-flex flex-wrap gap-2 mt-3">
+                    <span class="groove-status-badge groove-status-badge-muted">
+                        Избрана: @selectedOccurrence.StartDateTime.ToString("dd.MM.yyyy HH:mm") - @selectedOccurrence.EndDateTime.ToString("HH:mm")
+                    </span>
+                    <span class="groove-status-badge @(selectedOccurrence.Status == EventOccurrenceStatus.Cancelled ? "groove-status-badge-muted" : "groove-status-badge-success")">
+                        @selectedStatusText
+                    </span>
+                </div>
             </div>
             @if (Model.CanEdit && Model.SelectedOccurrenceId.HasValue && Model.SelectedOccurrenceStatus != EventOccurrenceStatus.Cancelled)
             {

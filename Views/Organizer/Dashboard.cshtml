@@ -189,14 +189,14 @@
                 <strong>@Model.Last30DaysSold <span data-i18n="org.stat.pcs">бр.</span></strong>
                 <small class="text-muted">@bgnFmt(Model.Last30DaysRevenue)</small>
             </article>
-            <article class="groove-stat-card">
+            <a asp-action="Events" class="groove-stat-card text-decoration-none text-reset">
                 <span data-i18n="org.stat.events">Събития</span>
                 <strong>@Model.EventsCount</strong>
                 <small class="text-muted">
                     <span data-i18n="org.stat.upcoming">Предстоящи:</span> @Model.UpcomingEventsCount
                     · <span data-i18n="org.stat.past">минали:</span> @Model.PastEventsCount
                 </small>
-            </article>
+            </a>
             <article class="groove-stat-card">
                 <span data-i18n="org.stat.tickettypes">Видове билети</span>
                 <strong>@Model.TicketTypesCount</strong>
@@ -332,6 +332,9 @@
         <div class="groove-page-actions mb-4">
             <a asp-controller="Tickets" asp-action="Validate" class="groove-button groove-button-dark">
                 <i class="bi bi-qr-code-scan"></i> <span data-i18n="nav.validate">Валидиране</span>
+            </a>
+            <a asp-controller="Organizer" asp-action="Validators" class="groove-button groove-button-paper">
+                <i class="bi bi-person-check"></i> Validators
             </a>
             <a asp-controller="Account" asp-action="Index" class="groove-button groove-button-paper">
                 <i class="bi bi-person-circle"></i> <span data-i18n="org.myprofile">Моят профил</span>

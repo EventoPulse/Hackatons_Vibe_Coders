@@ -4,9 +4,11 @@ using EventsApp.Infrastructure;
 using EventsApp.Models;
 using EventsApp.Services;
 using EventsApp.Services.AI;
+using EventsApp.Services.Email;
 using EventsApp.Services.Geocoding;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
@@ -73,8 +75,19 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.AccessDeniedPath = "/Identity/Account/AccessDenied";
 });
 
-builder.Services.AddSingleton<IMediaUploadService, MediaUploadService>();
+if (UseS3MediaStorage(builder.Configuration, isDevelopment))
+{
+    builder.Services.AddSingleton<S3MediaUploadService>();
+    builder.Services.AddSingleton<IMediaUploadService>(sp => sp.GetRequiredService<S3MediaUploadService>());
+    builder.Services.AddSingleton<IRemoteMediaService>(sp => sp.GetRequiredService<S3MediaUploadService>());
+}
+else
+{
+    builder.Services.AddSingleton<IMediaUploadService, MediaUploadService>();
+    builder.Services.AddSingleton<IRemoteMediaService, NullRemoteMediaService>();
+}
 builder.Services.AddSingleton<ITicketDocumentService, TicketDocumentService>();
+builder.Services.AddTransient<IEmailSender, SmtpEmailSender>();
 builder.Services.AddScoped<ISocialFeedService, SocialFeedService>();
 builder.Services.AddScoped<IRecurringEventService, RecurringEventService>();
 builder.Services.AddScoped<ILayoutService, LayoutService>();
@@ -129,6 +142,16 @@ builder.Services.AddRateLimiter(options =>
             QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
             AutoReplenishment = true,
         }));
+
+    options.AddPolicy("messages", context =>
+        RateLimitPartition.GetFixedWindowLimiter("messages:" + GetRateLimitKey(context), _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 60,
+            Window = TimeSpan.FromMinutes(1),
+            QueueLimit = 0,
+            QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+            AutoReplenishment = true,
+        }));
 });
 
 var app = builder.Build();
@@ -168,11 +191,19 @@ app.Use(async (context, next) =>
     headers.TryAdd("Referrer-Policy", "strict-origin-when-cross-origin");
     headers.TryAdd("X-Permitted-Cross-Domain-Policies", "none");
     headers.TryAdd("Permissions-Policy", "camera=(), microphone=(), geolocation=(self), payment=(self), usb=()");
+    var csp = app.Configuration["Security:ContentSecurityPolicy"];
+    if (!string.IsNullOrWhiteSpace(csp))
+    {
+        headers.TryAdd("Content-Security-Policy", csp);
+    }
 
     await next();
 });
 
-app.UseHttpsRedirection();
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
 app.UseStaticFiles();
 
 var supportedCultures = new[] { "bg", "en" };
@@ -205,4 +236,35 @@ static string GetRateLimitKey(HttpContext context)
     }
 
     return context.Connection.RemoteIpAddress?.ToString() ?? "anonymous";
+}
+
+static bool UseS3MediaStorage(IConfiguration configuration, bool isDevelopment)
+{
+    var configuredMode = configuration["Media:Storage"] ?? configuration["MEDIA_STORAGE"];
+    if (string.Equals(configuredMode, "S3", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(configuredMode, "RailwayBucket", StringComparison.OrdinalIgnoreCase))
+    {
+        return true;
+    }
+
+    if (!string.IsNullOrWhiteSpace(configuredMode))
+    {
+        return false;
+    }
+
+    if (isDevelopment)
+    {
+        return false;
+    }
+
+    var hasS3Bucket = !string.IsNullOrWhiteSpace(configuration["Media:S3:Bucket"]) ||
+                      !string.IsNullOrWhiteSpace(configuration["S3_BUCKET"]) ||
+                      !string.IsNullOrWhiteSpace(configuration["BUCKET"]);
+
+    var hasS3Endpoint = !string.IsNullOrWhiteSpace(configuration["Media:S3:Endpoint"]) ||
+                        !string.IsNullOrWhiteSpace(configuration["S3_ENDPOINT"]) ||
+                        !string.IsNullOrWhiteSpace(configuration["ENDPOINT"]) ||
+                        !string.IsNullOrWhiteSpace(configuration["AWS_ENDPOINT_URL"]);
+
+    return hasS3Bucket && hasS3Endpoint;
 }
