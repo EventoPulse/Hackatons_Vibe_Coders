@@ -26,7 +26,7 @@ namespace EventsApp.Controllers
             _logger = logger;
         }
 
-        public async Task<IActionResult> Index(string? search, string? city, EventGenre? genre, DateTime? dateFrom, DateTime? dateTo)
+        public async Task<IActionResult> Index(string? search, string? city, EventGenre? genre, DateTime? dateFrom, DateTime? dateTo, string? sort)
         {
             var isAdmin = User.IsInRole(GlobalConstants.Roles.Admin);
             var userId = _userManager.GetUserId(User);
@@ -39,6 +39,7 @@ namespace EventsApp.Controllers
 
             var normalizedSearch = search?.Trim();
             var freeOnly = string.Equals(normalizedSearch, "free", StringComparison.OrdinalIgnoreCase);
+            var normalizedSort = NormalizeSort(sort);
 
             if (!string.IsNullOrWhiteSpace(normalizedSearch) && !freeOnly)
             {
@@ -77,7 +78,7 @@ namespace EventsApp.Controllers
                 query = query.Where(e => e.StartTime < to);
             }
 
-            var events = await QueryEventCards(query.OrderBy(e => e.StartTime), userId)
+            var events = await QueryEventCards(ApplyEventSort(query, normalizedSort), userId)
                 .ToListAsync();
 
             var markers = BuildMarkers(events);
@@ -175,6 +176,7 @@ namespace EventsApp.Controllers
                 Genre = genre,
                 DateFrom = dateFrom,
                 DateTo = dateTo,
+                Sort = normalizedSort,
                 Events = events,
                 MapMarkers = markers,
                 Cities = cities,
@@ -187,6 +189,32 @@ namespace EventsApp.Controllers
                 PreferredCity = preferredCity,
                 IsAuthenticated = User.Identity?.IsAuthenticated == true,
             });
+        }
+
+        private static string NormalizeSort(string? sort)
+        {
+            return sort?.Trim().ToLowerInvariant() switch
+            {
+                "soon" => "soon",
+                "popular" => "popular",
+                _ => "recent",
+            };
+        }
+
+        private static IQueryable<Event> ApplyEventSort(IQueryable<Event> query, string sort)
+        {
+            return sort switch
+            {
+                "soon" => query
+                    .OrderBy(e => e.StartTime)
+                    .ThenBy(e => e.Title),
+                "popular" => query
+                    .OrderByDescending(e => e.Attendances.Count * 2 + e.Likes.Count + e.Saves.Count + e.Comments.Count)
+                    .ThenBy(e => e.StartTime),
+                _ => query
+                    .OrderByDescending(e => e.CreatedAt)
+                    .ThenBy(e => e.StartTime),
+            };
         }
 
         private static IQueryable<EventCardViewModel> QueryEventCards(IQueryable<Event> query, string? userId)

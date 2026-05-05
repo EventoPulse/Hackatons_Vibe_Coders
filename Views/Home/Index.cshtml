@@ -80,8 +80,8 @@
             </div>
 
             <div class="evt-hero__stats">
-                <span><strong>@Model.Events.Count</strong> <span data-i18n="home.stats.nights">записани нощи</span></span>
-                <span><strong>@visibleCityCount</strong> <span data-i18n="home.stats.cities">града</span></span>
+                <span><strong id="home-total-events-count">@Model.Events.Count</strong> <span data-i18n="home.stats.nights">записани нощи</span></span>
+                <span><strong id="home-city-count">@visibleCityCount</strong> <span data-i18n="home.stats.cities">града</span></span>
                 <span><strong id="home-event-count">@Model.MapMarkers.Count</strong> <span data-i18n="home.stats.pins">карфици</span></span>
             </div>
         </div>
@@ -148,7 +148,7 @@
         var isTabFree = Model.Search == "free";
     }
     <div class="evt-search-section">
-        <div class="evt-search-tabs-bar">
+        <div id="home-filter-tabs" class="evt-search-tabs-bar">
             <a class="evt-search-tab-link @(isTabAll ? "is-active" : "")" asp-action="Index">
                 <i class="bi bi-grid-3x3-gap"></i> <span>Всички</span>
             </a>
@@ -202,7 +202,7 @@
         </div>
     </div>
 
-    <section class="evt-section">
+    <section id="home-events-surface" class="evt-section" aria-live="polite">
         <div class="evt-section__head">
             <div>
                 <h2 class="evt-section__title" data-i18n="home.events.discover">Открий своята вечер</h2>
@@ -211,12 +211,16 @@
 
             <form id="home-events-filter" method="get" class="evt-toolbar" style="gap:8px;">
                 <input type="hidden" name="search" value="@Model.Search" />
+                <input type="hidden" name="city" value="@Model.City" />
+                <input type="hidden" name="genre" value="@Model.Genre" />
+                <input type="hidden" name="dateFrom" value="@Model.DateFrom?.ToString("yyyy-MM-dd")" />
+                <input type="hidden" name="dateTo" value="@Model.DateTo?.ToString("yyyy-MM-dd")" />
                 <div class="evt-sort">
                     <i class="bi bi-arrow-down-up"></i>
-                    <select name="sort" onchange="this.form.submit()">
-                        <option data-i18n="sort.recent">Recently added</option>
-                        <option data-i18n="sort.soon">Starting soon</option>
-                        <option data-i18n="sort.popular">Most popular</option>
+                    <select name="sort">
+                        <option value="recent" selected="@(Model.Sort == "recent")" data-i18n="sort.recent">Recently added</option>
+                        <option value="soon" selected="@(Model.Sort == "soon")" data-i18n="sort.soon">Starting soon</option>
+                        <option value="popular" selected="@(Model.Sort == "popular")" data-i18n="sort.popular">Most popular</option>
                     </select>
                 </div>
                 <button type="submit" class="evt-btn evt-btn-ghost" style="padding:8px 16px;">
@@ -261,7 +265,9 @@
                              data-event-title="@ev.Title"
                              data-event-city="@ev.City"
                              data-event-address="@ev.Address"
-                             data-event-genre="@ev.Genre">
+                             data-event-genre="@ev.Genre"
+                             data-event-start="@ev.StartTime.ToString("O")"
+                             data-event-free="@ev.IsFreeEvent.ToString().ToLowerInvariant()">
                             <partial name="_EventCard" model="ev" />
                         </div>
                     }

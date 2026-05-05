@@ -10,6 +10,7 @@ namespace EventsApp.ViewModels.Events
         public EventGenre? Genre { get; set; }
         public DateTime? DateFrom { get; set; }
         public DateTime? DateTo { get; set; }
+        public string Sort { get; set; } = "recent";
         public IReadOnlyList<EventCardViewModel> Events { get; set; } = Array.Empty<EventCardViewModel>();
         public IReadOnlyList<EventMapMarkerViewModel> MapMarkers { get; set; } = Array.Empty<EventMapMarkerViewModel>();
         public IReadOnlyList<string> Cities { get; set; } = Array.Empty<string>();

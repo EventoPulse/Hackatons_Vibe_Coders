@@ -54,6 +54,17 @@
 
     function normalize(s) { return (s == null ? '' : String(s)).trim().toLowerCase(); }
 
+    function readHomeEventsData() {
+        var dataEl = document.getElementById('home-events-data');
+        if (!dataEl) return [];
+        try {
+            var parsed = JSON.parse(dataEl.textContent || '{}');
+            return parsed && parsed.markers ? parsed.markers : [];
+        } catch (_) {
+            return [];
+        }
+    }
+
     function lookupCityCoords(city) {
         if (!city) return null;
         return CITY_FALLBACK[normalize(city)] || null;
@@ -162,14 +173,7 @@
         var mapEl = document.getElementById('events-map');
         if (!mapEl) return;
 
-        var dataEl = document.getElementById('home-events-data');
-        var markersData = [];
-        if (dataEl) {
-            try {
-                var parsed = JSON.parse(dataEl.textContent);
-                markersData = parsed && parsed.markers ? parsed.markers : [];
-            } catch (_) { markersData = []; }
-        }
+        var markersData = readHomeEventsData();
 
         var form = document.getElementById('home-smart-search-form');
         var input = document.getElementById('home-smart-search-input');
@@ -194,6 +198,7 @@
         function startMap() {
             if (mapStarted || !(window.google && window.google.maps)) return;
             mapStarted = true;
+            markersData = readHomeEventsData();
             setupMap(mapEl);
         }
 
@@ -308,6 +313,145 @@
             });
         }
 
+        var activeHomeRequest = null;
+
+        function setHomeLoading(isLoading) {
+            ['home-filter-tabs', 'home-events-surface'].forEach(function (id) {
+                var el = document.getElementById(id);
+                if (!el) return;
+                el.classList.toggle('is-loading', !!isLoading);
+                if (id === 'home-events-surface') {
+                    el.setAttribute('aria-busy', isLoading ? 'true' : 'false');
+                }
+            });
+        }
+
+        function syncStatFromDocument(doc, id) {
+            var next = doc.getElementById(id);
+            var current = document.getElementById(id);
+            if (next && current) current.textContent = next.textContent;
+        }
+
+        function replaceHomeDataScript(doc) {
+            var nextData = doc.getElementById('home-events-data');
+            if (!nextData) return;
+
+            var currentData = document.getElementById('home-events-data');
+            if (currentData) {
+                currentData.textContent = nextData.textContent || '';
+                return;
+            }
+
+            var clone = document.createElement('script');
+            clone.id = 'home-events-data';
+            clone.type = 'application/json';
+            clone.textContent = nextData.textContent || '';
+            document.body.appendChild(clone);
+        }
+
+        function swapHomeResults(html) {
+            var doc = new DOMParser().parseFromString(html, 'text/html');
+            var nextTabs = doc.getElementById('home-filter-tabs');
+            var nextSurface = doc.getElementById('home-events-surface');
+            var tabs = document.getElementById('home-filter-tabs');
+            var surface = document.getElementById('home-events-surface');
+            if (!nextTabs || !nextSurface || !tabs || !surface) return false;
+
+            replaceHomeDataScript(doc);
+            tabs.replaceWith(nextTabs);
+            surface.replaceWith(nextSurface);
+            syncStatFromDocument(doc, 'home-total-events-count');
+            syncStatFromDocument(doc, 'home-city-count');
+
+            if (typeof window.GrooveHomeUpdateEvents === 'function') {
+                window.GrooveHomeUpdateEvents();
+            }
+
+            return true;
+        }
+
+        function loadHomeResults(url, pushState) {
+            var tabs = document.getElementById('home-filter-tabs');
+            var surface = document.getElementById('home-events-surface');
+            if (!tabs || !surface || !window.fetch || !window.DOMParser) {
+                window.location.href = url.href;
+                return;
+            }
+
+            var savedScroll = window.scrollY || window.pageYOffset || 0;
+            if (activeHomeRequest && activeHomeRequest.abort) activeHomeRequest.abort();
+            activeHomeRequest = window.AbortController ? new AbortController() : null;
+
+            setHomeLoading(true);
+            fetch(url.href, {
+                method: 'GET',
+                credentials: 'same-origin',
+                headers: { 'X-Requested-With': 'fetch' },
+                signal: activeHomeRequest ? activeHomeRequest.signal : undefined
+            }).then(function (response) {
+                if (!response.ok) throw new Error('HTTP ' + response.status);
+                return response.text();
+            }).then(function (html) {
+                if (!swapHomeResults(html)) throw new Error('Missing home results fragment');
+                if (pushState) {
+                    window.history.pushState({ homeResults: true }, '', url.href);
+                }
+                window.scrollTo(0, savedScroll);
+            }).catch(function (err) {
+                if (err && err.name === 'AbortError') return;
+                if (window.console) console.warn('Home filter refresh failed', err);
+                window.location.href = url.href;
+            }).finally(function () {
+                setHomeLoading(false);
+                activeHomeRequest = null;
+            });
+        }
+
+        function urlFromFilterForm(form) {
+            var rawAction = form.getAttribute('action') || window.location.pathname;
+            var url = new URL(rawAction, window.location.href);
+            url.search = '';
+            new FormData(form).forEach(function (value, key) {
+                if (key === '__RequestVerificationToken') return;
+                var text = value == null ? '' : String(value).trim();
+                if (text) url.searchParams.set(key, text);
+            });
+            return url;
+        }
+
+        document.addEventListener('click', function (e) {
+            if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+            var link = e.target.closest('#home-filter-tabs a.evt-search-tab-link, #home-events-surface .evt-chips a.evt-chip');
+            if (!link) return;
+
+            var url = new URL(link.href, window.location.href);
+            if (url.origin !== window.location.origin) return;
+            var sortSelect = document.querySelector('#home-events-filter select[name="sort"]');
+            if (sortSelect && sortSelect.value && sortSelect.value !== 'recent' && !url.searchParams.has('sort')) {
+                url.searchParams.set('sort', sortSelect.value);
+            }
+            e.preventDefault();
+            loadHomeResults(url, true);
+        });
+
+        document.addEventListener('submit', function (e) {
+            var formEl = e.target.closest && e.target.closest('#home-events-filter');
+            if (!formEl) return;
+            e.preventDefault();
+            loadHomeResults(urlFromFilterForm(formEl), true);
+        });
+
+        document.addEventListener('change', function (e) {
+            var select = e.target.closest && e.target.closest('#home-events-filter select[name="sort"]');
+            if (!select || !select.form) return;
+            if (select.form.requestSubmit) select.form.requestSubmit();
+            else select.form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+        });
+
+        window.addEventListener('popstate', function () {
+            loadHomeResults(new URL(window.location.href), false);
+        });
+
         function setupMap(mapEl) {
             var map = new google.maps.Map(mapEl, {
                 center: BG_CENTER,
@@ -346,6 +490,15 @@
                 var center = map.getCenter();
                 google.maps.event.trigger(map, 'resize');
                 if (center) map.setCenter(center);
+            };
+            window.GrooveHomeUpdateEvents = function () {
+                if (!map || !(window.google && window.google.maps)) return null;
+                markersData = readHomeEventsData();
+                var result = applyFilter(null);
+                var center = map.getCenter();
+                google.maps.event.trigger(map, 'resize');
+                if (center) map.setCenter(center);
+                return result;
             };
 
             // Preview panel helpers

@@ -5286,6 +5286,17 @@ body.evt-home-bg .site-header { background: var(--evt-bg); }
 
 /* Section common */
 .evt-section { display: flex; flex-direction: column; gap: 18px; }
+#home-filter-tabs,
+#home-events-surface {
+    transition: opacity .16s ease, transform .16s ease, filter .16s ease;
+}
+#home-filter-tabs.is-loading,
+#home-events-surface.is-loading {
+    opacity: .58;
+    pointer-events: none;
+    transform: translateY(2px);
+    filter: saturate(.92);
+}
 .evt-section__head {
     display: flex;
     align-items: end;
