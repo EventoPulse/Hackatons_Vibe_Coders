@@ -22,12 +22,13 @@ namespace EventsApp.Data
 
             var configuration = configurationBuilder.Build();
 
-            var connectionString = configuration.GetConnectionString("DefaultConnection")
-                ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+            AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
+
+            var connectionString = DatabaseConnection.GetPostgresConnectionString(configuration);
 
             var optionsBuilder = new DbContextOptionsBuilder<ApplicationDbContext>();
             optionsBuilder
-                .UseSqlServer(connectionString)
+                .UseNpgsql(connectionString)
                 .ConfigureWarnings(warnings => warnings.Ignore(RelationalEventId.BoolWithDefaultWarning));
 
             return new ApplicationDbContext(optionsBuilder.Options);

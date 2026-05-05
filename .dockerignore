@@ -1,0 +1,9 @@
+bin/
+obj/
+.git/
+.vs/
+.vscode/
+.env
+**/.DS_Store
+docker-compose*.yml
+compose*.yaml

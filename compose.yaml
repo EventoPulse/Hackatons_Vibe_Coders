@@ -1,0 +1,20 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: evento-postgres
+    environment:
+      POSTGRES_DB: evento_dev
+      POSTGRES_USER: evento
+      POSTGRES_PASSWORD: evento_dev_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - evento-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U evento -d evento_dev"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  evento-postgres-data:

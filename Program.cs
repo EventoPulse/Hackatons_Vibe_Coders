@@ -19,12 +19,19 @@ DotEnvLoader.LoadIntoConfiguration(
     Path.Combine(builder.Environment.ContentRootPath, ".env"),
     builder.Configuration);
 
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
-    ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
+
+var port = builder.Configuration["PORT"];
+if (!string.IsNullOrWhiteSpace(port))
+{
+    builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+}
+
+var connectionString = DatabaseConnection.GetPostgresConnectionString(builder.Configuration);
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options
-        .UseSqlServer(connectionString)
+        .UseNpgsql(connectionString)
         .ConfigureWarnings(warnings => warnings.Ignore(RelationalEventId.BoolWithDefaultWarning)));
 
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();

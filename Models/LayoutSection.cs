@@ -36,7 +36,7 @@ namespace EventsApp.Models
         [Range(0, int.MaxValue)]
         public int Capacity { get; set; }
 
-        [Column(TypeName = "decimal(18,2)")]
+        [Column(TypeName = "numeric(18,2)")]
         public decimal PriceModifier { get; set; }
 
         public double X { get; set; }

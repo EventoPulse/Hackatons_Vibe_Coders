@@ -420,11 +420,11 @@ namespace EventsApp.Data
 
                 entity.HasIndex(c => new { c.ParticipantOneId, c.ParticipantTwoId })
                       .IsUnique()
-                      .HasFilter("[OrganizerProfileId] IS NULL");
+                      .HasFilter("\"OrganizerProfileId\" IS NULL");
 
                 entity.HasIndex(c => new { c.ParticipantOneId, c.ParticipantTwoId, c.OrganizerProfileId })
                       .IsUnique()
-                      .HasFilter("[OrganizerProfileId] IS NOT NULL");
+                      .HasFilter("\"OrganizerProfileId\" IS NOT NULL");
             });
 
             builder.Entity<Message>(entity =>
@@ -655,11 +655,11 @@ namespace EventsApp.Data
 
                 entity.HasIndex(i => new { i.EventId, i.SeatId })
                       .IsUnique()
-                      .HasFilter("[EventId] IS NOT NULL AND [EventOccurrenceId] IS NULL");
+                      .HasFilter("\"EventId\" IS NOT NULL AND \"EventOccurrenceId\" IS NULL");
 
                 entity.HasIndex(i => new { i.EventOccurrenceId, i.SeatId })
                       .IsUnique()
-                      .HasFilter("[EventOccurrenceId] IS NOT NULL");
+                      .HasFilter("\"EventOccurrenceId\" IS NOT NULL");
 
                 entity.HasIndex(i => new { i.Status, i.ReservedUntil });
             });

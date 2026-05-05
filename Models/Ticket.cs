@@ -32,7 +32,7 @@ namespace EventsApp.Models
 
         [Required]
         [Range(0, 1_000_000)]
-        [Column(TypeName = "decimal(18,2)")]
+        [Column(TypeName = "numeric(18,2)")]
         public decimal Price { get; set; }
 
         [Required]

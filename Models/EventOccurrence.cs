@@ -32,7 +32,7 @@ namespace EventsApp.Models
 
         public int? CapacityOverride { get; set; }
 
-        [Column(TypeName = "decimal(18,2)")]
+        [Column(TypeName = "numeric(18,2)")]
         public decimal? PriceOverride { get; set; }
 
         public ICollection<UserTicket> UserTickets { get; set; }

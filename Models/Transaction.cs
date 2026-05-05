@@ -29,7 +29,7 @@ namespace EventsApp.Models
 
         [Required]
         [Range(0, double.MaxValue)]
-        [Column(TypeName = "decimal(18,2)")]
+        [Column(TypeName = "numeric(18,2)")]
         public decimal TotalAmount { get; set; }
 
         [Required]
