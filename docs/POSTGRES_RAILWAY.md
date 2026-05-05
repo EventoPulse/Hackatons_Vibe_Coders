@@ -22,6 +22,8 @@ dotnet run
 
 The local database uses the Docker volume `evento-postgres-data`, so data stays available across container restarts.
 
+In development, `SeedDemoData` is enabled by default. The app always seeds roles and the admin account; demo events/users are added only when `SeedDemoData=true` and the environment is `Development`.
+
 ## Railway
 
 1. Create a Railway project.
@@ -32,3 +34,5 @@ The local database uses the Docker volume `evento-postgres-data`, so data stays 
 6. Deploy with the included `Dockerfile`.
 
 The app reads `DATABASE_URL` first. If it is missing, it falls back to `ConnectionStrings:DefaultConnection`.
+
+Production starts clean by default: roles and the admin account are seeded, but demo data is disabled unless you explicitly set `ASPNETCORE_ENVIRONMENT=Development` and `SeedDemoData=true`.
