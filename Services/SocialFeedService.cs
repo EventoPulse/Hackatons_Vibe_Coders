@@ -71,7 +71,8 @@ namespace EventsApp.Services
                 .GroupBy(s => s.OrganizerId)
                 .ToDictionary(g => g.Key, g => g.Sum(s => ActivityWeight(s.ActivityType, s.CreatedAt, now)));
 
-            var hasPersonalSignals = (prefs?.PreferredGenre != null)
+            var preferredGenres = prefs?.PreferredGenres ?? Array.Empty<EventGenre>();
+            var hasPersonalSignals = preferredGenres.Count > 0
                 || !string.IsNullOrWhiteSpace(prefs?.PreferredCity)
                 || followedIds.Count > 0
                 || activitySignals.Count > 0;
@@ -109,7 +110,7 @@ namespace EventsApp.Services
                 .Select(ev => new
                 {
                     Event = ev,
-                    Score = ScoreEvent(ev, prefs?.PreferredGenre, prefs?.PreferredCity, followedIds, genreScores, cityScores, organizerScores, now),
+                    Score = ScoreEvent(ev, preferredGenres, prefs?.PreferredCity, followedIds, genreScores, cityScores, organizerScores, now),
                 })
                 .OrderByDescending(x => x.Score)
                 .ThenBy(x => x.Event.StartTime)
@@ -435,7 +436,7 @@ namespace EventsApp.Services
 
         private static int ScoreEvent(
             EventCardViewModel ev,
-            EventGenre? preferredGenre,
+            IReadOnlyList<EventGenre> preferredGenres,
             string? preferredCity,
             IReadOnlyCollection<string> followedIds,
             IReadOnlyDictionary<EventGenre, int> genreScores,
@@ -445,7 +446,7 @@ namespace EventsApp.Services
         {
             var score = 0;
 
-            if (preferredGenre == ev.Genre) score += 60;
+            if (preferredGenres.Contains(ev.Genre)) score += 60;
             if (!string.IsNullOrWhiteSpace(preferredCity) && string.Equals(preferredCity, ev.City, StringComparison.OrdinalIgnoreCase)) score += 35;
             if (followedIds.Contains(ev.OrganizerId)) score += 45;
             if (genreScores.TryGetValue(ev.Genre, out var genreScore)) score += genreScore;

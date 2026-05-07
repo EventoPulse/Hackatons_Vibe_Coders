@@ -6,8 +6,8 @@ namespace EventsApp.ViewModels.Preferences
 {
     public class PreferencesViewModel
     {
-        [Display(Name = "Preferred genre")]
-        public EventGenre? PreferredGenre { get; set; }
+        [Display(Name = "Preferred genres")]
+        public List<EventGenre> PreferredGenres { get; set; } = new();
 
         [StringLength(GlobalConstants.Preferences.PreferredCityMaxLength)]
         [Display(Name = "Preferred city")]

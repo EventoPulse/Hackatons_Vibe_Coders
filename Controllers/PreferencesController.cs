@@ -29,7 +29,7 @@ namespace EventsApp.Controllers
 
             return View(new PreferencesViewModel
             {
-                PreferredGenre = prefs.PreferredGenre,
+                PreferredGenres = prefs.PreferredGenres.ToList(),
                 PreferredCity = prefs.PreferredCity,
                 MinAge = prefs.MinAge,
                 MaxDistanceKm = prefs.MaxDistanceKm,
@@ -45,7 +45,7 @@ namespace EventsApp.Controllers
                 ? new PreferencesViewModel()
                 : new PreferencesViewModel
                 {
-                    PreferredGenre = prefs.PreferredGenre,
+                    PreferredGenres = prefs.PreferredGenres.ToList(),
                     PreferredCity = prefs.PreferredCity,
                     MinAge = prefs.MinAge,
                     MaxDistanceKm = prefs.MaxDistanceKm,
@@ -68,20 +68,25 @@ namespace EventsApp.Controllers
             var userId = _userManager.GetUserId(User)!;
             var prefs = await _db.UserPreferences.FirstOrDefaultAsync(p => p.UserId == userId);
 
+            var genres = (input.PreferredGenres ?? new List<EventGenre>())
+                .Distinct()
+                .ToList();
+
             if (prefs == null)
             {
-                _db.UserPreferences.Add(new UserPreferences
+                var created = new UserPreferences
                 {
                     UserId = userId,
-                    PreferredGenre = input.PreferredGenre,
                     PreferredCity = input.PreferredCity,
                     MinAge = input.MinAge,
                     MaxDistanceKm = input.MaxDistanceKm,
-                });
+                };
+                created.PreferredGenres = genres;
+                _db.UserPreferences.Add(created);
             }
             else
             {
-                prefs.PreferredGenre = input.PreferredGenre;
+                prefs.PreferredGenres = genres;
                 prefs.PreferredCity = input.PreferredCity;
                 prefs.MinAge = input.MinAge;
                 prefs.MaxDistanceKm = input.MaxDistanceKm;

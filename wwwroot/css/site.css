@@ -7190,6 +7190,13 @@ h1, .h1 { font-weight: 800; }
     opacity: 1;
     transform: scale(1);
 }
+.evt-genre-tile__input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+    width: 1px;
+    height: 1px;
+}
 
 .evt-onboarding__city { margin-bottom: 24px; }
 .evt-onboarding__label {
@@ -9094,9 +9101,67 @@ html[data-theme="dark"] .evt-page-empty {
     gap: 18px;
 }
 
+.evt-page-card {
+    background: var(--evt-card, #fff);
+    border: 1px solid #e5e7ef;
+    border-radius: 22px;
+    padding: 22px 26px;
+    box-shadow: 0 4px 16px rgba(13, 20, 36, 0.04);
+}
+html[data-theme="dark"] .evt-page-card {
+    background: #151a26;
+    border-color: #262d3d;
+}
+
+.evt-page-data {
+    display: grid;
+    grid-template-columns: minmax(180px, 220px) 1fr;
+    gap: 10px 24px;
+    margin: 0;
+}
+.evt-page-data dt {
+    font-weight: 600;
+    color: #5b6275;
+    font-size: 0.92rem;
+    align-self: center;
+}
+html[data-theme="dark"] .evt-page-data dt { color: #9ba2b5; }
+.evt-page-data dd {
+    margin: 0;
+    color: #0d1424;
+    align-self: center;
+    font-weight: 600;
+}
+html[data-theme="dark"] .evt-page-data dd { color: #e8eaf2; }
+
+.evt-genre-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+.evt-genre-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 12px;
+    border-radius: 999px;
+    background: linear-gradient(120deg, #2456ff, #6b85ff);
+    color: #fff;
+    font-size: 0.82rem;
+    font-weight: 700;
+}
+
+.evt-page-card__footer {
+    margin-top: 18px;
+    padding-top: 16px;
+    border-top: 1px solid #e5e7ef;
+}
+html[data-theme="dark"] .evt-page-card__footer { border-top-color: #262d3d; }
+
 @media (max-width: 575.98px) {
     .evt-page-shell { padding: 0 12px; }
     .evt-page-grid { grid-template-columns: 1fr; }
+    .evt-page-data { grid-template-columns: 1fr; gap: 4px 0; }
+    .evt-page-data dt { margin-top: 8px; }
 }
 
 /* AI Plan — new compose & plan cards */

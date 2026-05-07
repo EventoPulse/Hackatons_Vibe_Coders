@@ -3,33 +3,31 @@
     ViewData["Title"] = "Предпочитания";
 }
 
-<section class="groove-app-page groove-form-shell groove-form-shell-narrow">
-    <div class="groove-page-hero">
-        <div class="groove-page-hero__copy">
-            <span class="groove-stamp groove-stamp-teal">Настройки</span>
-            <h1>Лични <span>предпочитания</span>.</h1>
-            <p>
-                Използваме ги, за да подреждаме по-добре препоръчаните събития според твоя вкус.
-            </p>
-        </div>
-        <div class="groove-page-actions">
-            <a asp-action="Edit" class="groove-button groove-button-dark">
+<section class="evt-page-shell">
+    <header class="evt-page-hero">
+        <span class="evt-page-hero__kicker"><i class="bi bi-sliders"></i> Настройки</span>
+        <h1>Лични <span>предпочитания</span>.</h1>
+        <p>
+            Използваме ги, за да подреждаме по-добре препоръчаните събития според твоя вкус.
+        </p>
+        <div class="evt-page-hero__cta">
+            <a asp-action="Edit" class="evt-btn evt-btn-primary">
                 <i class="bi bi-pencil"></i> Редактирай
             </a>
-            <a asp-controller="Events" asp-action="Recommended" class="groove-button groove-button-paper">
+            <a asp-controller="Events" asp-action="Recommended" class="evt-btn evt-btn-ghost">
                 <i class="bi bi-stars"></i> Препоръчани
             </a>
         </div>
-    </div>
+    </header>
 
     @if (Model == null)
     {
-        <div class="groove-empty-card">
+        <div class="evt-page-empty">
             <i class="bi bi-sliders"></i>
-            <h2 class="groove-panel-title">Още няма <span>запазени настройки</span>.</h2>
-            <p class="groove-panel-intro">Добави любим жанр, град или разстояние, за да получаваш по-точни предложения.</p>
-            <div class="groove-form-actions justify-content-center">
-                <a asp-action="Edit" class="groove-button groove-button-dark">
+            <h2>Още няма <span>запазени настройки</span>.</h2>
+            <p>Добави любим жанр, град или разстояние, за да получаваш по-точни предложения.</p>
+            <div class="evt-page-hero__cta">
+                <a asp-action="Edit" class="evt-btn evt-btn-primary">
                     <i class="bi bi-plus-lg"></i> Задай предпочитания
                 </a>
             </div>
@@ -37,10 +35,24 @@
     }
     else
     {
-        <div class="groove-info-card">
-            <dl class="groove-data-list">
-                <dt>Предпочитан жанр</dt>
-                <dd>@(Model.PreferredGenre.HasValue ? Model.PreferredGenre.Value.GetDisplayName() : "Няма зададен")</dd>
+        <article class="evt-page-card">
+            <dl class="evt-page-data">
+                <dt>Предпочитани жанрове</dt>
+                <dd>
+                    @if (Model.PreferredGenres != null && Model.PreferredGenres.Count > 0)
+                    {
+                        <div class="evt-genre-pills">
+                            @foreach (var g in Model.PreferredGenres)
+                            {
+                                <span class="evt-genre-pill">@g.GetDisplayName()</span>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <span class="text-muted">Няма зададени</span>
+                    }
+                </dd>
 
                 <dt>Предпочитан град</dt>
                 <dd>@(string.IsNullOrWhiteSpace(Model.PreferredCity) ? "Няма зададен" : Model.PreferredCity)</dd>
@@ -51,13 +63,13 @@
                 <dt>Максимално разстояние</dt>
                 <dd>@(Model.MaxDistanceKm.HasValue ? $"{Model.MaxDistanceKm.Value} км" : "Без ограничение")</dd>
             </dl>
-        </div>
 
-        <form asp-action="Delete" method="post" class="mt-3">
-            @Html.AntiForgeryToken()
-            <button class="groove-button groove-button-paper" onclick="return confirm('Да изчистя ли всички предпочитания?')">
-                <i class="bi bi-x-circle"></i> Изчисти предпочитанията
-            </button>
-        </form>
+            <form asp-action="Delete" method="post" class="evt-page-card__footer">
+                @Html.AntiForgeryToken()
+                <button class="evt-btn evt-btn-ghost" onclick="return confirm('Да изчистя ли всички предпочитания?')">
+                    <i class="bi bi-x-circle"></i> Изчисти предпочитанията
+                </button>
+            </form>
+        </article>
     }
 </section>

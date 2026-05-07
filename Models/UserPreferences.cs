@@ -22,6 +22,43 @@ namespace EventsApp.Models
 
         public EventGenre? PreferredGenre { get; set; }
 
+        [MaxLength(256)]
+        public string? PreferredGenresCsv { get; set; }
+
+        [NotMapped]
+        public IReadOnlyList<EventGenre> PreferredGenres
+        {
+            get
+            {
+                if (string.IsNullOrWhiteSpace(PreferredGenresCsv))
+                {
+                    return PreferredGenre.HasValue
+                        ? new[] { PreferredGenre.Value }
+                        : Array.Empty<EventGenre>();
+                }
+                var list = new List<EventGenre>();
+                foreach (var part in PreferredGenresCsv.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                {
+                    if (Enum.TryParse<EventGenre>(part, ignoreCase: true, out var g) && !list.Contains(g))
+                    {
+                        list.Add(g);
+                    }
+                }
+                return list;
+            }
+            set
+            {
+                if (value == null || value.Count == 0)
+                {
+                    PreferredGenresCsv = null;
+                    PreferredGenre = null;
+                    return;
+                }
+                PreferredGenresCsv = string.Join(",", value.Distinct().Select(g => g.ToString()));
+                PreferredGenre = value[0];
+            }
+        }
+
         [MaxLength(GlobalConstants.Preferences.PreferredCityMaxLength)]
         public string? PreferredCity { get; set; }
 

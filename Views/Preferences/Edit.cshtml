@@ -24,6 +24,7 @@
     };
 
     var popularCities = new[] { "София", "Пловдив", "Варна", "Бургас", "Русе", "Стара Загора", "Велико Търново" };
+    var selectedSet = new HashSet<EventGenre>(Model.PreferredGenres ?? new List<EventGenre>());
 }
 
 <section class="evt-onboarding">
@@ -33,7 +34,7 @@
             @(isWelcome ? "Кои събития обичаш?" : "Твоите предпочитания")
         </h1>
         <p class="evt-onboarding__lead">
-            @(isWelcome ? "Избери жанра, който те вдъхновява, и ще ти показваме най-доброто за теб." : "Подбери жанр и град — ще ти препоръчваме на база на тях.")
+            @(isWelcome ? "Избери всички жанрове, които те вдъхновяват — ще ти показваме най-доброто за теб." : "Избери жанрове и град — ще ти препоръчваме на база на тях.")
         </p>
     </header>
 
@@ -47,17 +48,16 @@
         <div class="evt-genre-grid" data-pref-grid>
             @foreach (var g in Enum.GetValues<EventGenre>())
             {
-                var selected = Model.PreferredGenre == g;
+                var selected = selectedSet.Contains(g);
                 var emoji = genreEmoji.TryGetValue(g, out var em) ? em : "✨";
-                <button type="button" class="evt-genre-tile @(selected ? "is-selected" : "")"
-                        data-pref-value="@((int)g)" data-pref-label="@g.GetDisplayName()">
+                <label class="evt-genre-tile @(selected ? "is-selected" : "")">
+                    <input type="checkbox" name="PreferredGenres" value="@g" @(selected ? "checked" : "") class="evt-genre-tile__input" />
                     <span class="evt-genre-tile__emoji">@emoji</span>
                     <span class="evt-genre-tile__label">@g.GetDisplayName()</span>
                     <span class="evt-genre-tile__check"><i class="bi bi-check-lg"></i></span>
-                </button>
+                </label>
             }
         </div>
-        <input type="hidden" asp-for="PreferredGenre" id="PreferredGenreHidden" />
 
         <div class="evt-onboarding__city">
             <label class="evt-onboarding__label">Град (по избор)</label>
@@ -74,7 +74,7 @@
         <div asp-validation-summary="ModelOnly" class="alert alert-danger mt-3" role="alert"></div>
 
         <div class="evt-onboarding__actions">
-            <button type="submit" class="evt-btn evt-btn-primary evt-onboarding__cta" data-pref-submit disabled>
+            <button type="submit" class="evt-btn evt-btn-primary evt-onboarding__cta">
                 <i class="bi bi-stars"></i>
                 @(isWelcome ? "Покажи моите събития" : "Запази")
             </button>
@@ -95,25 +95,20 @@
     <script>
         (function () {
             var grid = document.querySelector('[data-pref-grid]');
-            var hidden = document.getElementById('PreferredGenreHidden');
-            var submit = document.querySelector('[data-pref-submit]');
             var cityWrap = document.querySelector('[data-pref-city]');
             var cityInput = document.querySelector('.evt-onboarding__city-input');
 
-            function refreshSubmit() {
-                var ok = !!hidden.value;
-                submit.disabled = !ok;
-            }
-
-            if (grid && hidden && submit) {
-                if (hidden.value) refreshSubmit();
-                grid.addEventListener('click', function (e) {
-                    var btn = e.target.closest('.evt-genre-tile');
-                    if (!btn) return;
-                    grid.querySelectorAll('.evt-genre-tile').forEach(function (t) { t.classList.remove('is-selected'); });
-                    btn.classList.add('is-selected');
-                    hidden.value = btn.getAttribute('data-pref-value');
-                    refreshSubmit();
+            if (grid) {
+                grid.addEventListener('change', function (e) {
+                    var input = e.target.closest('.evt-genre-tile__input');
+                    if (!input) return;
+                    var tile = input.closest('.evt-genre-tile');
+                    if (!tile) return;
+                    if (input.checked) {
+                        tile.classList.add('is-selected');
+                    } else {
+                        tile.classList.remove('is-selected');
+                    }
                 });
             }
 

@@ -130,9 +130,12 @@ namespace EventsApp.Controllers
 
             var preferences = await _db.UserPreferences.AsNoTracking().FirstOrDefaultAsync(p => p.UserId == id);
             var vibeTags = new List<string>();
-            if (preferences?.PreferredGenre != null)
+            if (preferences != null)
             {
-                vibeTags.Add(preferences.PreferredGenre.Value.GetDisplayName());
+                foreach (var g in preferences.PreferredGenres)
+                {
+                    vibeTags.Add(g.GetDisplayName());
+                }
             }
             if (!string.IsNullOrWhiteSpace(preferences?.PreferredCity))
             {

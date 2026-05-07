@@ -1297,10 +1297,11 @@ namespace EventsApp.Controllers
                 })
                 .ToListAsync();
 
+            var preferredGenres = prefs?.PreferredGenres ?? Array.Empty<EventGenre>();
             int Score(EventCardViewModel ev)
             {
                 var score = 0;
-                if (prefs?.PreferredGenre == ev.Genre) score += 70;
+                if (preferredGenres.Contains(ev.Genre)) score += 70;
                 if (!string.IsNullOrWhiteSpace(prefs?.PreferredCity)
                     && string.Equals(prefs.PreferredCity, ev.City, StringComparison.OrdinalIgnoreCase)) score += 45;
                 if (genreScores.TryGetValue(ev.Genre, out var genreScore)) score += genreScore;
