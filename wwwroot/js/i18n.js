@@ -53,7 +53,7 @@
 
         // HOME — MARQUEE
         'marquee.live':    { bg: '★ Живи нощи',          en: '★ Live Nights' },
-        'marquee.diary':   { bg: '★ Дневник',             en: '★ Diary' },
+        'marquee.diary':   { bg: '★ Дневник на града',   en: '★ City Diary' },
         'marquee.map':     { bg: '★ Карта на България',  en: '★ Map of Bulgaria' },
         'marquee.tickets': { bg: '★ Свежи билети',        en: '★ Fresh Tickets' },
         'marquee.nearme':  { bg: '★ Около мен',           en: '★ Near Me' },
@@ -78,6 +78,8 @@
         // HOME — HERO ACTIONS
         'home.viewmap':  { bg: 'Виж картата',   en: 'View Map' },
         'home.openfeed': { bg: 'Отвори потока', en: 'Open Feed' },
+        'home.calendar': { bg: 'Календар',       en: 'Calendar' },
+        'home.ai.label': { bg: 'AI Търсене',     en: 'AI Search' },
 
         // HOME — STATS
         'home.stats.nights': { bg: 'записани нощи', en: 'recorded nights' },
@@ -524,7 +526,34 @@
         'home.how.save.buy': { bg: 'Запази или купи билет', en: 'Save or buy a ticket' },
         'home.how.follow': { bg: 'Последвай организатор и остани в течение', en: 'Follow organizers and stay in the loop' },
         'home.organizer.cta.kicker': { bg: 'Организираш събития?', en: 'Organizing events?' },
-        'home.organizer.cta.title': { bg: 'Създай публична страница, публикувай събития и управлявай билети от едно място.', en: 'Create a public page, publish events, and manage tickets in one place.' }
+        'home.organizer.cta.title': { bg: 'Създай публична страница, публикувай събития и управлявай билети от едно място.', en: 'Create a public page, publish events, and manage tickets in one place.' },
+
+        // HOME SEARCH TABS
+        'search.tab.all':     { bg: 'Всички',       en: 'All' },
+        'search.tab.tonight': { bg: 'Тази вечер',   en: 'Tonight' },
+        'search.tab.weekend': { bg: 'Уикенд',        en: 'Weekend' },
+        'search.tab.week':    { bg: 'Тази седмица',  en: 'This week' },
+
+        // HOME FILTER CHIPS (extra)
+        'home.chip.all':  { bg: 'Всички',     en: 'All' },
+        'home.chip.kids': { bg: 'За деца',    en: 'For children' },
+        'home.chip.live': { bg: 'Live музика', en: 'Live music' },
+
+        // ORGANIZER TOUR
+        'org.tour.step1.h':  { bg: 'Добре дошъл в Organizer Panel!', en: 'Welcome to the Organizer Panel!' },
+        'org.tour.step1.p':  { bg: 'Тук управляваш публичните си идентичности, събития, билети и приходи — всичко от едно място.', en: 'Manage your public identities, events, tickets and revenue — all in one place.' },
+        'org.tour.step2.h':  { bg: 'Публична страница', en: 'Public Page' },
+        'org.tour.step2.p':  { bg: 'Преди да публикуваш събитие, трябва да имаш поне една публична страница. Тя е лицето ти — хората я виждат при всяко събитие.', en: 'Before publishing an event you need at least one public page. It is your public face — people see it on every event.' },
+        'org.tour.step3.h':  { bg: 'Публикувай събитие', en: 'Publish an Event' },
+        'org.tour.step3.p':  { bg: 'Натисни "Ново събитие" и добави снимка, дати, жанр и локация. Събитието влиза за одобрение от admin, след което е видимо за всички.', en: 'Hit "New Event" and add a photo, dates, genre and location. The event goes for admin approval, then it becomes public.' },
+        'org.tour.step4.h':  { bg: 'Билети и приходи', en: 'Tickets & Revenue' },
+        'org.tour.step4.p':  { bg: 'Добавяй различни типове билети — безплатни, платени или VIP. Продажбата се случва директно от страницата на събитието.', en: 'Add different ticket types — free, paid or VIP. Sales happen directly from the event page.' },
+        'org.tour.step5.h':  { bg: 'Статистики и VIP Boost', en: 'Stats & VIP Boost' },
+        'org.tour.step5.p':  { bg: 'Следи продажбите, гледанията и ангажираността. Нов организатор получава 1 VIP boost — постави го на събитието, което искаш да промотираш най-много.', en: 'Track sales, views and engagement. New organizers get 1 VIP boost — use it on the event you want to promote most.' },
+        'org.tour.skip':     { bg: 'Пропусни', en: 'Skip' },
+        'org.tour.next':     { bg: 'Напред', en: 'Next' },
+        'org.tour.finish':   { bg: 'Готово!', en: 'Done!' },
+        'org.tour.help':     { bg: '? Помощ', en: '? Help' }
     });
 
     // ── Full text-replacement dictionary (BG → EN) for unlabelled nodes ────────
@@ -685,6 +714,75 @@
         'Скорошни събития': 'Recent Events',
         'Дейност': 'Activity',
         'Редактирай профила': 'Edit Profile',
+
+        // HOME FILTER CHIPS + LABELS
+        'Всички': 'All',
+        'За деца': 'For children',
+        'Live музика': 'Live music',
+        'Тази вечер': 'Tonight',
+        'Тази седмица': 'This week',
+        'Уикенд': 'Weekend',
+        'Календар': 'Calendar',
+        'AI Търсене': 'AI Search',
+
+        // BOTTOM NAV
+        'Профил': 'Profile',
+        'Поток': 'Feed',
+        'Открий': 'Discover',
+        'Съобщения': 'Messages',
+        'Панел': 'Panel',
+
+        // PROFILE MEMORIES
+        'Спомени': 'Memories',
+        'Преди': 'Before',
+        'година': 'year',
+        'години': 'years',
+        'този месец': 'this month',
+        'going': 'going',
+        'saved': 'saved',
+
+        // TICKETS PAGE
+        'Локация': 'Location',
+        'Начало': 'Start',
+        'Детайли': 'Details',
+        'Валиден': 'Valid',
+        'Купен на': 'Bought on',
+        'Разгледай събития': 'Explore Events',
+        'Намери събитие': 'Find an Event',
+
+        // AI PLAN
+        'Избери': 'Choose',
+        'Дата': 'Date',
+        'Настроение / повод': 'Vibe / occasion',
+        'Подреди ми вечерта': 'Plan my evening',
+        'Всички събития за деня': 'All events for the day',
+        'Няма публикувани събития за избрания ден. Опитай с друга дата.': 'No events for the selected day. Try another date.',
+        'Evento AI предлага': 'Evento AI suggests',
+
+        // RECOMMENDED
+        'Подбор': 'Selection',
+        'Вечери, избрани за теб.': 'Evenings chosen for you.',
+        'Моите предпочитания': 'My Preferences',
+        'Настрой препоръките': 'Set Recommendations',
+        'Предстоящи предложения': 'Upcoming suggestions',
+        'Промени предпочитанията': 'Change Preferences',
+
+        // WRAPPED
+        'Все още няма какво да обвием.': 'Nothing to wrap yet.',
+        'Здравей,': 'Hello,',
+        'Скролни': 'Scroll',
+        'Това беше твоята година.': 'That was your year.',
+        'Споделяй, запомняй, продължавай.': 'Share, remember, continue.',
+        'Брой събития': 'Events count',
+        'Топ жанр': 'Top genre',
+        'Любим град': 'Favourite city',
+        'На сцената': 'On stage',
+        'Топ организатор': 'Top organizer',
+        'Най-натоварен месец': 'Busiest month',
+        'Топ моменти': 'Top moments',
+        'Твоите фаворити': 'Your favourites',
+        'Нови организатори': 'New organizers',
+        'Это е твоята година.' : 'This is your year.',
     };
 
     // ── Helpers ────────────────────────────────────────────────────────────────
@@ -733,6 +831,84 @@
         'layout.seat.type': { bg: 'Тип място', en: 'Seat type' },
         'layout.seat.status': { bg: 'Статус', en: 'Status' },
         'layout.quick.generate': { bg: 'Бързо генериране', en: 'Quick generate' },
+    });
+
+    Object.assign(KEYED, {
+        // PROFILE STATS
+        'stat.this.month':  { bg: 'този месец',         en: 'this month' },
+        'stats.attended':   { bg: 'Посетени събития',  en: 'Events Attended' },
+        'stats.interested': { bg: 'Интересува ме',      en: 'Interested' },
+        'stats.likes':      { bg: 'Дадени харесвания',  en: 'Likes Given' },
+        'stats.followers':  { bg: 'Последователи',       en: 'Followers' },
+        'stats.favgenre':   { bg: 'Любим жанр',          en: 'Favourite Genre' },
+        'stats.cities':     { bg: 'Града посетени',      en: 'Cities Visited' },
+
+        // PROFILE MEMORIES
+        'memories.kicker': { bg: 'Спомени',                          en: 'Memories' },
+        'memories.desc':   { bg: 'Преди време беше на тези събития', en: 'You attended these events before' },
+
+        // TICKETS PAGE
+        'tickets.page.stamp':  { bg: 'Билети',              en: 'Tickets' },
+        'tickets.page.title':  { bg: 'Твоите <span>запазени</span> места.',   en: 'Your <span>reserved</span> seats.' },
+        'tickets.page.desc':   { bg: 'Всички купени билети са тук, заедно с QR кода и бърз достъп до PDF версията.', en: 'All purchased tickets are here, along with the QR code and quick PDF access.' },
+        'tickets.explore':     { bg: 'Разгледай събития',   en: 'Explore Events' },
+        'tickets.empty.title': { bg: 'Още нямаш <span>купени билети</span>.', en: 'No <span>purchased tickets</span> yet.' },
+        'tickets.empty.desc':  { bg: 'Когато вземеш билет за събитие, той ще се появи тук с всички детайли за вход.', en: 'When you get a ticket for an event, it will appear here with all entry details.' },
+        'tickets.find':        { bg: 'Намери събитие',       en: 'Find an Event' },
+        'tickets.dt.location': { bg: 'Локация',              en: 'Location' },
+        'tickets.dt.start':    { bg: 'Начало',               en: 'Start' },
+        'tickets.dt.price':    { bg: 'Цена',                 en: 'Price' },
+        'tickets.details.btn': { bg: 'Детайли',              en: 'Details' },
+        'tickets.used':        { bg: 'Използван',            en: 'Used' },
+        'tickets.valid':       { bg: 'Валиден',              en: 'Valid' },
+
+        // AI PLAN
+        'aiplan.kicker':       { bg: 'AI компаньон',           en: 'AI Companion' },
+        'aiplan.h1':           { bg: 'Какъв ще бъде твоят ден?', en: 'What will your day be like?' },
+        'aiplan.p':            { bg: 'Кажи ни град и настроение — Evento AI ще ти подреди вечер от реалните събития около теб.', en: 'Tell us your city and vibe — Evento AI will curate an evening from real events near you.' },
+        'aiplan.city':         { bg: 'Град',                   en: 'City' },
+        'aiplan.city.choose':  { bg: 'Избери',                 en: 'Choose' },
+        'aiplan.date':         { bg: 'Дата',                   en: 'Date' },
+        'aiplan.vibe':         { bg: 'Настроение / повод',     en: 'Vibe / occasion' },
+        'aiplan.vibe.placeholder': { bg: 'напр. първа среща · с приятели · спокойна вечер · техно до късно', en: 'e.g. first date · with friends · quiet evening · techno until late' },
+        'aiplan.submit':       { bg: 'Подреди ми вечерта',     en: 'Plan my evening' },
+        'aiplan.result.kicker':{ bg: 'Evento AI предлага',     en: 'Evento AI suggests' },
+        'aiplan.all.events':   { bg: 'Всички събития за деня', en: 'All events for the day' },
+        'aiplan.no.events':    { bg: 'Няма публикувани събития за избрания ден. Опитай с друга дата.', en: 'No events for the selected day. Try another date.' },
+
+        // RECOMMENDED
+        'rec.stamp':           { bg: 'Подбор',              en: 'Selection' },
+        'rec.h1':              { bg: 'Вечери, избрани <span>за теб</span>.', en: 'Evenings chosen <span>for you</span>.' },
+        'rec.p':               { bg: 'Тук събираме предстоящите събития, които най-добре пасват на твоите предпочитания. Ако още не си ги настроил, ще покажем всички одобрени предложения.', en: 'Here we gather upcoming events that best match your preferences. If you have not set them yet, we will show all approved events.' },
+        'rec.myprefs':         { bg: 'Моите предпочитания', en: 'My Preferences' },
+        'rec.settings':        { bg: 'Настрой препоръките', en: 'Set Recommendations' },
+        'rec.no.prefs':        { bg: 'Нямаш запазени предпочитания.', en: 'You have no saved preferences.' },
+        'rec.no.prefs.desc':   { bg: 'Показваме всички предстоящи одобрени събития. Добави любим жанр, град или радиус, за да получаваш по-точни предложения.', en: 'Showing all upcoming approved events. Add a favourite genre, city or radius for more precise suggestions.' },
+        'rec.upcoming.kicker': { bg: 'Предстоящи предложения', en: 'Upcoming suggestions' },
+        'rec.empty.title':     { bg: 'Още няма <span>точно попадение</span>.', en: 'No <span>perfect match</span> yet.' },
+        'rec.empty.desc':      { bg: 'Няма предстоящи събития, които да отговарят на сегашните ти настройки. Можеш да ги промениш или да разгледаш всички събития.', en: 'No upcoming events match your current settings. You can change them or browse all events.' },
+        'rec.change.prefs':    { bg: 'Промени предпочитанията', en: 'Change Preferences' },
+
+        // WRAPPED
+        'wrapped.empty.h1':       { bg: 'Все още няма какво да обвием.',     en: 'Nothing to wrap yet.' },
+        'wrapped.find.event':     { bg: 'Намери събитие',                    en: 'Find an Event' },
+        'wrapped.year.in.evento': { bg: 'Това е твоята година във Evento.',  en: 'This is your year in Evento.' },
+        'wrapped.your.year':      { bg: 'Това беше твоята година.',          en: 'That was your year.' },
+        'wrapped.share.memo':     { bg: 'Споделяй, запомняй, продължавай.', en: 'Share, remember, continue.' },
+        'wrapped.save':           { bg: 'Запази',                            en: 'Save' },
+        'wrapped.scroll':         { bg: 'Скролни',                           en: 'Scroll' },
+        'wrapped.kicker.count':   { bg: 'Брой събития',                     en: 'Events count' },
+        'wrapped.kicker.genre':   { bg: 'Топ жанр',                         en: 'Top genre' },
+        'wrapped.kicker.city':    { bg: 'Любим град',                       en: 'Favourite city' },
+        'wrapped.kicker.scene':   { bg: 'На сцената',                       en: 'On stage' },
+        'wrapped.kicker.organizer':{ bg: 'Топ организатор',                 en: 'Top organizer' },
+        'wrapped.kicker.month':   { bg: 'Най-натоварен месец',              en: 'Busiest month' },
+        'wrapped.kicker.moments': { bg: 'Топ моменти',                      en: 'Top moments' },
+        'wrapped.kicker.favs':    { bg: 'Твоите фаворити',                  en: 'Your favourites' },
+        'wrapped.kicker.likes':   { bg: 'Харесвания',                       en: 'Likes' },
+        'wrapped.kicker.comments':{ bg: 'Коментари',                        en: 'Comments' },
+        'wrapped.kicker.orgs':    { bg: 'Нови организатори',                en: 'New organizers' },
+        'wrapped.kicker.ai':      { bg: 'Evento AI ти казва',               en: 'Evento AI tells you' },
     });
 
     function getLang() {
@@ -844,8 +1020,64 @@
 
     var lang = getLang();
 
+    function showTranslateBtns(root) {
+        (root || document).querySelectorAll('.groove-translate-btn').forEach(function (b) {
+            b.style.display = 'inline-block';
+        });
+    }
+
+    function collapseComments() {
+        document.querySelectorAll('.groove-list-stack').forEach(function (stack) {
+            var items = Array.from(stack.children).filter(function (el) {
+                return el.tagName === 'ARTICLE' && el.hasAttribute('data-comment-item');
+            });
+            if (items.length <= 1) return;
+            for (var i = 1; i < items.length; i++) {
+                items[i].style.display = 'none';
+            }
+            var remaining = items.length - 1;
+            var btn = document.createElement('button');
+            btn.className = 'groove-button groove-button-paper mt-3 d-block w-100';
+            btn.setAttribute('type', 'button');
+            btn.innerHTML = '<i class="bi bi-chat-left-text"></i> ' + (
+                lang === 'en'
+                    ? 'Show ' + remaining + ' more comment' + (remaining !== 1 ? 's' : '')
+                    : 'Покажи още ' + remaining + ' ' + (remaining === 1 ? 'коментар' : 'коментара')
+            );
+            btn.addEventListener('click', function () {
+                for (var j = 1; j < items.length; j++) { items[j].style.display = ''; }
+                btn.remove();
+            });
+            var footer = stack.nextElementSibling;
+            stack.parentNode.insertBefore(btn, footer || null);
+        });
+    }
+
+    function autoTranslateQueue() {
+        if (typeof window.gtTranslate !== 'function') return;
+        var btns = Array.from(document.querySelectorAll('.groove-translate-btn'))
+            .filter(function (b) { return b.dataset.state !== '1' && b.offsetParent !== null; })
+            .slice(0, 10);
+        if (!btns.length) return;
+        var i = 0;
+        function fire() {
+            if (i >= btns.length) return;
+            var btn = btns[i++];
+            if (btn.dataset.state !== '1' && btn.offsetParent !== null && typeof window.gtTranslate === 'function') {
+                window.gtTranslate(btn);
+            }
+            setTimeout(fire, 650);
+        }
+        fire();
+    }
+
     function run() {
         applyTranslations(lang);
+        collapseComments();
+        if (lang !== 'bg') {
+            showTranslateBtns();
+            setTimeout(autoTranslateQueue, 0);
+        }
 
         if (window.MutationObserver) {
             var observer = new MutationObserver(function (mutations) {
@@ -877,6 +1109,7 @@
                         if (lang !== 'bg') {
                             walkAndTranslate(node, EN);
                             translateAttributes(node, EN);
+                            showTranslateBtns(node);
                         }
                     });
                 });

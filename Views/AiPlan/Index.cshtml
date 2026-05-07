@@ -5,17 +5,17 @@
 
 <section class="evt-aiplan">
     <header class="evt-aiplan__hero">
-        <span class="evt-aiplan__kicker"><i class="bi bi-stars"></i> AI компаньон</span>
-        <h1>Какъв ще бъде твоят ден?</h1>
-        <p>Кажи ни град и настроение — Evento AI ще ти подреди вечер от реалните събития около теб.</p>
+        <span class="evt-aiplan__kicker"><i class="bi bi-stars"></i> <span data-i18n="aiplan.kicker">AI компаньон</span></span>
+        <h1 data-i18n="aiplan.h1">Какъв ще бъде твоят ден?</h1>
+        <p data-i18n="aiplan.p">Кажи ни град и настроение — Evento AI ще ти подреди вечер от реалните събития около теб.</p>
     </header>
 
     <form method="get" class="evt-aiplan__form">
         <div class="evt-search-row" style="grid-template-columns: 1fr 1fr 1.6fr auto;">
             <div class="evt-search-field">
-                <span>Град</span>
+                <span data-i18n="aiplan.city">Град</span>
                 <select name="city" required>
-                    <option value="">Избери</option>
+                    <option value="" data-i18n="aiplan.city.choose">Избери</option>
                     @foreach (var c in Model.Cities)
                     {
                         <option value="@c" selected="@(string.Equals(Model.City, c, StringComparison.OrdinalIgnoreCase))">@c</option>
@@ -23,15 +23,15 @@
                 </select>
             </div>
             <div class="evt-search-field">
-                <span>Дата</span>
+                <span data-i18n="aiplan.date">Дата</span>
                 <input type="date" name="when" value="@Model.When.ToString("yyyy-MM-dd")" />
             </div>
             <div class="evt-search-field">
-                <span>Настроение / повод</span>
-                <input type="text" name="vibe" value="@Model.Vibe" placeholder="напр. първа среща · с приятели · спокойна вечер · техно до късно" maxlength="200" />
+                <span data-i18n="aiplan.vibe">Настроение / повод</span>
+                <input type="text" name="vibe" value="@Model.Vibe" placeholder="напр. първа среща · с приятели · спокойна вечер · техно до късно" data-i18n-placeholder="aiplan.vibe.placeholder" maxlength="200" />
             </div>
             <button type="submit" class="evt-search-submit">
-                <i class="bi bi-magic"></i> <span>Подреди ми вечерта</span>
+                <i class="bi bi-magic"></i> <span data-i18n="aiplan.submit">Подреди ми вечерта</span>
             </button>
         </div>
     </form>
@@ -46,7 +46,7 @@
             @if (!string.IsNullOrWhiteSpace(Model.AiPlan))
             {
                 <article class="evt-aiplan__card">
-                    <span class="evt-aiplan__cardkicker"><i class="bi bi-stars"></i> Evento AI предлага</span>
+                    <span class="evt-aiplan__cardkicker"><i class="bi bi-stars"></i> <span data-i18n="aiplan.result.kicker">Evento AI предлага</span></span>
                     <pre class="evt-aiplan__text">@Model.AiPlan</pre>
                 </article>
             }
@@ -54,7 +54,7 @@
             @if (Model.Candidates.Count > 0)
             {
                 <section class="evt-aiplan__candidates">
-                    <h2>Всички събития за деня</h2>
+                    <h2 data-i18n="aiplan.all.events">Всички събития за деня</h2>
                     <div class="evt-aiplan__list">
                         @foreach (var ev in Model.Candidates)
                         {
@@ -81,6 +81,6 @@
     }
     else if (!string.IsNullOrWhiteSpace(Model.City))
     {
-        <div class="evt-empty">Няма публикувани събития за избрания ден. Опитай с друга дата.</div>
+        <div class="evt-empty" data-i18n="aiplan.no.events">Няма публикувани събития за избрания ден. Опитай с друга дата.</div>
     }
 </section>

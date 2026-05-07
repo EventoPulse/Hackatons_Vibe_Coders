@@ -44,5 +44,16 @@ namespace EventsApp.ViewModels.Account
 
         public int PurchasedTicketsCount { get; set; }
         public IReadOnlyList<MyTicketRowViewModel> RecentTickets { get; set; } = Array.Empty<MyTicketRowViewModel>();
+
+        public UserOnboardingChecklist? OnboardingChecklist { get; set; }
+    }
+
+    public class UserOnboardingChecklist
+    {
+        public bool HasSavedEvent { get; set; }
+        public bool HasAttended { get; set; }
+        public bool HasFollowed { get; set; }
+        public bool HasViewedEvent { get; set; }
+        public bool IsComplete => HasSavedEvent && HasAttended && HasFollowed && HasViewedEvent;
     }
 }

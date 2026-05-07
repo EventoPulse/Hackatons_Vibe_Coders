@@ -96,8 +96,8 @@
             <div class="evt-memories__head">
                 <span class="evt-memories__icon"><i class="bi bi-clock-history"></i></span>
                 <div>
-                    <strong>Спомени</strong>
-                    <small>Преди време беше на тези събития</small>
+                    <strong data-i18n="memories.kicker">Спомени</strong>
+                    <small data-i18n="memories.desc">Преди време беше на тези събития</small>
                 </div>
             </div>
             <div class="evt-memories__list">
@@ -130,7 +130,7 @@
             <span class="evt-stat__label" data-i18n="stats.attended">Посетени събития</span>
             @if (Model.MonthlyEventsCount > 0)
             {
-                <span class="evt-stat__delta">+@Model.MonthlyEventsCount този месец</span>
+                <span class="evt-stat__delta">+@Model.MonthlyEventsCount <span data-i18n="stat.this.month">този месец</span></span>
             }
         </div>
         <div class="evt-stat">
@@ -149,7 +149,7 @@
             <span class="evt-stat__label" data-i18n="stats.followers">Последователи</span>
             @if (Model.MonthlyNewFollowersCount > 0)
             {
-                <span class="evt-stat__delta">+@Model.MonthlyNewFollowersCount този месец</span>
+                <span class="evt-stat__delta">+@Model.MonthlyNewFollowersCount <span data-i18n="stat.this.month">този месец</span></span>
             }
         </div>
         @if (!string.IsNullOrWhiteSpace(Model.FavouriteGenre))

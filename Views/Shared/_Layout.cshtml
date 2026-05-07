@@ -34,11 +34,7 @@
                 var btn = document.getElementById('app-lang-btn');
                 if (btn) btn.textContent = lang === 'en' ? '🇧🇬 BG' : '🇬🇧 EN';
                 if (btn) btn.textContent = lang === 'en' ? 'BG' : 'EN';
-                if (lang === 'en') {
-                    document.querySelectorAll('.groove-translate-btn').forEach(function (b) {
-                        b.style.display = 'inline-block';
-                    });
-                }
+                // groove-translate-btn visibility is handled by i18n.js
             });
         })();
     </script>
@@ -313,7 +309,13 @@
             var banner = document.getElementById('evt-pwa-banner');
             var iosBanner = document.getElementById('evt-ios-banner');
 
-            function showBanner(el) { if (el) el.hidden = false; }
+            function showBanner(el) {
+                if (!el) return;
+                // Ensure only one banner is visible at a time
+                if (el === banner && iosBanner) iosBanner.hidden = true;
+                if (el === iosBanner && banner) banner.hidden = true;
+                el.hidden = false;
+            }
             function dismissBanner(el) {
                 if (el) el.hidden = true;
                 sessionStorage.setItem('evt_pwa_dismissed', '1');
@@ -326,9 +328,11 @@
                 setTimeout(function () { showBanner(banner); }, 3500);
             });
 
-            // iOS Safari (no beforeinstallprompt)
+            // iOS Safari — only show if no Android-style install prompt is available
             if (isSafariOnly) {
-                setTimeout(function () { showBanner(iosBanner); }, 4500);
+                setTimeout(function () {
+                    if (!deferred) showBanner(iosBanner);
+                }, 4500);
             }
 
             var installBtn = document.getElementById('evt-pwa-install-btn');

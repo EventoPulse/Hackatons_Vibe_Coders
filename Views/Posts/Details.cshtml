@@ -128,7 +128,10 @@
             </a>
         }
 
-        <p class="groove-panel-intro mt-4" style="white-space:pre-wrap;">@Model.Content</p>
+        <p class="groove-panel-intro mt-4" style="white-space:pre-wrap;" id="post-detail-@Model.Id">@Model.Content</p>
+        <button class="groove-translate-btn" data-target="#post-detail-@Model.Id" onclick="gtTranslate(this)">
+            <i class="bi bi-translate"></i> Translate
+        </button>
 
         @if (Model.Media.Count > 0)
         {
@@ -270,7 +273,10 @@
                                     }
                                     <span class="groove-badge ms-2" data-i18n="@c.AuthorBadgeKey">@c.AuthorBadgeText</span>
                                     <p class="groove-list-meta mt-1">@c.CreatedAt.ToString("dd.MM.yyyy HH:mm")</p>
-                                    <p>@c.Content</p>
+                                                    <p id="ctext-@c.Id">@c.Content</p>
+                                    <button class="groove-translate-btn" data-target="#ctext-@c.Id" onclick="gtTranslate(this)">
+                                        <i class="bi bi-translate"></i> Translate
+                                    </button>
                                     <div class="social-comment-toolbar">
                                         @if (User.Identity?.IsAuthenticated == true)
                                         {
@@ -351,7 +357,10 @@
                                                 }
                                                 <span class="groove-badge ms-2" data-i18n="@reply.AuthorBadgeKey">@reply.AuthorBadgeText</span>
                                                 <p class="groove-list-meta mt-1">@reply.CreatedAt.ToString("dd.MM.yyyy HH:mm")</p>
-                                                <p>@reply.Content</p>
+                                                <p id="rtext-@reply.Id">@reply.Content</p>
+                                                <button class="groove-translate-btn" data-target="#rtext-@reply.Id" onclick="gtTranslate(this)">
+                                                    <i class="bi bi-translate"></i> Translate
+                                                </button>
                                                 <div class="social-comment-toolbar">
                                                     @if (User.Identity?.IsAuthenticated == true)
                                                     {

@@ -7,19 +7,19 @@
 <section class="groove-app-page">
     <div class="groove-page-hero">
         <div class="groove-page-hero__copy">
-            <span class="groove-stamp groove-stamp-teal">Подбор</span>
-            <h1>Вечери, избрани <span>за теб</span>.</h1>
-            <p>
+            <span class="groove-stamp groove-stamp-teal" data-i18n="rec.stamp">Подбор</span>
+            <h1 data-i18n-html="rec.h1">Вечери, избрани <span>за теб</span>.</h1>
+            <p data-i18n="rec.p">
                 Тук събираме предстоящите събития, които най-добре пасват на твоите предпочитания.
                 Ако още не си ги настроил, ще покажем всички одобрени предложения.
             </p>
         </div>
         <div class="groove-page-actions">
             <a asp-controller="Preferences" asp-action="Index" class="groove-button groove-button-paper">
-                <i class="bi bi-sliders"></i> Моите предпочитания
+                <i class="bi bi-sliders"></i> <span data-i18n="rec.myprefs">Моите предпочитания</span>
             </a>
             <a asp-controller="Preferences" asp-action="Edit" class="groove-button groove-button-dark">
-                <i class="bi bi-pencil"></i> Настрой препоръките
+                <i class="bi bi-pencil"></i> <span data-i18n="rec.settings">Настрой препоръките</span>
             </a>
         </div>
     </div>
@@ -27,9 +27,9 @@
     @if (!hasPrefs)
     {
         <div class="groove-alert groove-alert-info mb-4">
-            <strong>Нямаш запазени предпочитания.</strong>
-            Показваме всички предстоящи одобрени събития. Добави любим жанр, град или радиус,
-            за да получаваш по-точни предложения.
+            <strong data-i18n="rec.no.prefs">Нямаш запазени предпочитания.</strong>
+            <span data-i18n="rec.no.prefs.desc">Показваме всички предстоящи одобрени събития. Добави любим жанр, град или радиус,
+            за да получаваш по-точни предложения.</span>
         </div>
     }
 
@@ -37,17 +37,17 @@
     {
         <div class="groove-empty-card">
             <i class="bi bi-stars"></i>
-            <h2 class="groove-panel-title">Още няма <span>точно попадение</span>.</h2>
-            <p class="groove-panel-intro">
+            <h2 class="groove-panel-title" data-i18n-html="rec.empty.title">Още няма <span>точно попадение</span>.</h2>
+            <p class="groove-panel-intro" data-i18n="rec.empty.desc">
                 Няма предстоящи събития, които да отговарят на сегашните ти настройки.
                 Можеш да ги промениш или да разгледаш всички събития.
             </p>
             <div class="groove-form-actions justify-content-center">
                 <a asp-controller="Preferences" asp-action="Edit" class="groove-button groove-button-dark">
-                    <i class="bi bi-sliders"></i> Промени предпочитанията
+                    <i class="bi bi-sliders"></i> <span data-i18n="rec.change.prefs">Промени предпочитанията</span>
                 </a>
                 <a asp-controller="Home" asp-action="Index" class="groove-button groove-button-paper">
-                    <i class="bi bi-compass"></i> Към началото
+                    <i class="bi bi-compass"></i> <span data-i18n="nav.home">Към началото</span>
                 </a>
             </div>
         </div>
@@ -57,7 +57,7 @@
         <section class="groove-page-section">
             <div class="groove-section-bar">
                 <div>
-                    <span class="groove-kicker">Предстоящи предложения</span>
+                    <span class="groove-kicker" data-i18n="rec.upcoming.kicker">Предстоящи предложения</span>
                     <h2>@Model.Count <span>събития</span> за следващите дни.</h2>
                 </div>
             </div>

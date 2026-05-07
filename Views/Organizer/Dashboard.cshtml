@@ -113,6 +113,9 @@
                         <i class="bi bi-person-lines-fill"></i> Public profile
                     </a>
                 }
+                <button type="button" class="org-tour__help-btn" onclick="orgTourOpen()" title="Покажи ръководство">
+                    <i class="bi bi-question-circle"></i> <span data-i18n="org.tour.help">? Помощ</span>
+                </button>
             </div>
         </div>
 
@@ -543,6 +546,55 @@
     }
 </section>
 
+@if (Model.HasProfile)
+{
+    <div id="org-tour" class="org-tour" style="display:none;" role="dialog" aria-modal="true" aria-label="Организаторски наръчник">
+        <div class="org-tour__backdrop" onclick="orgTourClose()"></div>
+        <div class="org-tour__dialog">
+            <div class="org-tour__step is-active" data-step="1">
+                <div class="org-tour__icon"><i class="bi bi-rocket-takeoff"></i></div>
+                <h2 data-i18n="org.tour.step1.h">Добре дошъл в Organizer Panel!</h2>
+                <p data-i18n="org.tour.step1.p">Тук управляваш публичните си идентичности, събития, билети и приходи — всичко от едно място.</p>
+            </div>
+            <div class="org-tour__step" data-step="2">
+                <div class="org-tour__icon"><i class="bi bi-megaphone"></i></div>
+                <h2 data-i18n="org.tour.step2.h">Публична страница</h2>
+                <p data-i18n="org.tour.step2.p">Преди да публикуваш събитие, трябва да имаш поне една публична страница. Тя е лицето ти — хората я виждат при всяко събитие.</p>
+                <a asp-action="Profiles" class="org-tour__link">Публични страници →</a>
+            </div>
+            <div class="org-tour__step" data-step="3">
+                <div class="org-tour__icon"><i class="bi bi-calendar-plus"></i></div>
+                <h2 data-i18n="org.tour.step3.h">Публикувай събитие</h2>
+                <p data-i18n="org.tour.step3.p">Натисни "Ново събитие" и добави снимка, дати, жанр и локация. Събитието влиза за одобрение от admin, след което е видимо за всички.</p>
+                <a asp-controller="Events" asp-action="Create" class="org-tour__link">Ново събитие →</a>
+            </div>
+            <div class="org-tour__step" data-step="4">
+                <div class="org-tour__icon"><i class="bi bi-ticket-perforated"></i></div>
+                <h2 data-i18n="org.tour.step4.h">Билети и приходи</h2>
+                <p data-i18n="org.tour.step4.p">Добавяй различни типове билети — безплатни, платени или VIP. Продажбата се случва директно от страницата на събитието.</p>
+                <a asp-action="Events" class="org-tour__link">Моите събития →</a>
+            </div>
+            <div class="org-tour__step" data-step="5">
+                <div class="org-tour__icon"><i class="bi bi-bar-chart-line"></i></div>
+                <h2 data-i18n="org.tour.step5.h">Статистики и VIP Boost</h2>
+                <p data-i18n="org.tour.step5.p">Следи продажбите, гледанията и ангажираността. Нов организатор получава 1 VIP boost — постави го на събитието, което искаш да промотираш най-много.</p>
+            </div>
+            <div class="org-tour__dots">
+                <span class="org-tour__dot is-active"></span>
+                <span class="org-tour__dot"></span>
+                <span class="org-tour__dot"></span>
+                <span class="org-tour__dot"></span>
+                <span class="org-tour__dot"></span>
+            </div>
+            <div class="org-tour__actions">
+                <button type="button" class="org-tour__skip" onclick="orgTourClose()" data-i18n="org.tour.skip">Пропусни</button>
+                <button type="button" class="org-tour__next" id="org-tour-next-btn" onclick="orgTourNext()" data-i18n="org.tour.next">Напред</button>
+                <button type="button" class="org-tour__finish" id="org-tour-finish-btn" onclick="orgTourClose()" data-i18n="org.tour.finish" style="display:none;">Готово!</button>
+            </div>
+        </div>
+    </div>
+}
+
 @section Scripts {
     @if (Model.HasProfile)
     {
@@ -607,6 +659,58 @@
                     });
                 }
             })();
+        </script>
+    }
+
+    @if (Model.HasProfile)
+    {
+        <script>
+            var orgTourStep = 1;
+            var orgTourTotal = 5;
+
+            function orgTourOpen() {
+                orgTourStep = 1;
+                orgTourRender();
+                document.getElementById('org-tour').style.display = 'flex';
+                document.body.style.overflow = 'hidden';
+            }
+
+            function orgTourClose() {
+                document.getElementById('org-tour').style.display = 'none';
+                document.body.style.overflow = '';
+                try { localStorage.setItem('org_tour_seen', '1'); } catch (_) {}
+            }
+
+            function orgTourNext() {
+                if (orgTourStep < orgTourTotal) {
+                    orgTourStep++;
+                    orgTourRender();
+                }
+            }
+
+            function orgTourRender() {
+                var steps = document.querySelectorAll('#org-tour .org-tour__step');
+                var dots = document.querySelectorAll('#org-tour .org-tour__dot');
+                var nextBtn = document.getElementById('org-tour-next-btn');
+                var finishBtn = document.getElementById('org-tour-finish-btn');
+                steps.forEach(function (s, i) {
+                    s.classList.toggle('is-active', i + 1 === orgTourStep);
+                });
+                dots.forEach(function (d, i) {
+                    d.classList.toggle('is-active', i + 1 === orgTourStep);
+                });
+                var isLast = orgTourStep === orgTourTotal;
+                nextBtn.style.display = isLast ? 'none' : '';
+                finishBtn.style.display = isLast ? '' : 'none';
+            }
+
+            document.addEventListener('DOMContentLoaded', function () {
+                try {
+                    if (!localStorage.getItem('org_tour_seen')) {
+                        setTimeout(orgTourOpen, 600);
+                    }
+                } catch (_) {}
+            });
         </script>
     }
 }

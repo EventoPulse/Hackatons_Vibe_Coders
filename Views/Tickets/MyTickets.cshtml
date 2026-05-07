@@ -6,15 +6,15 @@
 <section class="groove-app-page">
     <div class="groove-page-hero">
         <div class="groove-page-hero__copy">
-            <span class="groove-stamp groove-stamp-red">Билети</span>
-            <h1>Твоите <span>запазени</span> места.</h1>
-            <p>
+            <span class="groove-stamp groove-stamp-red" data-i18n="tickets.page.stamp">Билети</span>
+            <h1 data-i18n-html="tickets.page.title">Твоите <span>запазени</span> места.</h1>
+            <p data-i18n="tickets.page.desc">
                 Всички купени билети са тук, заедно с QR кода и бърз достъп до PDF версията.
             </p>
         </div>
         <div class="groove-page-actions">
             <a asp-controller="Home" asp-action="Index" class="groove-button groove-button-paper">
-                <i class="bi bi-calendar2-event"></i> Разгледай събития
+                <i class="bi bi-calendar2-event"></i> <span data-i18n="tickets.explore">Разгледай събития</span>
             </a>
         </div>
     </div>
@@ -23,13 +23,13 @@
     {
         <div class="groove-empty-card">
             <i class="bi bi-ticket-perforated"></i>
-            <h2 class="groove-panel-title">Още нямаш <span>купени билети</span>.</h2>
-            <p class="groove-panel-intro">
+            <h2 class="groove-panel-title" data-i18n-html="tickets.empty.title">Още нямаш <span>купени билети</span>.</h2>
+            <p class="groove-panel-intro" data-i18n="tickets.empty.desc">
                 Когато вземеш билет за събитие, той ще се появи тук с всички детайли за вход.
             </p>
             <div class="groove-form-actions justify-content-center">
                 <a asp-controller="Home" asp-action="Index" class="groove-button groove-button-dark">
-                    <i class="bi bi-search"></i> Намери събитие
+                    <i class="bi bi-search"></i> <span data-i18n="tickets.find">Намери събитие</span>
                 </a>
             </div>
         </div>
@@ -45,17 +45,17 @@
                 <article class="groove-ticket-card">
                     <div class="d-flex justify-content-between align-items-start gap-2">
                         <span class="groove-ticket-meta">Купен на @t.CreatedAt.ToString("dd.MM.yyyy HH:mm")</span>
-                        <span class="groove-status-badge @statusClass">@statusText</span>
+                        <span class="groove-status-badge @statusClass" data-i18n="@(t.IsUsed ? "tickets.used" : "tickets.valid")">@statusText</span>
                     </div>
 
                     <h3 class="mt-3">@t.EventTitle</h3>
                     <p>@t.TicketName</p>
 
                     <dl class="groove-data-list mt-3">
-                        <dt>Локация</dt>
+                        <dt data-i18n="tickets.dt.location">Локация</dt>
                         <dd>@t.Address, @t.City</dd>
 
-                        <dt>Начало</dt>
+                        <dt data-i18n="tickets.dt.start">Начало</dt>
                         <dd>@t.StartTime.ToString("dd.MM.yyyy HH:mm")</dd>
 
                         @if (!string.IsNullOrWhiteSpace(t.SeatLabel))
@@ -64,7 +64,7 @@
                             <dd>@t.SeatLabel</dd>
                         }
 
-                        <dt>Цена</dt>
+                        <dt data-i18n="tickets.dt.price">Цена</dt>
                         <dd>@t.Price.ToTicketPriceDisplay()</dd>
                     </dl>
 
@@ -72,7 +72,7 @@
                         <span class="groove-price">@t.Price.ToTicketPriceDisplay()</span>
                         <div class="groove-list-actions">
                             <a asp-action="Details" asp-route-id="@t.Id" class="groove-button groove-button-dark">
-                                <i class="bi bi-eye"></i> Детайли
+                                <i class="bi bi-eye"></i> <span data-i18n="tickets.details.btn">Детайли</span>
                             </a>
                             <a asp-action="DownloadPdf" asp-route-id="@t.Id" class="groove-button groove-button-paper">
                                 <i class="bi bi-file-earmark-pdf"></i> PDF

@@ -469,10 +469,6 @@
         });
 
         function setupMap(mapEl) {
-            // Hide loading overlay immediately — don't wait for tilesloaded
-            var loadingOverlay = mapEl.querySelector('.map-loading-state');
-            if (loadingOverlay) loadingOverlay.style.display = 'none';
-
             var map = new google.maps.Map(mapEl, {
                 center: BG_CENTER,
                 zoom: BG_ZOOM,
@@ -490,6 +486,10 @@
                 { lat: BG_BOUNDS.north, lng: BG_BOUNDS.east }
             );
             map.fitBounds(bgBounds);
+
+            // Hide loading overlay as soon as Maps has rendered its canvas
+            var loadingOverlay = mapEl.querySelector('.map-loading-state');
+            if (loadingOverlay) loadingOverlay.style.display = 'none';
 
             // Fix tiles not covering full container on initial load
             google.maps.event.addListenerOnce(map, 'tilesloaded', function () {

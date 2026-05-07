@@ -262,6 +262,18 @@ namespace EventsApp.Controllers
                 })
                 .ToListAsync();
 
+            var hasViewedAny = await _db.UserActivities
+                .AnyAsync(a => a.UserId == user.Id && a.ActivityType == UserActivityType.EventViewed);
+            var hasAttendedAny = await _db.EventAttendances
+                .AnyAsync(a => a.UserId == user.Id);
+            vm.OnboardingChecklist = new UserOnboardingChecklist
+            {
+                HasSavedEvent = vm.SavedEventsCount > 0,
+                HasAttended = hasAttendedAny,
+                HasFollowed = vm.FollowingCount > 0,
+                HasViewedEvent = hasViewedAny,
+            };
+
             return View(vm);
         }
 

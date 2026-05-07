@@ -18,22 +18,22 @@
         {
             <article class="evt-wrap-slide is-cover">
                 <span class="evt-wrap-slide__kicker">@Model.Year</span>
-                <h1>Все още няма какво да обвием.</h1>
+                <h1 data-i18n="wrapped.empty.h1">Все още няма какво да обвием.</h1>
                 <p>Иди на 1-2 събития през @Model.Year и се върни — ще ти направим красив ретроспектив.</p>
-                <a asp-controller="Home" asp-action="Index" class="evt-btn evt-btn-primary">Намери събитие</a>
+                <a asp-controller="Home" asp-action="Index" class="evt-btn evt-btn-primary" data-i18n="wrapped.find.event">Намери събитие</a>
             </article>
         }
         else
         {
             <article class="evt-wrap-slide is-cover">
                 <span class="evt-wrap-slide__kicker">@Model.Year</span>
-                <h1>Здравей, <em>@Model.DisplayName</em>.</h1>
-                <p>Това е твоята година във Evento.</p>
-                <span class="evt-wrap-slide__hint"><i class="bi bi-arrow-down"></i> Скролни</span>
+                <h1><span data-i18n="wrapped.hello">Здравей,</span> <em>@Model.DisplayName</em>.</h1>
+                <p data-i18n="wrapped.year.in.evento">Това е твоята година във Evento.</p>
+                <span class="evt-wrap-slide__hint"><i class="bi bi-arrow-down"></i> <span data-i18n="wrapped.scroll">Скролни</span></span>
             </article>
 
             <article class="evt-wrap-slide is-purple">
-                <span class="evt-wrap-slide__kicker">Брой събития</span>
+                <span class="evt-wrap-slide__kicker" data-i18n="wrapped.kicker.count">Брой събития</span>
                 <h2 class="evt-wrap-slide__big">@Model.TotalEventsAttended</h2>
                 <p>живи нощи прекара през @Model.Year.</p>
             </article>
@@ -41,7 +41,7 @@
             @if (Model.TopGenre != null)
             {
                 <article class="evt-wrap-slide is-orange">
-                    <span class="evt-wrap-slide__kicker">Топ жанр</span>
+                    <span class="evt-wrap-slide__kicker" data-i18n="wrapped.kicker.genre">Топ жанр</span>
                     <h2>@Model.TopGenre</h2>
                     <p>@Model.TopGenreCount събития от този жанр — явно ти е до сърце.</p>
                 </article>
@@ -50,14 +50,14 @@
             @if (Model.TopCity != null)
             {
                 <article class="evt-wrap-slide is-teal">
-                    <span class="evt-wrap-slide__kicker">Любим град</span>
+                    <span class="evt-wrap-slide__kicker" data-i18n="wrapped.kicker.city">Любим град</span>
                     <h2>@Model.TopCity</h2>
                     <p>Това беше твоят дом за @Model.TopCityCount нощи.</p>
                 </article>
             }
 
             <article class="evt-wrap-slide is-pink">
-                <span class="evt-wrap-slide__kicker">На сцената</span>
+                <span class="evt-wrap-slide__kicker" data-i18n="wrapped.kicker.scene">На сцената</span>
                 <h2 class="evt-wrap-slide__big">@Model.TotalHoursOnScene<sub>часа</sub></h2>
                 <p>@Model.CitiesVisited @(Model.CitiesVisited == 1 ? "град" : "града") изпробва.</p>
             </article>
@@ -65,7 +65,7 @@
             @if (Model.TopOrganizer != null)
             {
                 <article class="evt-wrap-slide is-indigo">
-                    <span class="evt-wrap-slide__kicker">Топ организатор</span>
+                    <span class="evt-wrap-slide__kicker" data-i18n="wrapped.kicker.organizer">Топ организатор</span>
                     <h2>@Model.TopOrganizer</h2>
                     <p>@Model.TopOrganizerCount събития на тази сцена.</p>
                 </article>
@@ -74,7 +74,7 @@
             @if (Model.BusiestMonth != null)
             {
                 <article class="evt-wrap-slide is-blue">
-                    <span class="evt-wrap-slide__kicker">Най-натоварен месец</span>
+                    <span class="evt-wrap-slide__kicker" data-i18n="wrapped.kicker.month">Най-натоварен месец</span>
                     <h2 style="text-transform:capitalize;">@Model.BusiestMonth</h2>
                     <p>@Model.BusiestMonthCount събития само за един месец.</p>
                 </article>
@@ -83,8 +83,8 @@
             @if (Model.TopEvents.Count > 0)
             {
                 <article class="evt-wrap-slide is-green">
-                    <span class="evt-wrap-slide__kicker">Топ моменти</span>
-                    <h2>Твоите фаворити</h2>
+                    <span class="evt-wrap-slide__kicker" data-i18n="wrapped.kicker.moments">Топ моменти</span>
+                    <h2 data-i18n="wrapped.kicker.favs">Твоите фаворити</h2>
                     <div class="evt-wrap-top">
                         @foreach (var ev in Model.TopEvents)
                         {
@@ -108,15 +108,15 @@
             <article class="evt-wrap-slide is-mini">
                 <div class="evt-wrap-grid">
                     <div>
-                        <span class="evt-wrap-slide__kicker">Харесвания</span>
+                        <span class="evt-wrap-slide__kicker" data-i18n="wrapped.kicker.likes">Харесвания</span>
                         <h3>@Model.LikesGiven</h3>
                     </div>
                     <div>
-                        <span class="evt-wrap-slide__kicker">Коментари</span>
+                        <span class="evt-wrap-slide__kicker" data-i18n="wrapped.kicker.comments">Коментари</span>
                         <h3>@Model.CommentsPosted</h3>
                     </div>
                     <div>
-                        <span class="evt-wrap-slide__kicker">Нови организатори</span>
+                        <span class="evt-wrap-slide__kicker" data-i18n="wrapped.kicker.orgs">Нови организатори</span>
                         <h3>@Model.OrganizersFollowed</h3>
                     </div>
                 </div>
@@ -125,18 +125,18 @@
             @if (!string.IsNullOrWhiteSpace(Model.AiSummary))
             {
                 <article class="evt-wrap-slide is-cover">
-                    <span class="evt-wrap-slide__kicker"><i class="bi bi-stars"></i> Evento AI ти казва</span>
+                    <span class="evt-wrap-slide__kicker"><i class="bi bi-stars"></i> <span data-i18n="wrapped.kicker.ai">Evento AI ти казва</span></span>
                     <p class="evt-wrap-quote">@Model.AiSummary</p>
                 </article>
             }
 
             <article class="evt-wrap-slide is-cover">
                 <span class="evt-wrap-slide__kicker">@Model.Year</span>
-                <h2>Това беше твоята година.</h2>
-                <p>Споделяй, запомняй, продължавай.</p>
+                <h2 data-i18n="wrapped.your.year">Това беше твоята година.</h2>
+                <p data-i18n="wrapped.share.memo">Споделяй, запомняй, продължавай.</p>
                 <div style="display:flex;gap:8px;margin-top:18px;flex-wrap:wrap;justify-content:center;">
                     <button type="button" class="evt-btn evt-btn-primary" onclick="window.print()">
-                        <i class="bi bi-printer"></i> Запази
+                        <i class="bi bi-printer"></i> <span data-i18n="wrapped.save">Запази</span>
                     </button>
                     <a asp-controller="Home" asp-action="Index" class="evt-btn evt-btn-ghost" style="background:rgba(255,255,255,.15);color:#fff;border-color:rgba(255,255,255,.3);">
                         <i class="bi bi-house"></i> Към началото

@@ -50,8 +50,8 @@
 
     <div class="evt-marquee" aria-hidden="true">
         <div class="evt-marquee__track">
-            <span>★ Live nights</span><span>★ Дневник на града</span><span>★ Карта на България</span><span>★ Свежи билети</span><span>★ Techno</span><span>★ House</span><span>★ Jazz</span><span>★ Около мен</span>
-            <span>★ Live nights</span><span>★ Дневник на града</span><span>★ Карта на България</span><span>★ Свежи билети</span><span>★ Techno</span><span>★ House</span><span>★ Jazz</span><span>★ Около мен</span>
+            <span data-i18n="marquee.live">★ Живи нощи</span><span data-i18n="marquee.diary">★ Дневник на града</span><span data-i18n="marquee.map">★ Карта на България</span><span data-i18n="marquee.tickets">★ Свежи билети</span><span>★ Techno</span><span>★ House</span><span>★ Jazz</span><span data-i18n="marquee.nearme">★ Около мен</span>
+            <span data-i18n="marquee.live">★ Живи нощи</span><span data-i18n="marquee.diary">★ Дневник на града</span><span data-i18n="marquee.map">★ Карта на България</span><span data-i18n="marquee.tickets">★ Свежи билети</span><span>★ Techno</span><span>★ House</span><span>★ Jazz</span><span data-i18n="marquee.nearme">★ Около мен</span>
         </div>
     </div>
 
@@ -151,7 +151,7 @@
     <div class="evt-search-section">
         <div id="home-filter-tabs" class="evt-search-tabs-bar">
             <a class="evt-search-tab-link @(isTabAll ? "is-active" : "")" asp-action="Index">
-                <i class="bi bi-grid-3x3-gap"></i> <span>Всички</span>
+                <i class="bi bi-grid-3x3-gap"></i> <span data-i18n="search.tab.all">Всички</span>
             </a>
             <a class="evt-search-tab-link @(isTabTonight ? "is-active" : "")"
                asp-action="Index"
@@ -169,7 +169,7 @@
                asp-action="Index"
                asp-route-dateFrom="@today.ToString("yyyy-MM-dd")"
                asp-route-dateTo="@endOfWeek.ToString("yyyy-MM-dd")">
-                <i class="bi bi-calendar-week"></i> <span>Тази седмица</span>
+                <i class="bi bi-calendar-week"></i> <span data-i18n="search.tab.week">Тази седмица</span>
             </a>
             <a class="evt-search-tab-link @(isTabFree ? "is-active" : "")"
                asp-action="Index" asp-route-search="free">
@@ -203,79 +203,6 @@
         </div>
     </div>
 
-    @if (Model.IsAuthenticated && Model.OnboardingChecklist is { } checklist)
-    {
-        @if (!checklist.IsComplete)
-        {
-            var done = new[] { checklist.HasSavedEvent, checklist.HasAttended, checklist.HasFollowed, checklist.HasViewedEvents }.Count(x => x);
-            <div class="evt-onboarding" id="user-onboarding-checklist">
-                <div class="evt-onboarding__header">
-                    <div>
-                        <span class="evt-onboarding__label">Първи стъпки</span>
-                        <h3 class="evt-onboarding__title">Открий всичко, което Evento предлага</h3>
-                    </div>
-                    <button type="button" class="evt-onboarding__dismiss" onclick="dismissOnboarding()" title="Скрий">
-                        <i class="bi bi-x-lg"></i>
-                    </button>
-                </div>
-                <ul class="evt-onboarding__steps">
-                    <li class="@(checklist.HasSavedEvent ? "is-done" : "")">
-                        <i class="bi @(checklist.HasSavedEvent ? "bi-bookmark-check-fill" : "bi-bookmark")"></i>
-                        <span>Запази любимо събитие</span>
-                        @if (!checklist.HasSavedEvent) { <a asp-action="Index" class="evt-onboarding__do">Разгледай →</a> }
-                    </li>
-                    <li class="@(checklist.HasAttended ? "is-done" : "")">
-                        <i class="bi @(checklist.HasAttended ? "bi-check-circle-fill" : "bi-circle")"></i>
-                        <span>Запиши се за събитие (Going или Interested)</span>
-                        @if (!checklist.HasAttended) { <a asp-action="Index" class="evt-onboarding__do">Намери →</a> }
-                    </li>
-                    <li class="@(checklist.HasFollowed ? "is-done" : "")">
-                        <i class="bi @(checklist.HasFollowed ? "bi-person-check-fill" : "bi-person-plus")"></i>
-                        <span>Последвай организатор или приятел</span>
-                    </li>
-                    <li class="@(checklist.HasViewedEvents ? "is-done" : "")">
-                        <i class="bi @(checklist.HasViewedEvents ? "bi-eye-fill" : "bi-eye")"></i>
-                        <span>Разгледай поне 3 събития</span>
-                    </li>
-                </ul>
-                <div class="evt-onboarding__progress">
-                    <div class="evt-onboarding__bar">
-                        <div class="evt-onboarding__fill" style="width:@(done * 25)%"></div>
-                    </div>
-                    <span class="evt-onboarding__count">@done / 4</span>
-                </div>
-            </div>
-        }
-        else
-        {
-            <div class="evt-onboarding evt-onboarding--done" id="user-onboarding-complete">
-                <div class="evt-onboarding__celebrate">
-                    <i class="bi bi-stars" style="font-size:2rem;color:#fbbf24;"></i>
-                    <div>
-                        <p class="evt-onboarding__title mb-0">Перфектно! Открил си всичко.</p>
-                        <p class="mb-0" style="font-size:.82rem;opacity:.85;">Сега можеш да изследваш цялото Evento без ограничения.</p>
-                    </div>
-                    <button type="button" class="evt-onboarding__dismiss ms-auto" onclick="dismissOnboarding()" title="Скрий">
-                        <i class="bi bi-x-lg"></i>
-                    </button>
-                </div>
-            </div>
-        }
-        <script>
-            function dismissOnboarding() {
-                var el = document.getElementById('user-onboarding-checklist') || document.getElementById('user-onboarding-complete');
-                if (el) el.style.display = 'none';
-                try { localStorage.setItem('evt_onboarding_dismissed', '1'); } catch (_) { }
-            }
-            document.addEventListener('DOMContentLoaded', function () {
-                if (localStorage.getItem('evt_onboarding_dismissed') === '1') {
-                    var el = document.getElementById('user-onboarding-checklist') || document.getElementById('user-onboarding-complete');
-                    if (el) el.style.display = 'none';
-                }
-            });
-        </script>
-    }
-
     <section id="home-events-surface" class="evt-section" aria-live="polite">
         <div class="evt-section__head">
             <div>
@@ -306,7 +233,7 @@
         <div class="evt-toolbar">
             <div class="evt-chips">
                 <a class="evt-chip @(string.IsNullOrEmpty(Model.Search) && Model.DateFrom == null && Model.Genre == null ? "is-active" : "")"
-                   asp-action="Index">Всички</a>
+                   asp-action="Index" data-i18n="search.tab.all">Всички</a>
                 <a class="evt-chip @(Model.Search == "concert" ? "is-active" : "")"
                    asp-action="Index" asp-route-search="concert" data-i18n="chip.concerts">Концерти</a>
                 <a class="evt-chip @(Model.Search == "festival" ? "is-active" : "")"
@@ -316,9 +243,9 @@
                 <a class="evt-chip @(Model.Search == "free" ? "is-active" : "")"
                    asp-action="Index" asp-route-search="free" data-i18n="chip.free">Безплатни</a>
                 <a class="evt-chip @(Model.Search == "family" ? "is-active" : "")"
-                   asp-action="Index" asp-route-search="family">За деца</a>
+                   asp-action="Index" asp-route-search="family" data-i18n="home.chip.kids">За деца</a>
                 <a class="evt-chip @(Model.Search == "live" ? "is-active" : "")"
-                   asp-action="Index" asp-route-search="live">Live музика</a>
+                   asp-action="Index" asp-route-search="live" data-i18n="home.chip.live">Live музика</a>
             </div>
             @if (User.IsInRole(GlobalConstants.Roles.Organizer) || User.IsInRole(GlobalConstants.Roles.Admin))
             {
