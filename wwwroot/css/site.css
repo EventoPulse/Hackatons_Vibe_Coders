@@ -10573,3 +10573,345 @@ video {
 [data-theme="dark"] .org-tour__dialog h2 { color: #f7f8ff; }
 [data-theme="dark"] .org-tour__dialog p { color: #aeb7cc; }
 [data-theme="dark"] .org-tour__dot { background: #2a3347; }
+
+/* =====================================================
+   MODERN UNIFICATION OVERRIDES
+   Restyle groove-* legacy classes to the evt-* modern look
+   so all pages share one design language without touching
+   45+ Razor templates.
+   ===================================================== */
+.groove-app-page,
+.groove-feed-page,
+.groove-form-shell {
+    --groove-paper: transparent;
+    --groove-card: #ffffff;
+    --groove-ink: #0d1424;
+    --groove-muted: #5b6275;
+    color: var(--groove-ink);
+    max-width: 1180px;
+    margin: 24px auto 56px;
+    padding: 0 16px;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+.groove-form-shell-narrow { max-width: 760px; }
+
+html[data-theme="dark"] .groove-app-page,
+html[data-theme="dark"] .groove-feed-page,
+html[data-theme="dark"] .groove-form-shell {
+    --groove-card: #151a26;
+    --groove-ink: #e8eaf2;
+    --groove-muted: #9ba2b5;
+    color: var(--groove-ink);
+}
+
+.groove-page-hero {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 0 4px;
+    margin-bottom: 24px;
+    text-align: center;
+    justify-content: flex-start;
+}
+.groove-page-hero__copy {
+    max-width: 720px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    align-items: center;
+}
+.groove-page-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+}
+.groove-inline-actions {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.groove-page-hero__copy h1,
+.groove-page-section h2,
+.groove-panel-title,
+.groove-app-page h1,
+.groove-app-page h2,
+.groove-feed-page h1,
+.groove-feed-page h2,
+.groove-form-shell h1,
+.groove-form-shell h2,
+.groove-feed-hero h1,
+.groove-section-heading h2 {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif !important;
+    font-weight: 800 !important;
+    letter-spacing: -0.02em !important;
+    line-height: 1.15 !important;
+    margin: 0 !important;
+}
+.groove-page-hero__copy h1,
+.groove-panel-title,
+.groove-feed-hero h1 {
+    font-size: clamp(1.8rem, 3.2vw, 2.6rem) !important;
+}
+.groove-page-section h2,
+.groove-section-heading h2,
+.groove-app-page h2,
+.groove-feed-page h2,
+.groove-form-shell h2 {
+    font-size: 1.3rem !important;
+}
+
+.groove-page-hero__copy h1 span,
+.groove-page-section h2 span,
+.groove-panel-title span,
+.groove-feed-hero h1 span,
+.groove-section-heading h2 span,
+.groove-app-page h1 span,
+.groove-app-page h2 span {
+    font-style: normal !important;
+    background: linear-gradient(120deg, #2456ff, #6b85ff);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent !important;
+}
+
+.groove-page-hero__copy p,
+.groove-page-section p,
+.groove-panel-intro,
+.groove-muted-copy,
+.groove-feed-hero p {
+    color: var(--evt-ink-soft, #5b6275);
+    font-family: 'Inter', system-ui, -apple-system, sans-serif !important;
+    font-size: 1rem;
+    line-height: 1.55;
+    max-width: 620px;
+    margin: 0 !important;
+}
+
+.groove-stamp {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px !important;
+    border: none !important;
+    border-radius: 999px !important;
+    box-shadow: none !important;
+    background: linear-gradient(120deg, #2456ff, #6b85ff) !important;
+    color: #fff !important;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif !important;
+    font-size: 0.78rem !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    transform: none !important;
+}
+.groove-stamp-red { background: linear-gradient(120deg, #e53935, #ff6e6a) !important; color: #fff !important; }
+.groove-stamp-teal { background: linear-gradient(120deg, #2456ff, #6b85ff) !important; color: #fff !important; }
+.groove-stamp-yellow { background: linear-gradient(120deg, #ff9f43, #feca57) !important; color: #4a2f00 !important; }
+
+.groove-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px !important;
+    border: 1px solid transparent !important;
+    border-radius: 999px !important;
+    box-shadow: none !important;
+    padding: 10px 18px !important;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif !important;
+    font-size: 0.92rem !important;
+    font-weight: 700 !important;
+    letter-spacing: 0 !important;
+    text-transform: none !important;
+    text-decoration: none !important;
+    transition: transform 0.12s, background 0.15s, border-color 0.15s, box-shadow 0.15s !important;
+    cursor: pointer;
+}
+.groove-button:hover {
+    transform: translateY(-1px) !important;
+    box-shadow: 0 6px 18px -8px rgba(36, 86, 255, 0.4) !important;
+}
+
+.groove-button-dark,
+.groove-button-red {
+    background: linear-gradient(120deg, #2456ff, #6b85ff) !important;
+    color: #fff !important;
+    border-color: transparent !important;
+}
+.groove-button-dark:hover,
+.groove-button-red:hover {
+    color: #fff !important;
+    filter: brightness(1.05);
+}
+
+.groove-button-paper {
+    background: #f7f8fb !important;
+    color: #0d1424 !important;
+    border: 1px solid #e5e7ef !important;
+}
+.groove-button-paper:hover {
+    background: #eef0f6 !important;
+    color: #0d1424 !important;
+    border-color: #c8cdd9 !important;
+}
+html[data-theme="dark"] .groove-button-paper {
+    background: #1c2231 !important;
+    border-color: #2a3142 !important;
+    color: #e8eaf2 !important;
+}
+html[data-theme="dark"] .groove-button-paper:hover {
+    background: #232a3a !important;
+    color: #e8eaf2 !important;
+}
+
+.groove-paper-card,
+.groove-table-card,
+.groove-form-panel,
+.groove-info-card,
+.groove-highlight-card,
+.groove-empty-card,
+.groove-ticket-card,
+.groove-stat-card {
+    background: var(--groove-card, #fff) !important;
+    background-image: none !important;
+    border: 1px solid #e5e7ef !important;
+    border-radius: 18px !important;
+    box-shadow: 0 4px 16px rgba(13, 20, 36, 0.04) !important;
+    padding: 20px !important;
+    transform: none !important;
+}
+html[data-theme="dark"] .groove-paper-card,
+html[data-theme="dark"] .groove-table-card,
+html[data-theme="dark"] .groove-form-panel,
+html[data-theme="dark"] .groove-info-card,
+html[data-theme="dark"] .groove-highlight-card,
+html[data-theme="dark"] .groove-empty-card,
+html[data-theme="dark"] .groove-ticket-card,
+html[data-theme="dark"] .groove-stat-card {
+    background: #151a26 !important;
+    border-color: #262d3d !important;
+}
+
+.groove-paper-card:nth-child(odd),
+.groove-paper-card:nth-child(even),
+.groove-ticket-card:nth-child(odd),
+.groove-ticket-card:nth-child(even),
+.groove-stat-card:nth-child(odd),
+.groove-stat-card:nth-child(even) {
+    transform: none !important;
+}
+
+.groove-empty-card {
+    text-align: center;
+    padding: 48px 24px !important;
+}
+.groove-empty-card i {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 64px !important;
+    height: 64px !important;
+    margin-bottom: 12px !important;
+    border: none !important;
+    background: linear-gradient(120deg, #2456ff, #6b85ff) !important;
+    color: #fff !important;
+    border-radius: 50% !important;
+    box-shadow: 0 8px 24px -10px rgba(36, 86, 255, 0.5) !important;
+    font-size: 1.6rem !important;
+}
+
+.groove-kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #6b85ff !important;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif !important;
+    font-size: 0.72rem !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.08em !important;
+    text-transform: uppercase !important;
+}
+
+.groove-hand-note {
+    color: #6b85ff !important;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif !important;
+    font-style: normal !important;
+    transform: none !important;
+    font-size: 1.1rem !important;
+    font-weight: 700;
+}
+
+.groove-stat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 14px;
+    margin-bottom: 20px;
+}
+
+.groove-page-grid { gap: 16px; }
+.groove-page-grid-2,
+.groove-page-grid-3,
+.groove-page-grid-4 {
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)) !important;
+}
+
+/* Form panel inputs — make them match modern look */
+.groove-form-panel input[type="text"],
+.groove-form-panel input[type="email"],
+.groove-form-panel input[type="password"],
+.groove-form-panel input[type="number"],
+.groove-form-panel input[type="date"],
+.groove-form-panel input[type="time"],
+.groove-form-panel input[type="datetime-local"],
+.groove-form-panel input[type="url"],
+.groove-form-panel input[type="search"],
+.groove-form-panel select,
+.groove-form-panel textarea,
+.groove-form-panel .form-control,
+.groove-form-panel .form-select {
+    border: 1px solid #d8dce6 !important;
+    border-radius: 12px !important;
+    box-shadow: none !important;
+    background: #fff !important;
+    color: #0d1424 !important;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif !important;
+    padding: 10px 14px !important;
+    transition: border-color 0.15s, box-shadow 0.15s !important;
+}
+.groove-form-panel input:focus,
+.groove-form-panel select:focus,
+.groove-form-panel textarea:focus,
+.groove-form-panel .form-control:focus,
+.groove-form-panel .form-select:focus {
+    outline: none !important;
+    border-color: #6b85ff !important;
+    box-shadow: 0 0 0 3px rgba(108, 133, 255, 0.15) !important;
+}
+html[data-theme="dark"] .groove-form-panel input,
+html[data-theme="dark"] .groove-form-panel select,
+html[data-theme="dark"] .groove-form-panel textarea,
+html[data-theme="dark"] .groove-form-panel .form-control,
+html[data-theme="dark"] .groove-form-panel .form-select {
+    background: #151a26 !important;
+    border-color: #2a3142 !important;
+    color: #e8eaf2 !important;
+}
+
+/* Account / profile hero adjustments — keep them clean */
+.account-overview-hero,
+.social-profile-hero,
+.organizer-profile-card {
+    transform: none !important;
+}
+
+@media (max-width: 575.98px) {
+    .groove-app-page,
+    .groove-feed-page,
+    .groove-form-shell { padding: 0 12px; }
+    .groove-page-grid-2,
+    .groove-page-grid-3,
+    .groove-page-grid-4 { grid-template-columns: 1fr !important; }
+}
