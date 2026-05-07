@@ -26,5 +26,15 @@ namespace EventsApp.ViewModels.Events
         public IReadOnlyList<PopularCityViewModel> PopularCities { get; set; } = Array.Empty<PopularCityViewModel>();
         public string? PreferredCity { get; set; }
         public bool IsAuthenticated { get; set; }
+        public UserOnboardingChecklist? OnboardingChecklist { get; set; }
+    }
+
+    public class UserOnboardingChecklist
+    {
+        public bool HasSavedEvent { get; set; }
+        public bool HasAttended { get; set; }
+        public bool HasFollowed { get; set; }
+        public bool HasViewedEvents { get; set; }
+        public bool IsComplete => HasSavedEvent && HasAttended && HasFollowed && HasViewedEvents;
     }
 }

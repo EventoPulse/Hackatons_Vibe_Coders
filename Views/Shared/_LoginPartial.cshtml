@@ -23,8 +23,9 @@
             ? string.Concat(fullName.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(w => w[0].ToString().ToUpper()))
             : (displayName?.Length > 0 ? displayName[0].ToString().ToUpper() : "У");
         <li class="nav-item dropdown site-account-menu">
-            <a class="nav-link dropdown-toggle p-1" href="#" id="accountMenu" role="button" data-bs-toggle="dropdown" aria-expanded="false" title="@displayName">
+            <a class="nav-link dropdown-toggle p-1 d-flex align-items-center gap-2" href="#" id="accountMenu" role="button" data-bs-toggle="dropdown" aria-expanded="false" title="@displayName">
                 <span class="evt-avatar-circle">@initials</span>
+                <span class="d-none d-md-inline text-truncate" style="max-width:130px;font-size:.875rem;font-weight:600;">@displayName</span>
             </a>
             <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="accountMenu">
                 <li>

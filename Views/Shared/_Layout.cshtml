@@ -269,36 +269,85 @@
 
     <partial name="_MobileNav" />
 
-    <button id="evt-install-btn" type="button" hidden
-            style="position:fixed;right:18px;bottom:18px;z-index:1080;background:#2456ff;color:#fff;border:none;border-radius:999px;padding:12px 18px;font-weight:700;box-shadow:0 14px 28px -12px rgba(36,86,255,.55);cursor:pointer;display:flex;align-items:center;gap:8px;">
-        <i class="bi bi-download"></i> <span>Инсталирай Evento</span>
-    </button>
+    <!-- PWA install banners -->
+    <div id="evt-pwa-banner" hidden class="evt-pwa-banner">
+        <img src="/img/logo.svg" alt="Evento" class="evt-pwa-banner__logo" />
+        <div class="evt-pwa-banner__text">
+            <strong>Инсталирай Evento</strong>
+            <span>Добави към началния екран</span>
+        </div>
+        <button id="evt-pwa-install-btn" type="button" class="evt-pwa-banner__btn">
+            <i class="bi bi-download"></i> Инсталирай
+        </button>
+        <button id="evt-pwa-close-btn" type="button" class="evt-pwa-banner__close" aria-label="Затвори">
+            <i class="bi bi-x-lg"></i>
+        </button>
+    </div>
+    <div id="evt-ios-banner" hidden class="evt-pwa-banner">
+        <img src="/img/logo.svg" alt="Evento" class="evt-pwa-banner__logo" />
+        <div class="evt-pwa-banner__text">
+            <strong>Инсталирай Evento на iPhone</strong>
+            <span>Натисни <i class="bi bi-box-arrow-up"></i> &rarr; "Добави към начален екран"</span>
+        </div>
+        <button id="evt-ios-close-btn" type="button" class="evt-pwa-banner__close" aria-label="Затвори">
+            <i class="bi bi-x-lg"></i>
+        </button>
+    </div>
     <script>
         (function () {
+            // Already installed — never show
+            if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true) return;
+
             if ('serviceWorker' in navigator) {
                 window.addEventListener('load', function () {
                     navigator.serviceWorker.register('/sw.js').catch(function () { });
                 });
             }
+
+            // Dismiss flag resets each browser session
+            if (sessionStorage.getItem('evt_pwa_dismissed')) return;
+
+            var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+            var isSafariOnly = isIOS && /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
             var deferred = null;
-            var btn = document.getElementById('evt-install-btn');
+            var banner = document.getElementById('evt-pwa-banner');
+            var iosBanner = document.getElementById('evt-ios-banner');
+
+            function showBanner(el) { if (el) el.hidden = false; }
+            function dismissBanner(el) {
+                if (el) el.hidden = true;
+                sessionStorage.setItem('evt_pwa_dismissed', '1');
+            }
+
+            // Android / Chrome / desktop Edge
             window.addEventListener('beforeinstallprompt', function (e) {
                 e.preventDefault();
                 deferred = e;
-                if (btn) btn.hidden = false;
+                setTimeout(function () { showBanner(banner); }, 3500);
             });
-            if (btn) {
-                btn.addEventListener('click', function () {
+
+            // iOS Safari (no beforeinstallprompt)
+            if (isSafariOnly) {
+                setTimeout(function () { showBanner(iosBanner); }, 4500);
+            }
+
+            var installBtn = document.getElementById('evt-pwa-install-btn');
+            if (installBtn) {
+                installBtn.addEventListener('click', function () {
                     if (!deferred) return;
                     deferred.prompt();
-                    deferred.userChoice.finally(function () {
-                        deferred = null;
-                        btn.hidden = true;
-                    });
+                    deferred.userChoice.finally(function () { deferred = null; dismissBanner(banner); });
                 });
             }
+
+            var closeBtn = document.getElementById('evt-pwa-close-btn');
+            if (closeBtn) closeBtn.addEventListener('click', function () { dismissBanner(banner); });
+
+            var iosClose = document.getElementById('evt-ios-close-btn');
+            if (iosClose) iosClose.addEventListener('click', function () { dismissBanner(iosBanner); });
+
             window.addEventListener('appinstalled', function () {
-                if (btn) btn.hidden = true;
+                dismissBanner(banner); dismissBanner(iosBanner);
             });
         })();
     </script>

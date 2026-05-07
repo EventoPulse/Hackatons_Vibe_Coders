@@ -185,6 +185,22 @@ namespace EventsApp.Controllers
                 .OrderBy(c => c)
                 .ToListAsync();
 
+            ViewModels.Events.UserOnboardingChecklist? checklist = null;
+            if (userId != null)
+            {
+                var hasSave = await _db.EventSaves.AnyAsync(s => s.UserId == userId);
+                var hasAttend = await _db.EventAttendances.AnyAsync(a => a.UserId == userId);
+                var hasFollow = await _db.Follows.AnyAsync(f => f.FollowerId == userId);
+                var viewCount = await _db.UserActivities.CountAsync(a => a.UserId == userId && a.ActivityType == UserActivityType.EventViewed);
+                checklist = new ViewModels.Events.UserOnboardingChecklist
+                {
+                    HasSavedEvent = hasSave,
+                    HasAttended = hasAttend,
+                    HasFollowed = hasFollow,
+                    HasViewedEvents = viewCount >= 3,
+                };
+            }
+
             return View(new EventsIndexViewModel
             {
                 Search = freeOnly ? "free" : normalizedSearch,
@@ -207,6 +223,7 @@ namespace EventsApp.Controllers
                 RecentlyViewedEvents = recentlyViewed,
                 PreferredCity = preferredCity,
                 IsAuthenticated = User.Identity?.IsAuthenticated == true,
+                OnboardingChecklist = checklist,
             });
         }
 

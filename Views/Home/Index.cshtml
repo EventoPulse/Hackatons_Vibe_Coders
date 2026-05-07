@@ -203,6 +203,79 @@
         </div>
     </div>
 
+    @if (Model.IsAuthenticated && Model.OnboardingChecklist is { } checklist)
+    {
+        @if (!checklist.IsComplete)
+        {
+            var done = new[] { checklist.HasSavedEvent, checklist.HasAttended, checklist.HasFollowed, checklist.HasViewedEvents }.Count(x => x);
+            <div class="evt-onboarding" id="user-onboarding-checklist">
+                <div class="evt-onboarding__header">
+                    <div>
+                        <span class="evt-onboarding__label">Първи стъпки</span>
+                        <h3 class="evt-onboarding__title">Открий всичко, което Evento предлага</h3>
+                    </div>
+                    <button type="button" class="evt-onboarding__dismiss" onclick="dismissOnboarding()" title="Скрий">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+                <ul class="evt-onboarding__steps">
+                    <li class="@(checklist.HasSavedEvent ? "is-done" : "")">
+                        <i class="bi @(checklist.HasSavedEvent ? "bi-bookmark-check-fill" : "bi-bookmark")"></i>
+                        <span>Запази любимо събитие</span>
+                        @if (!checklist.HasSavedEvent) { <a asp-action="Index" class="evt-onboarding__do">Разгледай →</a> }
+                    </li>
+                    <li class="@(checklist.HasAttended ? "is-done" : "")">
+                        <i class="bi @(checklist.HasAttended ? "bi-check-circle-fill" : "bi-circle")"></i>
+                        <span>Запиши се за събитие (Going или Interested)</span>
+                        @if (!checklist.HasAttended) { <a asp-action="Index" class="evt-onboarding__do">Намери →</a> }
+                    </li>
+                    <li class="@(checklist.HasFollowed ? "is-done" : "")">
+                        <i class="bi @(checklist.HasFollowed ? "bi-person-check-fill" : "bi-person-plus")"></i>
+                        <span>Последвай организатор или приятел</span>
+                    </li>
+                    <li class="@(checklist.HasViewedEvents ? "is-done" : "")">
+                        <i class="bi @(checklist.HasViewedEvents ? "bi-eye-fill" : "bi-eye")"></i>
+                        <span>Разгледай поне 3 събития</span>
+                    </li>
+                </ul>
+                <div class="evt-onboarding__progress">
+                    <div class="evt-onboarding__bar">
+                        <div class="evt-onboarding__fill" style="width:@(done * 25)%"></div>
+                    </div>
+                    <span class="evt-onboarding__count">@done / 4</span>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="evt-onboarding evt-onboarding--done" id="user-onboarding-complete">
+                <div class="evt-onboarding__celebrate">
+                    <i class="bi bi-stars" style="font-size:2rem;color:#fbbf24;"></i>
+                    <div>
+                        <p class="evt-onboarding__title mb-0">Перфектно! Открил си всичко.</p>
+                        <p class="mb-0" style="font-size:.82rem;opacity:.85;">Сега можеш да изследваш цялото Evento без ограничения.</p>
+                    </div>
+                    <button type="button" class="evt-onboarding__dismiss ms-auto" onclick="dismissOnboarding()" title="Скрий">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+            </div>
+        }
+        <script>
+            function dismissOnboarding() {
+                var el = document.getElementById('user-onboarding-checklist') || document.getElementById('user-onboarding-complete');
+                if (el) el.style.display = 'none';
+                try { localStorage.setItem('evt_onboarding_dismissed', '1'); } catch (_) { }
+            }
+            document.addEventListener('DOMContentLoaded', function () {
+                if (localStorage.getItem('evt_onboarding_dismissed') === '1') {
+                    var el = document.getElementById('user-onboarding-checklist') || document.getElementById('user-onboarding-complete');
+                    if (el) el.style.display = 'none';
+                }
+            });
+        </script>
+    }
+
     <section id="home-events-surface" class="evt-section" aria-live="polite">
         <div class="evt-section__head">
             <div>

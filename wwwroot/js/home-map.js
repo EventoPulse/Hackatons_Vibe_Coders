@@ -216,6 +216,22 @@
             }
         }, 100);
 
+        // Fallback: try again after all resources finish loading (catches edge cases with cached Maps API)
+        window.addEventListener('load', function () {
+            if (!mapStarted && window.google && window.google.maps) startMap();
+        });
+
+        // bfcache: when user presses Back/Forward the page is restored from memory —
+        // hide any stale loading overlay and trigger a map resize so tiles re-render.
+        window.addEventListener('pageshow', function (event) {
+            if (!event.persisted) return;
+            var loadingEl = mapEl.querySelector('.map-loading-state');
+            if (loadingEl) loadingEl.style.display = 'none';
+            window.setTimeout(function () {
+                if (window.GrooveHomeMapRefresh) window.GrooveHomeMapRefresh();
+            }, 80);
+        });
+
         window.setTimeout(function () {
             if (mapStarted || (window.google && window.google.maps)) return;
             setMapLoadMessage('Map is still loading. Check network, API restrictions, or the browser console.');
@@ -453,6 +469,10 @@
         });
 
         function setupMap(mapEl) {
+            // Hide loading overlay immediately — don't wait for tilesloaded
+            var loadingOverlay = mapEl.querySelector('.map-loading-state');
+            if (loadingOverlay) loadingOverlay.style.display = 'none';
+
             var map = new google.maps.Map(mapEl, {
                 center: BG_CENTER,
                 zoom: BG_ZOOM,
@@ -471,10 +491,8 @@
             );
             map.fitBounds(bgBounds);
 
-            // Fix tiles not covering full container on initial load; also clear loading state
+            // Fix tiles not covering full container on initial load
             google.maps.event.addListenerOnce(map, 'tilesloaded', function () {
-                var loadingEl = mapEl.querySelector('.map-loading-state');
-                if (loadingEl) loadingEl.style.display = 'none';
                 var center = map.getCenter();
                 google.maps.event.trigger(map, 'resize');
                 if (center) map.setCenter(center);
