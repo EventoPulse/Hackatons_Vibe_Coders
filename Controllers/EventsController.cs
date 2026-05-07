@@ -883,6 +883,11 @@ namespace EventsApp.Controllers
                 await _db.SaveChangesAsync();
                 await _socialFeed.TrackActivityAsync(userId, UserActivityType.EventLiked, eventId: id);
             }
+            if (IsAjaxRequest())
+            {
+                var likesCount = await _db.EventLikes.CountAsync(l => l.EventId == id);
+                return Json(new { liked = true, likesCount });
+            }
             if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
             {
                 return Redirect(returnUrl);
@@ -904,6 +909,11 @@ namespace EventsApp.Controllers
                 await _socialFeed.TrackActivityAsync(userId, UserActivityType.EventSaved, eventId: id);
             }
 
+            if (IsAjaxRequest())
+            {
+                return Json(new { saved = true });
+            }
+
             if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
             {
                 return Redirect(returnUrl);
@@ -922,6 +932,11 @@ namespace EventsApp.Controllers
             {
                 _db.EventSaves.Remove(save);
                 await _db.SaveChangesAsync();
+            }
+
+            if (IsAjaxRequest())
+            {
+                return Json(new { saved = false });
             }
 
             if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
@@ -968,6 +983,23 @@ namespace EventsApp.Controllers
                 status == EventAttendanceStatus.Going ? UserActivityType.EventGoing : UserActivityType.EventInterested,
                 eventId: id);
 
+            if (IsAjaxRequest())
+            {
+                var current = await _db.EventAttendances
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(a => a.EventId == id && a.UserId == userId);
+                var goingCount = await _db.EventAttendances
+                    .CountAsync(a => a.EventId == id && a.Status == EventAttendanceStatus.Going);
+                var interestedCount = await _db.EventAttendances
+                    .CountAsync(a => a.EventId == id && a.Status == EventAttendanceStatus.Interested);
+                return Json(new
+                {
+                    attendanceStatus = current?.Status.ToString(),
+                    goingCount,
+                    interestedCount,
+                });
+            }
+
             if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
             {
                 return Redirect(returnUrl);
@@ -986,6 +1018,11 @@ namespace EventsApp.Controllers
             {
                 _db.EventLikes.Remove(like);
                 await _db.SaveChangesAsync();
+            }
+            if (IsAjaxRequest())
+            {
+                var likesCount = await _db.EventLikes.CountAsync(l => l.EventId == id);
+                return Json(new { liked = false, likesCount });
             }
             if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
             {
