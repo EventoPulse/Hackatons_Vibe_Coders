@@ -82,6 +82,10 @@ namespace EventsApp.Data
 
         public DbSet<OrganizerValidatorAssignment> OrganizerValidatorAssignments { get; set; } = null!;
 
+        public DbSet<DayPlan> DayPlans { get; set; } = null!;
+
+        public DbSet<DayPlanItem> DayPlanItems { get; set; } = null!;
+
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
@@ -728,6 +732,32 @@ namespace EventsApp.Data
                       .OnDelete(DeleteBehavior.Restrict);
 
                 entity.HasIndex(s => new { s.SectionId, s.Row, s.Number }).IsUnique();
+            });
+
+            builder.Entity<DayPlan>(entity =>
+            {
+                entity.HasOne(p => p.User)
+                      .WithMany()
+                      .HasForeignKey(p => p.UserId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(p => new { p.UserId, p.PlannedFor });
+                entity.HasIndex(p => p.ShareToken).IsUnique().HasFilter("\"ShareToken\" IS NOT NULL");
+            });
+
+            builder.Entity<DayPlanItem>(entity =>
+            {
+                entity.HasOne(i => i.DayPlan)
+                      .WithMany(p => p.Items)
+                      .HasForeignKey(i => i.DayPlanId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(i => i.Event)
+                      .WithMany()
+                      .HasForeignKey(i => i.EventId)
+                      .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasIndex(i => new { i.DayPlanId, i.Order });
             });
 
             builder.Entity<EventSeatInventory>(entity =>

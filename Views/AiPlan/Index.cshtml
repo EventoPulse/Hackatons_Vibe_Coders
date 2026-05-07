@@ -1,86 +1,173 @@
 @model EventsApp.ViewModels.Wrapped.DayPlanViewModel
+@using EventsApp.Models
 @{
     ViewData["Title"] = "AI план за деня";
+    var error = TempData["AiPlanError"] as string;
+    var createdId = TempData["AiPlanCreatedId"];
+    var slotIcon = (DayPlanSlotKind kind) => kind switch
+    {
+        DayPlanSlotKind.Before => "bi-cup-hot",
+        DayPlanSlotKind.Main => "bi-stars",
+        DayPlanSlotKind.After => "bi-moon-stars",
+        _ => "bi-dot",
+    };
+    var slotLabel = (DayPlanSlotKind kind) => kind switch
+    {
+        DayPlanSlotKind.Before => "Преди",
+        DayPlanSlotKind.Main => "Основно",
+        DayPlanSlotKind.After => "След",
+        _ => "",
+    };
 }
 
 <section class="evt-aiplan">
     <header class="evt-aiplan__hero">
-        <span class="evt-aiplan__kicker"><i class="bi bi-stars"></i> <span data-i18n="aiplan.kicker">AI компаньон</span></span>
-        <h1 data-i18n="aiplan.h1">Какъв ще бъде твоят ден?</h1>
-        <p data-i18n="aiplan.p">Кажи ни град и настроение — Evento AI ще ти подреди вечер от реалните събития около теб.</p>
+        <span class="evt-aiplan__kicker"><i class="bi bi-stars"></i> AI компаньон</span>
+        <h1>Какъв ще бъде твоят ден?</h1>
+        <p>Опиши какво искаш — Evento AI ще намери реалните събития и ще ти подреди графика.</p>
     </header>
 
-    <form method="get" class="evt-aiplan__form">
-        <div class="evt-search-row" style="grid-template-columns: 1fr 1fr 1.6fr auto;">
-            <div class="evt-search-field">
-                <span data-i18n="aiplan.city">Град</span>
-                <select name="city" required>
-                    <option value="" data-i18n="aiplan.city.choose">Избери</option>
-                    @foreach (var c in Model.Cities)
-                    {
-                        <option value="@c" selected="@(string.Equals(Model.City, c, StringComparison.OrdinalIgnoreCase))">@c</option>
-                    }
-                </select>
-            </div>
-            <div class="evt-search-field">
-                <span data-i18n="aiplan.date">Дата</span>
-                <input type="date" name="when" value="@Model.When.ToString("yyyy-MM-dd")" />
-            </div>
-            <div class="evt-search-field">
-                <span data-i18n="aiplan.vibe">Настроение / повод</span>
-                <input type="text" name="vibe" value="@Model.Vibe" placeholder="напр. първа среща · с приятели · спокойна вечер · техно до късно" data-i18n-placeholder="aiplan.vibe.placeholder" maxlength="200" />
-            </div>
-            <button type="submit" class="evt-search-submit">
-                <i class="bi bi-magic"></i> <span data-i18n="aiplan.submit">Подреди ми вечерта</span>
-            </button>
-        </div>
-    </form>
-
-    @if (Model.HasResult)
+    @if (User.Identity?.IsAuthenticated == true && Model.MyPlans.Count > 0)
     {
-        <div class="evt-aiplan__result">
-            @if (!string.IsNullOrWhiteSpace(Model.AiError))
-            {
-                <div class="alert alert-warning">@Model.AiError</div>
-            }
-            @if (!string.IsNullOrWhiteSpace(Model.AiPlan))
-            {
-                <article class="evt-aiplan__card">
-                    <span class="evt-aiplan__cardkicker"><i class="bi bi-stars"></i> <span data-i18n="aiplan.result.kicker">Evento AI предлага</span></span>
-                    <pre class="evt-aiplan__text">@Model.AiPlan</pre>
-                </article>
-            }
-
-            @if (Model.Candidates.Count > 0)
-            {
-                <section class="evt-aiplan__candidates">
-                    <h2 data-i18n="aiplan.all.events">Всички събития за деня</h2>
-                    <div class="evt-aiplan__list">
-                        @foreach (var ev in Model.Candidates)
-                        {
-                            <a asp-controller="Events" asp-action="Details" asp-route-id="@ev.Id" class="evt-aiplan__row">
-                                @if (!string.IsNullOrWhiteSpace(ev.ImageUrl))
+        <section class="evt-aiplan__plans">
+            <h2>Моите предстоящи планове</h2>
+            <div class="evt-aiplan__plans-list">
+                @foreach (var plan in Model.MyPlans)
+                {
+                    var isHighlighted = createdId is int cid && cid == plan.Id;
+                    <article class="evt-aiplan__plancard @(isHighlighted ? "is-new" : "")">
+                        <header class="evt-aiplan__planhead">
+                            <div>
+                                <span class="evt-aiplan__planmeta">
+                                    <i class="bi bi-calendar-event"></i> @plan.PlannedFor.ToString("dd.MM.yyyy")
+                                    <span class="evt-aiplan__sep">·</span>
+                                    <i class="bi bi-geo-alt"></i> @plan.City
+                                    @if (!string.IsNullOrWhiteSpace(plan.Vibe))
+                                    {
+                                        <span class="evt-aiplan__sep">·</span>
+                                        <span>@plan.Vibe</span>
+                                    }
+                                </span>
+                                @if (!string.IsNullOrWhiteSpace(plan.Title))
                                 {
-                                    <img src="@ev.ImageUrl" alt="@ev.Title" />
+                                    <h3>@plan.Title</h3>
+                                }
+                            </div>
+                            <div class="evt-aiplan__planactions">
+                                @if (!string.IsNullOrEmpty(plan.ShareToken))
+                                {
+                                    var shareUrl = Url.Action("ViewShared", "AiPlan", new { token = plan.ShareToken }, Context.Request.Scheme);
+                                    <button type="button" class="evt-aiplan__btn" data-copy-url="@shareUrl" title="Копирай линк за споделяне">
+                                        <i class="bi bi-link-45deg"></i> Копирай линк
+                                    </button>
                                 }
                                 else
                                 {
-                                    <span class="evt-aiplan__rowimg"><i class="bi bi-music-note-beamed"></i></span>
+                                    <form asp-action="Share" asp-route-id="@plan.Id" method="post" class="evt-aiplan__inline">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit" class="evt-aiplan__btn"><i class="bi bi-share"></i> Сподели</button>
+                                    </form>
                                 }
-                                <div class="evt-aiplan__rowbody">
-                                    <span class="evt-aiplan__rowtime">@ev.StartTime.ToString("HH:mm")</span>
-                                    <strong>@ev.Title</strong>
-                                    <small>@ev.Genre.GetDisplayName() · @(string.IsNullOrWhiteSpace(ev.Address) ? ev.City : ev.Address)</small>
-                                </div>
-                            </a>
+                                <form asp-action="Delete" asp-route-id="@plan.Id" method="post" class="evt-aiplan__inline" onsubmit="return confirm('Изтриване на този план?');">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="evt-aiplan__btn evt-aiplan__btn--danger" title="Изтрий"><i class="bi bi-trash"></i></button>
+                                </form>
+                            </div>
+                        </header>
+
+                        @if (!string.IsNullOrWhiteSpace(plan.Intro))
+                        {
+                            <p class="evt-aiplan__planintro">@plan.Intro</p>
                         }
-                    </div>
-                </section>
+
+                        <ol class="evt-aiplan__timeline">
+                            @foreach (var item in plan.Items.OrderBy(i => i.Order))
+                            {
+                                <li class="evt-aiplan__slot evt-aiplan__slot--@(item.Slot.ToString().ToLowerInvariant())">
+                                    <span class="evt-aiplan__sloticon"><i class="bi @slotIcon(item.Slot)"></i></span>
+                                    <div class="evt-aiplan__slotbody">
+                                        <div class="evt-aiplan__slothead">
+                                            @if (!string.IsNullOrWhiteSpace(item.StartTime))
+                                            {
+                                                <strong class="evt-aiplan__slottime">@item.StartTime@(string.IsNullOrWhiteSpace(item.EndTime) ? "" : "–" + item.EndTime)</strong>
+                                            }
+                                            <span class="evt-aiplan__slotlabel">@slotLabel(item.Slot)</span>
+                                        </div>
+                                        @if (item.Event != null)
+                                        {
+                                            <a asp-controller="Events" asp-action="Details" asp-route-id="@item.Event.Id" class="evt-aiplan__slotlink">
+                                                <strong>@item.Title</strong>
+                                                <i class="bi bi-arrow-up-right"></i>
+                                            </a>
+                                        }
+                                        else
+                                        {
+                                            <strong class="evt-aiplan__slottitle">@item.Title</strong>
+                                        }
+                                        @if (!string.IsNullOrWhiteSpace(item.Description))
+                                        {
+                                            <p>@item.Description</p>
+                                        }
+                                    </div>
+                                </li>
+                            }
+                        </ol>
+                    </article>
+                }
+            </div>
+        </section>
+    }
+
+    <section class="evt-aiplan__compose">
+        <h2>Нов план</h2>
+        @if (User.Identity?.IsAuthenticated != true)
+        {
+            <div class="alert alert-info">
+                Влез в профила си, за да създаваш планове.
+                <a asp-area="Identity" asp-page="/Account/Login">Вход</a>
+            </div>
+        }
+        else
+        {
+            @if (!string.IsNullOrEmpty(error))
+            {
+                <div class="alert alert-warning">@error</div>
             }
-        </div>
-    }
-    else if (!string.IsNullOrWhiteSpace(Model.City))
-    {
-        <div class="evt-empty" data-i18n="aiplan.no.events">Няма публикувани събития за избрания ден. Опитай с друга дата.</div>
-    }
+            <form asp-action="Generate" method="post" class="evt-aiplan__form">
+                @Html.AntiForgeryToken()
+                <label for="ai-plan-description" class="evt-aiplan__label">
+                    <i class="bi bi-magic"></i> Опиши плана си
+                </label>
+                <textarea id="ai-plan-description"
+                          name="description"
+                          class="evt-aiplan__textarea"
+                          rows="3"
+                          maxlength="500"
+                          placeholder="напр. „Утре отивам в София с приятели, искаме нещо живо след 20:00, после питие" или „Този петък в Пловдив, спокойна вечер с джаз""
+                          required></textarea>
+                <div class="evt-aiplan__compose-actions">
+                    <span class="evt-aiplan__hint">AI ще намери реални събития от платформата и ще ти подреди графика.</span>
+                    <button type="submit" class="evt-search-submit">
+                        <i class="bi bi-stars"></i> Генерирай план
+                    </button>
+                </div>
+            </form>
+        }
+    </section>
 </section>
+
+<script>
+    document.querySelectorAll('[data-copy-url]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const url = btn.getAttribute('data-copy-url');
+            try {
+                await navigator.clipboard.writeText(url);
+                const original = btn.innerHTML;
+                btn.innerHTML = '<i class="bi bi-check2"></i> Копирано';
+                setTimeout(() => { btn.innerHTML = original; }, 1500);
+            } catch {
+                window.prompt('Копирай линка:', url);
+            }
+        });
+    });
+</script>

@@ -1,0 +1,85 @@
+@model EventsApp.Models.DayPlan
+@{
+    ViewData["Title"] = Model.Title ?? "AI план";
+    var slotIcon = (EventsApp.Models.DayPlanSlotKind kind) => kind switch
+    {
+        EventsApp.Models.DayPlanSlotKind.Before => "bi-cup-hot",
+        EventsApp.Models.DayPlanSlotKind.Main => "bi-stars",
+        EventsApp.Models.DayPlanSlotKind.After => "bi-moon-stars",
+        _ => "bi-dot",
+    };
+    var slotLabel = (EventsApp.Models.DayPlanSlotKind kind) => kind switch
+    {
+        EventsApp.Models.DayPlanSlotKind.Before => "Преди",
+        EventsApp.Models.DayPlanSlotKind.Main => "Основно",
+        EventsApp.Models.DayPlanSlotKind.After => "След",
+        _ => "",
+    };
+}
+
+<section class="evt-aiplan">
+    <header class="evt-aiplan__hero">
+        <span class="evt-aiplan__kicker"><i class="bi bi-share"></i> Споделен план</span>
+        <h1>@(Model.Title ?? "AI план за деня")</h1>
+        <p>Споделено от @(Model.User?.UserName ?? "Evento потребител")</p>
+    </header>
+
+    <article class="evt-aiplan__plancard">
+        <header class="evt-aiplan__planhead">
+            <div>
+                <span class="evt-aiplan__planmeta">
+                    <i class="bi bi-calendar-event"></i> @Model.PlannedFor.ToString("dd.MM.yyyy")
+                    <span class="evt-aiplan__sep">·</span>
+                    <i class="bi bi-geo-alt"></i> @Model.City
+                    @if (!string.IsNullOrWhiteSpace(Model.Vibe))
+                    {
+                        <span class="evt-aiplan__sep">·</span>
+                        <span>@Model.Vibe</span>
+                    }
+                </span>
+            </div>
+        </header>
+
+        @if (!string.IsNullOrWhiteSpace(Model.Intro))
+        {
+            <p class="evt-aiplan__planintro">@Model.Intro</p>
+        }
+
+        <ol class="evt-aiplan__timeline">
+            @foreach (var item in Model.Items.OrderBy(i => i.Order))
+            {
+                <li class="evt-aiplan__slot evt-aiplan__slot--@(item.Slot.ToString().ToLowerInvariant())">
+                    <span class="evt-aiplan__sloticon"><i class="bi @slotIcon(item.Slot)"></i></span>
+                    <div class="evt-aiplan__slotbody">
+                        <div class="evt-aiplan__slothead">
+                            @if (!string.IsNullOrWhiteSpace(item.StartTime))
+                            {
+                                <strong class="evt-aiplan__slottime">@item.StartTime@(string.IsNullOrWhiteSpace(item.EndTime) ? "" : "–" + item.EndTime)</strong>
+                            }
+                            <span class="evt-aiplan__slotlabel">@slotLabel(item.Slot)</span>
+                        </div>
+                        @if (item.Event != null)
+                        {
+                            <a asp-controller="Events" asp-action="Details" asp-route-id="@item.Event.Id" class="evt-aiplan__slotlink">
+                                <strong>@item.Title</strong>
+                                <i class="bi bi-arrow-up-right"></i>
+                            </a>
+                        }
+                        else
+                        {
+                            <strong class="evt-aiplan__slottitle">@item.Title</strong>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(item.Description))
+                        {
+                            <p>@item.Description</p>
+                        }
+                    </div>
+                </li>
+            }
+        </ol>
+    </article>
+
+    <p class="text-center mt-4">
+        <a asp-action="Index" class="evt-aiplan__btn"><i class="bi bi-stars"></i> Направи си твой план</a>
+    </p>
+</section>

@@ -112,6 +112,85 @@ Rules:
             return string.IsNullOrWhiteSpace(clean) ? null : clean;
         }
 
+        public async Task<DayPlanRequestIntent?> ParseDayPlanRequestAsync(string description, IReadOnlyList<string> knownCities, CancellationToken cancellationToken = default)
+        {
+            if (string.IsNullOrWhiteSpace(description)) return null;
+
+            var sys = new StringBuilder();
+            sys.AppendLine("You are a request parser for an events platform. Extract the day plan request as JSON.");
+            sys.AppendLine("Return ONLY JSON. No markdown.");
+            sys.AppendLine("Schema: { \"city\": string|null, \"date\": \"YYYY-MM-DD\"|null, \"vibe\": string|null, \"groupContext\": string|null }");
+            if (knownCities.Count > 0)
+            {
+                sys.AppendLine("Known cities (use exact spelling from this list when matching): " + string.Join(", ", knownCities));
+            }
+            sys.AppendLine("Rules:");
+            sys.AppendLine("- Recognize Bulgarian and English city names. Match to a known city if possible.");
+            sys.AppendLine("- Resolve relative dates: today, tomorrow, the day after tomorrow, this Friday, etc. Always return ISO date.");
+            sys.AppendLine("- vibe: short phrase summarizing mood/genre/energy (e.g. 'live techno', 'chill jazz').");
+            sys.AppendLine("- groupContext: who they are with (e.g. 'with friends', 'solo', 'first date'). Null if missing.");
+
+            var user = "Today: " + DateTime.UtcNow.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)
+                + "\nUser request: " + description.Trim();
+
+            var raw = await CallChatAsync(sys.ToString(), user, 300, 0.1, cancellationToken);
+            if (raw == null) return null;
+            return ParseDayPlanIntentJson(raw);
+        }
+
+        public async Task<DayPlanTimeline?> GenerateDayPlanTimelineAsync(DayPlanRequestIntent intent, IReadOnlyList<DayPlanEventCandidate> events, CancellationToken cancellationToken = default)
+        {
+            if (intent == null) return null;
+
+            var sys = new StringBuilder();
+            sys.AppendLine("You are a friendly day-plan composer for the Evento events platform in Bulgaria.");
+            sys.AppendLine("Build a short timeline using ONLY events from the provided list when picking real events. Do NOT invent events.");
+            sys.AppendLine("Output STRICT JSON. No markdown, no commentary.");
+            sys.AppendLine("Schema:");
+            sys.AppendLine("{");
+            sys.AppendLine("  \"title\": string,");
+            sys.AppendLine("  \"intro\": string,");
+            sys.AppendLine("  \"slots\": [");
+            sys.AppendLine("    { \"slot\": \"before\"|\"main\"|\"after\", \"startTime\": \"HH:mm\"|null, \"endTime\": \"HH:mm\"|null, \"title\": string, \"description\": string, \"eventId\": number|null }");
+            sys.AppendLine("  ]");
+            sys.AppendLine("}");
+            sys.AppendLine("Rules:");
+            sys.AppendLine("- title: short headline for the day (max 80 chars). In Bulgarian.");
+            sys.AppendLine("- intro: 1 sentence in Bulgarian, warm and concrete.");
+            sys.AppendLine("- 1 'main' slot is REQUIRED if any events are provided — pick the best fitting one and set eventId to its id.");
+            sys.AppendLine("- 0-1 'before' slot (e.g. coffee, dinner, drinks). General description only — no specific venue invented. eventId must be null.");
+            sys.AppendLine("- 0-1 'after' slot (e.g. late drinks, walk). General description only. eventId must be null.");
+            sys.AppendLine("- Times in 24h HH:mm. Make 'before' end before main starts, 'after' start after main ends.");
+            sys.AppendLine("- All text fields in Bulgarian.");
+            sys.AppendLine("- If NO events were provided, still return a plan with main slot title 'Няма публикувани събития' and eventId=null.");
+
+            var user = new StringBuilder();
+            user.AppendLine($"Град: {intent.City}");
+            if (intent.Date.HasValue)
+            {
+                user.AppendLine($"Дата: {intent.Date.Value:dd.MM.yyyy} ({intent.Date.Value.ToString("dddd", new CultureInfo("bg-BG"))})");
+            }
+            if (!string.IsNullOrWhiteSpace(intent.Vibe)) user.AppendLine($"Настроение: {intent.Vibe}");
+            if (!string.IsNullOrWhiteSpace(intent.GroupContext)) user.AppendLine($"Контекст: {intent.GroupContext}");
+            user.AppendLine();
+            user.AppendLine("Events available:");
+            if (events.Count == 0)
+            {
+                user.AppendLine("(no events)");
+            }
+            else
+            {
+                foreach (var e in events.Take(20))
+                {
+                    user.AppendLine($"- id={e.Id} | {e.StartTime:HH:mm}-{e.EndTime:HH:mm} | {e.Title} | {e.Genre} | {e.Address}");
+                }
+            }
+
+            var raw = await CallChatAsync(sys.ToString(), user.ToString(), 800, 0.6, cancellationToken);
+            if (raw == null) return null;
+            return ParseDayPlanTimelineJson(raw);
+        }
+
         public async Task<string?> GenerateEventDescriptionAsync(string title, string? city, string? genre, string? hints, string? lang = null, CancellationToken cancellationToken = default)
         {
             if (string.IsNullOrWhiteSpace(title)) return null;
@@ -304,5 +383,88 @@ Rules:
 
         private static string Truncate(string s, int max) =>
             string.IsNullOrEmpty(s) || s.Length <= max ? s : s[..max] + "...";
+
+        private static string? ExtractJson(string raw)
+        {
+            if (string.IsNullOrWhiteSpace(raw)) return null;
+            var s = raw.Trim();
+            if (s.StartsWith("```"))
+            {
+                var first = s.IndexOf('\n');
+                var last = s.LastIndexOf("```", StringComparison.Ordinal);
+                if (first > 0 && last > first) s = s[(first + 1)..last].Trim();
+            }
+            var start = s.IndexOf('{');
+            var end = s.LastIndexOf('}');
+            if (start < 0 || end <= start) return null;
+            return s[start..(end + 1)];
+        }
+
+        private static DayPlanRequestIntent? ParseDayPlanIntentJson(string raw)
+        {
+            var json = ExtractJson(raw);
+            if (json == null) return null;
+            try
+            {
+                using var doc = JsonDocument.Parse(json);
+                var r = doc.RootElement;
+                var intent = new DayPlanRequestIntent
+                {
+                    City = ReadString(r, "city"),
+                    Vibe = ReadString(r, "vibe"),
+                    GroupContext = ReadString(r, "groupContext"),
+                };
+                if (TryParseDate(ReadString(r, "date"), out var d)) intent.Date = d.Date;
+                return intent;
+            }
+            catch (JsonException)
+            {
+                return null;
+            }
+        }
+
+        private static DayPlanTimeline? ParseDayPlanTimelineJson(string raw)
+        {
+            var json = ExtractJson(raw);
+            if (json == null) return null;
+            try
+            {
+                using var doc = JsonDocument.Parse(json);
+                var r = doc.RootElement;
+                var timeline = new DayPlanTimeline
+                {
+                    Title = ReadString(r, "title"),
+                    Intro = ReadString(r, "intro"),
+                };
+
+                if (r.TryGetProperty("slots", out var slots) && slots.ValueKind == JsonValueKind.Array)
+                {
+                    foreach (var s in slots.EnumerateArray())
+                    {
+                        if (s.ValueKind != JsonValueKind.Object) continue;
+                        var slot = new DayPlanTimelineSlot
+                        {
+                            Slot = ReadString(s, "slot")?.ToLowerInvariant() ?? "main",
+                            StartTime = ReadString(s, "startTime"),
+                            EndTime = ReadString(s, "endTime"),
+                            Title = ReadString(s, "title") ?? "",
+                            Description = ReadString(s, "description"),
+                        };
+                        if (s.TryGetProperty("eventId", out var eid))
+                        {
+                            if (eid.ValueKind == JsonValueKind.Number && eid.TryGetInt32(out var id)) slot.EventId = id;
+                        }
+                        if (!string.IsNullOrWhiteSpace(slot.Title))
+                            timeline.Slots.Add(slot);
+                    }
+                }
+
+                return timeline;
+            }
+            catch (JsonException)
+            {
+                return null;
+            }
+        }
     }
 }
