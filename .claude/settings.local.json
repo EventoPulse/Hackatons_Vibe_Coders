@@ -61,7 +61,23 @@
       "Bash(git fetch *)",
       "Bash(git remote *)",
       "Bash(git ls-tree *)",
-      "Bash(git stash *)"
+      "Bash(git stash *)",
+      "Bash(python -c \"import docx; print\\(docx.__version__\\)\")",
+      "Bash(python /c/tmp/build_paper.py)",
+      "PowerShell($shell = New-Object -ComObject Word.Application; $shell.Visible = $false; $doc = $shell.Documents.Open\\('c:\\\\Users\\\\javicilie\\\\Desktop\\\\Hackatons_Vibe_Coders\\\\GrooveOn_Paper.docx'\\); $doc.SaveAs2\\('c:\\\\tmp\\\\GrooveOn_Paper.txt', 7\\); $doc.Close\\(\\); $shell.Quit\\(\\))",
+      "Bash(python -c ' *)",
+      "Bash(python c:/tmp/extract_pdfs.py)",
+      "Bash(python c:/tmp/rewrite_doc.py)",
+      "Bash(python /c/tmp/rewrite_doc.py)",
+      "Bash(python /c/tmp/zip_docx.py)",
+      "PowerShell($ErrorActionPreference = 'Stop'; $w = New-Object -ComObject Word.Application; $w.Visible = $false; try { $d = $w.Documents.Open\\('c:\\\\Users\\\\javicilie\\\\Desktop\\\\Hackatons_Vibe_Coders\\\\Evento pulse_BG.docx', $false, $true\\); Write-Output \\('OK pages=' + $d.ComputeStatistics\\(2\\)\\); Write-Output \\('words=' + $d.ComputeStatistics\\(0\\)\\); $d.Close\\($false\\) } catch { Write-Output \\('ERR: ' + $_\\) } finally { $w.Quit\\(\\) })",
+      "PowerShell($w = New-Object -ComObject Word.Application; $w.Visible = $false; $d = $w.Documents.Open\\('c:\\\\Users\\\\javicilie\\\\Desktop\\\\Hackatons_Vibe_Coders\\\\Evento pulse_BG.docx', $false, $true\\); $d.SaveAs2\\('c:\\\\tmp\\\\Evento_pulse_check.txt', 7\\); $d.Close\\($false\\); $w.Quit\\(\\))",
+      "Bash(\"/c/Program Files \\(x86\\)/Microsoft/Edge/Application/msedge.exe\" --headless --disable-gpu --no-sandbox --hide-scrollbars --window-size=1200,880 --screenshot=\"c:\\\\Users\\\\javicilie\\\\Desktop\\\\Hackatons_Vibe_Coders\\\\public\\\\evento_pulse_architecture.png\" \"file:///c:/Users/javicilie/Desktop/Hackatons_Vibe_Coders/public/evento_pulse_architecture.svg\")",
+      "Bash(\"/c/Program Files \\(x86\\)/Microsoft/Edge/Application/msedge.exe\" --headless --disable-gpu --no-sandbox --hide-scrollbars --window-size=2400,1760 --force-device-scale-factor=2 --screenshot=\"c:\\\\Users\\\\javicilie\\\\Desktop\\\\Hackatons_Vibe_Coders\\\\public\\\\evento_pulse_architecture@2x.png\" \"file:///c:/Users/javicilie/Desktop/Hackatons_Vibe_Coders/public/evento_pulse_architecture.svg\")",
+      "Bash(curl -sk -o /tmp/edit.html https://localhost:5001/Events/Edit/1 -w \"%{http_code}\\\\n\")",
+      "Bash(curl -s -o /tmp/edit.html http://localhost:5000/Events/Edit/1 -w \"%{http_code}\\\\n\")",
+      "Bash(taskkill -F /IM dotnet.exe)",
+      "Bash(curl -s -o /tmp/edit.html -w \"%{http_code}\\\\n\" http://localhost:5180/Events/Create)"
     ],
     "additionalDirectories": [
       "\\tmp"

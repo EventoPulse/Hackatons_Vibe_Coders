@@ -29,15 +29,15 @@
             </div>
 
             <div class="mb-3">
-                <div class="d-flex justify-content-between align-items-end gap-2">
-                    <label asp-for="Description" class="form-label mb-0"></label>
-                    <button type="button" id="ai-generate-description" class="groove-button groove-button-paper btn-sm">
-                        <i class="bi bi-stars"></i> Генерирай с AI
-                    </button>
-                </div>
+                <label asp-for="Description" class="form-label"></label>
                 <textarea asp-for="Description" id="event-description" class="form-control" rows="4"></textarea>
                 <span asp-validation-for="Description" class="text-danger small"></span>
-                <div id="ai-description-status" class="form-text"></div>
+                <div class="d-flex flex-wrap align-items-center gap-2 mt-2">
+                    <button type="button" id="ai-generate-description" class="groove-button groove-button-dark">
+                        <i class="bi bi-stars"></i> Генерирай с AI
+                    </button>
+                    <div id="ai-description-status" class="form-text mb-0"></div>
+                </div>
             </div>
 
             <div class="groove-form-grid">

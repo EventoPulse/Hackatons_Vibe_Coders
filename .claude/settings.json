@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s -o /tmp/create.html -w \"%{http_code}\\\\n\" http://localhost:5180/Events/Create)",
+      "Bash(curl -s -L -o /tmp/create.html -w \"%{http_code}\\\\n\" http://localhost:5180/Events/Create)",
+      "Bash(curl -sk -L -o /tmp/create.html -w \"%{http_code}\\\\n\" http://localhost:5180/Events/Create)",
+      "PowerShell(Get-Process dotnet,EventsApp -ErrorAction SilentlyContinue)",
+      "PowerShell(dotnet build 2>&1)",
+      "Read(//c/Users/javicilie/Downloads/**)",
+      "Bash(cp \"C:/Users/javicilie/Downloads/Евенто пулс.pptx\" /tmp/evento.pptx)",
+      "Bash(unzip -o evento.pptx -d evento_extracted)",
+      "Bash(cygpath -w /tmp/s1.xml)",
+      "Bash(python -c \"import pptx; print\\(pptx.__version__\\)\")",
+      "Bash(python)"
+    ]
+  }
+}
