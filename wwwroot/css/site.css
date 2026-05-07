@@ -2956,6 +2956,10 @@ video.card-img-top-fixed {
     gap: 0.65rem;
     padding: 1rem;
     border-top: 1px solid var(--social-line);
+    max-width: 640px;
+    width: 100%;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 .social-chat-compose input {
@@ -2963,6 +2967,44 @@ video.card-img-top-fixed {
     border: 1px solid var(--social-line);
     border-radius: 8px;
     padding: 0.8rem 0.9rem;
+}
+
+.nav-link--with-badge {
+    position: relative;
+    display: inline-flex !important;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.nav-unread-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 9px;
+    background: #e53935;
+    color: #fff;
+    font-size: 0.68rem;
+    font-weight: 700;
+    line-height: 1;
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.9);
+}
+
+.evt-bottom-nav__item--with-badge {
+    position: relative;
+}
+
+.evt-bottom-nav__item--with-badge .nav-unread-badge {
+    position: absolute;
+    top: 4px;
+    right: calc(50% - 18px);
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    border-radius: 8px;
+    font-size: 0.62rem;
 }
 
 .social-chat-compose > .small,

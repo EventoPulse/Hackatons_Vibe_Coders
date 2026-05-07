@@ -43,8 +43,9 @@
     @if (isAuthed)
     {
         <a asp-controller="Messages" asp-action="Index"
-           class="evt-bottom-nav__item @(isMessages ? "active" : "")">
+           class="evt-bottom-nav__item evt-bottom-nav__item--with-badge @(isMessages ? "active" : "")">
             <i class="bi bi-chat-dots"></i>
+            @await Component.InvokeAsync("UnreadMessages")
             <span>Съобщения</span>
         </a>
     }

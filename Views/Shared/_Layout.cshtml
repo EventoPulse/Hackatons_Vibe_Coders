@@ -119,8 +119,9 @@
                         @if (isAuthed)
                         {
                             <li class="nav-item">
-                                <a class="nav-link" asp-controller="Messages" asp-action="Index">
+                                <a class="nav-link nav-link--with-badge" asp-controller="Messages" asp-action="Index">
                                     <i class="bi bi-chat-dots"></i> <span data-i18n="nav.messages">Съобщения</span>
+                                    @await Component.InvokeAsync("UnreadMessages")
                                 </a>
                             </li>
                         }

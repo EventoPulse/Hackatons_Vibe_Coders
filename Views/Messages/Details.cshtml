@@ -190,3 +190,19 @@
         }
     </div>
 </section>
+
+<script>
+    (function () {
+        var thread = document.querySelector('.social-chat-thread');
+        if (!thread) return;
+        var scrollToBottom = function () {
+            thread.scrollTop = thread.scrollHeight;
+        };
+        scrollToBottom();
+        window.addEventListener('load', scrollToBottom);
+        var lastMessage = thread.querySelector('.social-message-bubble:last-of-type img');
+        if (lastMessage && !lastMessage.complete) {
+            lastMessage.addEventListener('load', scrollToBottom);
+        }
+    })();
+</script>
