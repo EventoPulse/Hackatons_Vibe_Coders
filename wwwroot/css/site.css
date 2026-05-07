@@ -8938,6 +8938,167 @@ html[data-theme="dark"] .evt-aiplan__row:hover { background: #1c2231; color: #e8
     white-space: nowrap;
 }
 
+/* =====================================================
+   Generic modern page layout (used by Recommended, etc.)
+   ===================================================== */
+.evt-page-shell {
+    max-width: 1180px;
+    margin: 24px auto 56px;
+    padding: 0 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+}
+
+.evt-page-hero {
+    text-align: center;
+    padding: 12px 0 4px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
+
+.evt-page-hero__kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: linear-gradient(120deg, #2456ff, #6b85ff);
+    color: #fff;
+    padding: 6px 14px;
+    border-radius: 999px;
+    font-weight: 700;
+    font-size: 0.78rem;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+}
+
+.evt-page-hero h1 {
+    font-size: clamp(1.8rem, 3.2vw, 2.6rem);
+    font-weight: 800;
+    margin: 0;
+    letter-spacing: -0.02em;
+}
+
+.evt-page-hero h1 span {
+    background: linear-gradient(120deg, #2456ff, #6b85ff);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+.evt-page-hero p {
+    color: var(--evt-ink-soft, #5a6175);
+    margin: 0 auto;
+    max-width: 620px;
+    line-height: 1.55;
+}
+
+.evt-page-hero__cta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+    margin-top: 4px;
+}
+
+.evt-page-banner {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px 18px;
+    border-radius: 16px;
+    background: #eef2ff;
+    border: 1px solid #d6deff;
+    color: #1d3a8a;
+}
+html[data-theme="dark"] .evt-page-banner {
+    background: #1c2545;
+    border-color: #2a3464;
+    color: #c5cdf2;
+}
+.evt-page-banner i {
+    font-size: 1.2rem;
+    margin-top: 2px;
+}
+.evt-page-banner strong { display: block; margin-bottom: 2px; }
+.evt-page-banner span { font-size: 0.92rem; }
+
+.evt-page-empty {
+    text-align: center;
+    padding: 48px 24px;
+    background: var(--evt-card, #fff);
+    border: 1px solid #e5e7ef;
+    border-radius: 22px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+html[data-theme="dark"] .evt-page-empty {
+    background: #151a26;
+    border-color: #262d3d;
+}
+.evt-page-empty > i {
+    font-size: 2.4rem;
+    color: #6b85ff;
+}
+.evt-page-empty h2 {
+    font-size: 1.4rem;
+    font-weight: 800;
+    margin: 0;
+    letter-spacing: -0.01em;
+}
+.evt-page-empty h2 span {
+    background: linear-gradient(120deg, #2456ff, #6b85ff);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+.evt-page-empty p {
+    color: var(--evt-ink-soft, #5a6175);
+    max-width: 520px;
+    margin: 0;
+}
+
+.evt-page-section { display: flex; flex-direction: column; gap: 18px; }
+
+.evt-page-section__head {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.evt-page-section__kicker {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: #8b91a4;
+    font-weight: 700;
+}
+.evt-page-section__head h2 {
+    font-size: 1.3rem;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    margin: 0;
+}
+.evt-page-section__head h2 span {
+    background: linear-gradient(120deg, #2456ff, #6b85ff);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+.evt-page-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 18px;
+}
+
+@media (max-width: 575.98px) {
+    .evt-page-shell { padding: 0 12px; }
+    .evt-page-grid { grid-template-columns: 1fr; }
+}
+
 /* AI Plan — new compose & plan cards */
 .evt-aiplan__plans {
     margin-top: 28px;
