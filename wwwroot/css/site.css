@@ -7273,9 +7273,9 @@ html[data-theme="dark"] {
     --evt-bg: #131826;
     --evt-surface: #1b2030;
     --evt-surface-soft: #232940;
-    --evt-ink: #d8dce8;
-    --evt-ink-soft: #9ca3b8;
-    --evt-mute: #6b7388;
+    --evt-ink: #f1f3fa;
+    --evt-ink-soft: #c5cad8;
+    --evt-mute: #8a93a8;
     --evt-line: #2a3142;
     --evt-card: #1b2030;
     --evt-card-soft: #232940;
@@ -7286,7 +7286,7 @@ html[data-theme="dark"] {
 html[data-theme="dark"] body,
 html[data-theme="dark"] body.evt-home-bg {
     background: #131826;
-    color: #d8dce8;
+    color: #e3e6f0;
 }
 
 html[data-theme="dark"] h1,
@@ -7294,7 +7294,33 @@ html[data-theme="dark"] h2,
 html[data-theme="dark"] h3,
 html[data-theme="dark"] h4,
 html[data-theme="dark"] h5,
-html[data-theme="dark"] h6 { color: #ecedf3; }
+html[data-theme="dark"] h6 { color: #f5f6fa; }
+
+/* Hero + key surfaces — ensure strong contrast in dark mode */
+html[data-theme="dark"] .evt-hero__title,
+html[data-theme="dark"] .evt-section__title,
+html[data-theme="dark"] .evt-card__title,
+html[data-theme="dark"] .evt-trending__head h3,
+html[data-theme="dark"] .groove-panel-title,
+html[data-theme="dark"] .groove-page-hero__copy h1 {
+    color: #f5f6fa;
+}
+
+html[data-theme="dark"] .evt-hero__lead,
+html[data-theme="dark"] .evt-section__sub,
+html[data-theme="dark"] .evt-card__meta,
+html[data-theme="dark"] .evt-card__organizer,
+html[data-theme="dark"] .evt-hero__brand,
+html[data-theme="dark"] .evt-hero__stats,
+html[data-theme="dark"] .evt-marquee__track span,
+html[data-theme="dark"] .evt-trending__head p,
+html[data-theme="dark"] .groove-page-hero__copy p,
+html[data-theme="dark"] .groove-panel-intro,
+html[data-theme="dark"] .groove-muted-copy {
+    color: #c5cad8;
+}
+
+html[data-theme="dark"] .evt-hero__stats strong { color: #f5f6fa; }
 
 html[data-theme="dark"] .card,
 html[data-theme="dark"] .evt-hero,
