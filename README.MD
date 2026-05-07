@@ -1,91 +1,127 @@
 # Hackatons Vibe Coders
 
-A web application project created during the **AI Ruse Hackathon** as part of a 48-hour competition challenge.
+Event and social platform built during the AI Ruse Hackathon and currently developed on the `social-design` branch.
 
-> Status: Work in progress  
-> This project is not finished yet. The repository currently contains multiple branches and active development work. Features, structure, UI, and implementation details may change.
+The app is an ASP.NET Core MVC project with authentication, events, tickets, organizer tools, social content, messaging, and AI-assisted features.
 
----
+## Current Stack
 
-## About the Project
+- .NET 8
+- ASP.NET Core MVC + Razor Views
+- Entity Framework Core
+- ASP.NET Core Identity
+- SQL Server / LocalDB
+- Optional OpenAI integration
+- Optional Google Maps client key
 
-**Hackatons Vibe Coders** is an event-focused web application built as a hackathon project.  
-The goal of the project is to provide a platform where events, users, and event-related functionality can be managed in one place.
+## What Works Right Now
 
-The current version is still under development. Some parts of the project were created quickly during the hackathon period, and the team is now continuing work on improving the structure, UI, functionality, and overall code quality.
+The current codebase includes flows for:
 
----
+- registration, login, roles, and seeded admin account
+- event browsing and event details
+- organizer profiles and organizer management screens
+- posts, stories, comments, likes, and social feed UI
+- direct messages and shared cards inside conversations
+- ticket creation, ticket management, attendee data, and user tickets
+- venue layout editing, including AI-assisted layout generation
+- AI-assisted search when an API key is configured
+- Bulgarian and English localization
 
-## Current Development Status
+## Local Run
 
-This repository is currently in a mid-development state.
+### Prerequisites
 
-What this means:
+- .NET 8 SDK
+- SQL Server LocalDB on Windows
 
-- The project is not production-ready.
-- Some features may be incomplete.
-- Some branches may contain experimental or temporary work.
-- The UI and backend structure may still change.
-- Documentation will be updated as the project becomes more stable.
+If you are not using LocalDB, replace `ConnectionStrings:DefaultConnection` with a normal SQL Server connection string in `appsettings.json`, `appsettings.Development.json`, environment variables, or user-secrets.
 
-Active work is being done through branches, including UI and feature-related updates.
+### Optional `.env`
 
----
+The app loads a local `.env` file automatically on startup. Useful keys:
 
-## Tech Stack
+```env
+OPENAI_API_KEY=your_openai_key
+GOOGLE_MAPS_API_KEY=your_google_maps_key
+```
 
-Current visible project stack:
+`AI_API_KEY` also works as an alias for `OPENAI_API_KEY`.
 
-- **C#**
-- **ASP.NET Core**
-- **Entity Framework Core**
-- **Razor Views / MVC structure**
-- **HTML**
-- **CSS**
-- **SQL Server / LocalDB**
+### Start
 
-The repository currently includes typical ASP.NET project folders such as:
+```bash
+dotnet restore
+dotnet build
+dotnet run
+```
 
-- `Controllers`
-- `Models`
-- `Views`
-- `ViewModels`
-- `Services`
-- `Data`
-- `Migrations`
-- `wwwroot`
+Default local URLs from the launch profile:
 
----
+- `https://localhost:7180`
+- `http://localhost:5180`
 
-## Main Features Planned / In Progress
+On startup the app automatically:
 
-The project may include or work toward:
+- applies pending EF Core migrations
+- seeds roles
+- seeds the admin account
+- seeds demo users, organizers, events, posts, tickets, and activity data
 
-- User registration and login
-- Event creation and management
-- Event browsing
-- Admin or role-based functionality
-- UI improvements
-- Database-backed event data
-- Better project structure and documentation
+## Demo Accounts
 
-More specific feature documentation will be added once the implementation becomes stable.
+Admin:
 
----
+- email: `admin@grooveon.com`
+- password: `admin`
 
-## Repository Structure
+Demo users and demo organizers:
+
+- password: `Demo123`
+- example emails: `ivan.dimitrov@demo.bg`, `sofia.sound@demo.bg`, `beat.rooms@demo.bg`
+
+The admin password is hardcoded for development convenience and should be changed before any real deployment.
+
+## Build Status
+
+Verified locally on May 7, 2026:
+
+- `dotnet build` succeeds
+- app startup reaches database migration and seeding successfully
+
+## Important Note For Railway
+
+The project is currently wired to SQL Server in code:
+
+- `Program.cs` uses `UseSqlServer(...)`
+- `Data/ApplicationDbContextFactory.cs` uses `UseSqlServer(...)`
+- default config points to LocalDB
+
+That means a Railway Postgres service will not work with the current code as-is.
+
+If you want to deploy to Railway next, you have two realistic options:
+
+1. Keep the current code and point it to a SQL Server instance instead of Postgres.
+2. Migrate the app from `Microsoft.EntityFrameworkCore.SqlServer` to PostgreSQL/Npgsql.
+
+## Project Structure
 
 ```text
 Hackatons_Vibe_Coders/
-├── Controllers/
-├── Models/
-├── Views/
-├── ViewModels/
-├── Services/
-├── Data/
-├── Migrations/
-├── wwwroot/
-├── Program.cs
-├── EventsApp.csproj
-├── EventsApp.sln
-└── README.MD
+|-- Areas/
+|-- Common/
+|-- Configuration/
+|-- Controllers/
+|-- Data/
+|-- Infrastructure/
+|-- Migrations/
+|-- Models/
+|-- Services/
+|-- ViewModels/
+|-- Views/
+|-- wwwroot/
+|-- Program.cs
+|-- EventsApp.csproj
+|-- EventsApp.sln
+|-- README.MD
+```
