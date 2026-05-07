@@ -5,6 +5,7 @@ using EventsApp.Services;
 using EventsApp.ViewModels.Events;
 using EventsApp.ViewModels.Organizer;
 using EventsApp.ViewModels.Posts;
+using System.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -71,6 +72,8 @@ namespace EventsApp.Controllers
                     SavesCount = e.Saves.Count,
                     GoingCount = e.Attendances.Count(a => a.Status == EventAttendanceStatus.Going),
                     InterestedCount = e.Attendances.Count(a => a.Status == EventAttendanceStatus.Interested),
+                    ViewsCount = e.UserActivities.Count(a => a.ActivityType == UserActivityType.EventViewed),
+                    VipBoostScore = e.Boosts.Sum(b => (int?)b.CreditsSpent) ?? 0,
                     CurrentUserLiked = e.Likes.Any(l => l.UserId == userId),
                     CurrentUserSaved = e.Saves.Any(s => s.UserId == userId),
                     CurrentUserAttendanceStatus = e.Attendances
@@ -139,8 +142,17 @@ namespace EventsApp.Controllers
                 .CountAsync(l => l.Event.OrganizerId == userId);
             var totalComments = await _db.EventComments
                 .CountAsync(c => c.Event.OrganizerId == userId);
+            var totalViews = await _db.UserActivities
+                .AsNoTracking()
+                .CountAsync(a => a.ActivityType == UserActivityType.EventViewed && a.Event != null && a.Event.OrganizerId == userId);
 
             var since30 = now.AddDays(-29).Date;
+            var last30Views = await _db.UserActivities
+                .AsNoTracking()
+                .CountAsync(a => a.ActivityType == UserActivityType.EventViewed
+                    && a.CreatedAt >= since30
+                    && a.Event != null
+                    && a.Event.OrganizerId == userId);
 
             var dailyRaw = await soldQuery
                 .Where(ut => ut.CreatedAt >= since30)
@@ -190,6 +202,25 @@ namespace EventsApp.Controllers
                 .Take(5)
                 .ToList();
 
+            var topByViews = await _db.UserActivities
+                .AsNoTracking()
+                .Where(a => a.ActivityType == UserActivityType.EventViewed
+                    && a.EventId != null
+                    && a.Event != null
+                    && a.Event.OrganizerId == userId)
+                .GroupBy(a => new { a.EventId, a.Event!.Title })
+                .Select(g => new TopEventStat
+                {
+                    EventId = g.Key.EventId ?? 0,
+                    Title = g.Key.Title,
+                    Views = g.Count(),
+                    UniqueViewers = g.Select(x => x.UserId).Distinct().Count(),
+                    EngagementScore = g.Count() + g.Select(x => x.UserId).Distinct().Count() * 2,
+                })
+                .OrderByDescending(s => s.Views)
+                .Take(5)
+                .ToListAsync();
+
             var genreBreakdown = await _db.Events
                 .AsNoTracking()
                 .Where(e => e.OrganizerId == userId)
@@ -220,6 +251,16 @@ namespace EventsApp.Controllers
                     HasActiveTickets = e.Tickets.Any(t => t.IsActive),
                     Sold = e.Tickets.SelectMany(t => t.UserTickets)
                         .Count(ut => ut.Transaction.Status == paid),
+                    Likes = e.Likes.Count,
+                    Comments = e.Comments.Count,
+                    Views = e.UserActivities.Count(a => a.ActivityType == UserActivityType.EventViewed),
+                    UniqueViewers = e.UserActivities
+                        .Where(a => a.ActivityType == UserActivityType.EventViewed)
+                        .Select(a => a.UserId)
+                        .Distinct()
+                        .Count(),
+                    VipBoostScore = e.Boosts.Sum(b => (int?)b.CreditsSpent) ?? 0,
+                    CanBoost = e.IsApproved,
                 })
                 .ToListAsync();
 
@@ -271,12 +312,20 @@ namespace EventsApp.Controllers
                 TicketsUsedCount = ticketsUsedCount,
                 TotalLikes = totalLikes,
                 TotalComments = totalComments,
+                TotalViews = totalViews,
+                Last30DaysViews = last30Views,
+                VipBoostCreditsAvailable = orgData.VipBoostCreditsAvailable,
+                VipBoostCreditsUsed = orgData.VipBoostCreditsUsed,
+                ShowFirstBoostNotice = orgData.Approved
+                    && orgData.FirstApprovalBoostGranted
+                    && !orgData.FirstApprovalBoostNoticeSeen,
                 TotalRevenue = totalRevenue,
                 AverageTicketPrice = avgTicketPrice,
                 Last30DaysSold = last30Sold,
                 Last30DaysRevenue = last30Revenue,
                 TopByTicketsSold = topByTicketsSold,
                 TopByRevenue = topByRevenue,
+                TopByViews = topByViews,
                 GenreBreakdown = genreBreakdown,
                 CityBreakdown = cityBreakdown,
                 SalesLast30Days = salesSeries,
@@ -291,7 +340,8 @@ namespace EventsApp.Controllers
         public async Task<IActionResult> Events()
         {
             var userId = _userManager.GetUserId(User)!;
-            if (!await _db.OrganizerData.AnyAsync(o => o.OrganizerId == userId))
+            var orgData = await _db.OrganizerData.AsNoTracking().FirstOrDefaultAsync(o => o.OrganizerId == userId);
+            if (orgData == null)
             {
                 return RedirectToAction(nameof(Profile));
             }
@@ -312,10 +362,112 @@ namespace EventsApp.Controllers
                     OrganizerPageName = e.OrganizerProfile != null ? e.OrganizerProfile.DisplayName : "Публична страница",
                     TicketsCount = e.Tickets.Count,
                     SoldTicketsCount = e.Tickets.SelectMany(t => t.UserTickets).Count(ut => ut.Transaction.Status == paid),
+                    VipBoostScore = e.Boosts.Sum(b => (int?)b.CreditsSpent) ?? 0,
                 })
                 .ToListAsync();
 
-            return View(new OrganizerEventsViewModel { Events = rows });
+            return View(new OrganizerEventsViewModel
+            {
+                Events = rows,
+                VipBoostCreditsAvailable = orgData.VipBoostCreditsAvailable,
+                VipBoostCreditsUsed = orgData.VipBoostCreditsUsed,
+            });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DismissFirstBoostNotice(string? returnUrl = null)
+        {
+            var userId = _userManager.GetUserId(User)!;
+            var orgData = await _db.OrganizerData.FirstOrDefaultAsync(o => o.OrganizerId == userId);
+            if (orgData == null)
+            {
+                return RedirectToAction(nameof(Profile));
+            }
+
+            orgData.FirstApprovalBoostNoticeSeen = true;
+            await _db.SaveChangesAsync();
+
+            if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
+            {
+                return LocalRedirect(returnUrl);
+            }
+
+            return RedirectToAction(nameof(Dashboard));
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> BuyVipBoostCredits(int quantity = 1, string? returnUrl = null)
+        {
+            var userId = _userManager.GetUserId(User)!;
+            quantity = Math.Clamp(quantity, 1, 20);
+
+            var orgData = await _db.OrganizerData.FirstOrDefaultAsync(o => o.OrganizerId == userId);
+            if (orgData == null || !orgData.Approved)
+            {
+                return Forbid();
+            }
+
+            orgData.VipBoostCreditsAvailable += quantity;
+            await _db.SaveChangesAsync();
+
+            TempData["StatusMessage"] = $"Добавени са {quantity} VIP boost кредит(а). Това е локална тестова покупка до Stripe интеграцията.";
+            return SafeLocalRedirect(returnUrl) ?? RedirectToAction(nameof(Dashboard));
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> BoostEvent(int eventId, string? returnUrl = null)
+        {
+            var userId = _userManager.GetUserId(User)!;
+            await using var tx = await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable);
+
+            var orgData = await _db.OrganizerData.FirstOrDefaultAsync(o => o.OrganizerId == userId);
+            if (orgData == null || !orgData.Approved)
+            {
+                return Forbid();
+            }
+
+            var ev = await _db.Events.FirstOrDefaultAsync(e => e.Id == eventId && e.OrganizerId == userId);
+            if (ev == null)
+            {
+                return NotFound();
+            }
+
+            if (!ev.IsApproved)
+            {
+                TempData["StatusMessage"] = "VIP boost може да се активира след одобрение на събитието.";
+                return SafeLocalRedirect(returnUrl) ?? RedirectToAction(nameof(Events));
+            }
+
+            if (orgData.VipBoostCreditsAvailable <= 0)
+            {
+                TempData["StatusMessage"] = "Първо ти трябва наличен VIP boost кредит.";
+                return SafeLocalRedirect(returnUrl) ?? RedirectToAction(nameof(Events));
+            }
+
+            orgData.VipBoostCreditsAvailable -= 1;
+            orgData.VipBoostCreditsUsed += 1;
+            _db.EventBoosts.Add(new EventBoost
+            {
+                EventId = eventId,
+                OrganizerId = userId,
+                CreditsSpent = 1,
+            });
+
+            await _db.SaveChangesAsync();
+            await tx.CommitAsync();
+
+            TempData["StatusMessage"] = "VIP boost е активиран. Събитието вече получава по-силен ranking в Home и препоръките.";
+            return SafeLocalRedirect(returnUrl) ?? RedirectToAction(nameof(Events));
+        }
+
+        private IActionResult? SafeLocalRedirect(string? returnUrl)
+        {
+            return !string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl)
+                ? Redirect(returnUrl)
+                : null;
         }
 
         [HttpPost]

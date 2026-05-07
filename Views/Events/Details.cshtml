@@ -1,4 +1,5 @@
 @model EventDetailsViewModel
+@using System.Globalization
 @{
     ViewData["Title"] = Model.Title;
     var shareUrl = Url.Action("Details", "Events", new { id = Model.Id }, Context.Request.Scheme) ?? string.Empty;
@@ -223,6 +224,7 @@
         var selectedOccurrence = Model.Occurrences.FirstOrDefault(o => o.Id == Model.SelectedOccurrenceId) ?? Model.Occurrences.First();
         var firstOccurrence = Model.Occurrences.First();
         var lastOccurrence = Model.Occurrences.Last();
+        var showAllOccurrences = Model.CanEdit || Model.OccurrenceDisplayMode == EventOccurrenceDisplayMode.ShowAllDates;
         var selectedStatusText = selectedOccurrence.Status switch
         {
             EventOccurrenceStatus.Cancelled => "Отменена",
@@ -236,43 +238,105 @@
                     <h2>Избери дата.</h2>
                 </div>
             </div>
-            <div class="groove-info-card">
-                <div class="row g-3 align-items-end">
-                    <div class="col-12 col-lg-5">
+            <div class="groove-info-card event-occurrence-card">
+                <div class="event-occurrence-card__head">
+                    <div>
                         <span class="groove-kicker">Период</span>
                         <p class="mb-0">
                             @firstOccurrence.StartDateTime.ToString("dd.MM.yyyy") - @lastOccurrence.StartDateTime.ToString("dd.MM.yyyy")
                             · @Model.Occurrences.Count дати
                         </p>
                     </div>
-                    <div class="col-12 col-lg-7">
-                        <form asp-action="Details" asp-route-id="@Model.Id" method="get">
-                            <label class="form-label" for="occurrenceId">Конкретна дата</label>
-                            <select id="occurrenceId" name="occurrenceId" class="form-select" onchange="this.form.submit()">
-                                @foreach (var occurrence in Model.Occurrences)
-                                {
-                                    var statusText = occurrence.Status switch
-                                    {
-                                        EventOccurrenceStatus.Cancelled => "отменена",
-                                        EventOccurrenceStatus.SoldOut => "разпродадена",
-                                        _ => "планирана",
-                                    };
-                                    <option value="@occurrence.Id" selected="@(occurrence.Id == Model.SelectedOccurrenceId)">
-                                        @occurrence.StartDateTime.ToString("dd.MM.yyyy HH:mm") - @occurrence.EndDateTime.ToString("HH:mm") · @statusText · @occurrence.SoldCount продадени
-                                    </option>
-                                }
-                            </select>
-                        </form>
+                    <div class="event-occurrence-card__selected">
+                        <span>@(showAllOccurrences ? "Избрана дата" : "Следваща дата")</span>
+                        <strong>@selectedOccurrence.StartDateTime.ToString("dd.MM HH:mm")</strong>
+                        <small>@selectedOccurrence.EndDateTime.ToString("HH:mm") · @selectedStatusText</small>
                     </div>
                 </div>
-                <div class="d-flex flex-wrap gap-2 mt-3">
-                    <span class="groove-status-badge groove-status-badge-muted">
-                        Избрана: @selectedOccurrence.StartDateTime.ToString("dd.MM.yyyy HH:mm") - @selectedOccurrence.EndDateTime.ToString("HH:mm")
-                    </span>
-                    <span class="groove-status-badge @(selectedOccurrence.Status == EventOccurrenceStatus.Cancelled ? "groove-status-badge-muted" : "groove-status-badge-success")">
-                        @selectedStatusText
-                    </span>
-                </div>
+
+                @if (showAllOccurrences)
+                {
+                    <div class="event-occurrence-pills" aria-label="Избор на дата">
+                        @foreach (var occurrence in Model.Occurrences.Take(8))
+                        {
+                            var isSelected = occurrence.Id == Model.SelectedOccurrenceId;
+                            var statusClass = occurrence.Status == EventOccurrenceStatus.Cancelled
+                                ? "is-cancelled"
+                                : occurrence.Status == EventOccurrenceStatus.SoldOut ? "is-soldout" : "";
+                            <a asp-action="Details"
+                               asp-route-id="@Model.Id"
+                               asp-route-occurrenceId="@occurrence.Id"
+                               class="event-occurrence-pill @(isSelected ? "is-selected" : "") @statusClass">
+                                <span>@occurrence.StartDateTime.ToString("ddd, dd.MM", CultureInfo.GetCultureInfo("bg-BG"))</span>
+                                <strong>@occurrence.StartDateTime.ToString("HH:mm")</strong>
+                                @if (occurrence.SoldCount > 0)
+                                {
+                                    <small>@occurrence.SoldCount продадени</small>
+                                }
+                            </a>
+                        }
+                    </div>
+
+                    @if (Model.Occurrences.Count > 8)
+                    {
+                        <details class="event-occurrence-more mt-3">
+                            <summary>Покажи всички дати (@Model.Occurrences.Count)</summary>
+                            <div class="event-occurrence-pills mt-3">
+                                @foreach (var occurrence in Model.Occurrences.Skip(8))
+                                {
+                                    var isSelected = occurrence.Id == Model.SelectedOccurrenceId;
+                                    var statusClass = occurrence.Status == EventOccurrenceStatus.Cancelled
+                                        ? "is-cancelled"
+                                        : occurrence.Status == EventOccurrenceStatus.SoldOut ? "is-soldout" : "";
+                                    <a asp-action="Details"
+                                       asp-route-id="@Model.Id"
+                                       asp-route-occurrenceId="@occurrence.Id"
+                                       class="event-occurrence-pill @(isSelected ? "is-selected" : "") @statusClass">
+                                        <span>@occurrence.StartDateTime.ToString("ddd, dd.MM", CultureInfo.GetCultureInfo("bg-BG"))</span>
+                                        <strong>@occurrence.StartDateTime.ToString("HH:mm")</strong>
+                                        @if (occurrence.SoldCount > 0)
+                                        {
+                                            <small>@occurrence.SoldCount продадени</small>
+                                        }
+                                    </a>
+                                }
+                            </div>
+                        </details>
+                    }
+
+                    <form asp-action="Details" asp-route-id="@Model.Id" method="get" class="event-occurrence-select mt-3">
+                        <label class="form-label" for="occurrenceId">Бърз избор</label>
+                        <select id="occurrenceId" name="occurrenceId" class="form-select" onchange="this.form.submit()">
+                            @foreach (var occurrence in Model.Occurrences)
+                            {
+                                var statusText = occurrence.Status switch
+                                {
+                                    EventOccurrenceStatus.Cancelled => "отменена",
+                                    EventOccurrenceStatus.SoldOut => "разпродадена",
+                                    _ => "планирана",
+                                };
+                                <option value="@occurrence.Id" selected="@(occurrence.Id == Model.SelectedOccurrenceId)">
+                                    @occurrence.StartDateTime.ToString("dd.MM.yyyy HH:mm") - @occurrence.EndDateTime.ToString("HH:mm") · @statusText · @occurrence.SoldCount продадени
+                                </option>
+                            }
+                        </select>
+                    </form>
+                }
+                else
+                {
+                    <div class="event-safe-edit-note">
+                        <i class="bi bi-lightning-charge"></i>
+                        Организаторът е избрал бърза покупка за най-близката дата. Следващата налична дата е избрана автоматично.
+                    </div>
+                }
+
+                @if (Model.CanEdit)
+                {
+                    <div class="event-safe-edit-note mt-3">
+                        <i class="bi bi-shield-check"></i>
+                        Дати с продадени билети или активни резервации се пазят автоматично. За тях използвай “Отмени дата” или премести датата, вместо да я триеш от серията.
+                    </div>
+                }
             </div>
             @if (Model.CanEdit && Model.SelectedOccurrenceId.HasValue && Model.SelectedOccurrenceStatus != EventOccurrenceStatus.Cancelled)
             {
@@ -538,7 +602,7 @@
                 <div class="groove-list-stack">
                     @foreach (var c in Model.Comments)
                     {
-                        <article class="groove-list-item social-comment-item" id="comment-@c.Id">
+                        <article class="groove-list-item social-comment-item" id="comment-@c.Id" data-comment-like-surface data-comment-item data-comment-id="@c.Id" data-comment-likes="@c.LikesCount" data-comment-created="@c.CreatedAt.Ticks">
                             <div class="d-flex gap-3">
                                 @if (!string.IsNullOrWhiteSpace(c.AuthorImageUrl))
                                 {
@@ -560,6 +624,25 @@
                                     <span class="groove-badge ms-2" data-i18n="@c.AuthorBadgeKey">@c.AuthorBadgeText</span>
                                     <p class="groove-list-meta mt-1">@c.CreatedAt.ToString("dd.MM.yyyy HH:mm")</p>
                                     <p>@c.Content</p>
+                                    <div class="social-comment-toolbar">
+                                        @if (User.Identity?.IsAuthenticated == true)
+                                        {
+                                            var commentLikeAction = c.CurrentUserLiked ? "UnlikeComment" : "LikeComment";
+                                            var commentLikeMode = c.CurrentUserLiked ? "unlike" : "like";
+                                            <form asp-action="@commentLikeAction" method="post" class="m-0" data-comment-like-form="@commentLikeMode">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="commentId" value="@c.Id" />
+                                                <button class="comment-like-button @(c.CurrentUserLiked ? "is-liked" : "")" type="submit" title="Like">
+                                                    <i class="bi @(c.CurrentUserLiked ? "bi-heart-fill" : "bi-heart")"></i>
+                                                    <span data-comment-like-count>@c.LikesCount</span>
+                                                </button>
+                                            </form>
+                                        }
+                                        else
+                                        {
+                                            <span class="comment-like-button is-static"><i class="bi bi-heart"></i> <span>@c.LikesCount</span></span>
+                                        }
+                                    </div>
                                     @if (User.Identity?.IsAuthenticated == true)
                                     {
                                         <details class="social-comment-reply">
@@ -601,7 +684,7 @@
                                 <div class="social-comment-replies">
                                     @foreach (var reply in c.Replies)
                                     {
-                                        <article class="social-comment-reply-item" id="comment-@reply.Id">
+                                        <article class="social-comment-reply-item" id="comment-@reply.Id" data-comment-like-surface data-comment-item data-comment-id="@reply.Id" data-comment-likes="@reply.LikesCount" data-comment-created="@reply.CreatedAt.Ticks">
                                             @if (!string.IsNullOrWhiteSpace(reply.AuthorImageUrl))
                                             {
                                                 <img src="@reply.AuthorImageUrl" alt="@reply.UserName" class="social-avatar-xs" />
@@ -622,6 +705,25 @@
                                                 <span class="groove-badge ms-2" data-i18n="@reply.AuthorBadgeKey">@reply.AuthorBadgeText</span>
                                                 <p class="groove-list-meta mt-1">@reply.CreatedAt.ToString("dd.MM.yyyy HH:mm")</p>
                                                 <p>@reply.Content</p>
+                                                <div class="social-comment-toolbar">
+                                                    @if (User.Identity?.IsAuthenticated == true)
+                                                    {
+                                                        var replyLikeAction = reply.CurrentUserLiked ? "UnlikeComment" : "LikeComment";
+                                                        var replyLikeMode = reply.CurrentUserLiked ? "unlike" : "like";
+                                                        <form asp-action="@replyLikeAction" method="post" class="m-0" data-comment-like-form="@replyLikeMode">
+                                                            @Html.AntiForgeryToken()
+                                                            <input type="hidden" name="commentId" value="@reply.Id" />
+                                                            <button class="comment-like-button @(reply.CurrentUserLiked ? "is-liked" : "")" type="submit" title="Like">
+                                                                <i class="bi @(reply.CurrentUserLiked ? "bi-heart-fill" : "bi-heart")"></i>
+                                                                <span data-comment-like-count>@reply.LikesCount</span>
+                                                            </button>
+                                                        </form>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="comment-like-button is-static"><i class="bi bi-heart"></i> <span>@reply.LikesCount</span></span>
+                                                    }
+                                                </div>
                                             </div>
                                             @if (reply.CanDelete)
                                             {
@@ -644,6 +746,26 @@
                                 </form>
                             }
                         </article>
+                    }
+                </div>
+                <div class="comments-progressive-footer">
+                    <span>
+                        <span data-i18n="common.showing">Показани</span>
+                        <strong>@Model.VisibleRootCommentsCount</strong> / <strong>@Model.RootCommentsCount</strong>
+                        <span data-i18n="comments.threads">нишки</span>
+                    </span>
+                    @if (Model.HasMoreComments)
+                    {
+                        var nextComments = Math.Min(Model.RootCommentsCount, Model.VisibleRootCommentsCount + 8);
+                        <a asp-action="Details"
+                           asp-route-id="@Model.Id"
+                           asp-route-occurrenceId="@Model.SelectedOccurrenceId"
+                           asp-route-commentsToShow="@nextComments"
+                           asp-fragment="comments"
+                           class="groove-button groove-button-paper">
+                            <i class="bi bi-chat-left-text"></i>
+                            <span data-i18n="comments.show.more">Покажи още коментари</span>
+                        </a>
                     }
                 </div>
             </div>

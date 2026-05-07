@@ -226,12 +226,23 @@
                             <h2 data-i18n="feed.following.title">Съдържание от следвани организатори.</h2>
                         </div>
                     </div>
-                    <div class="social-post-list social-post-list--stream">
+                    <div class="social-post-list social-post-list--stream" data-progressive-list data-initial-count="4" data-step-count="4">
                         @foreach (var post in Model.FriendsActivity)
                         {
-                            <partial name="_PostCard" model="post" />
+                            <div data-progressive-item>
+                                <partial name="_PostCard" model="post" />
+                            </div>
                         }
                     </div>
+                    @if (Model.FriendsActivity.Count > 4)
+                    {
+                        <div class="evt-load-more evt-load-more--compact">
+                            <button type="button" class="evt-btn evt-btn-ghost" data-progressive-more>
+                                <i class="bi bi-plus-circle"></i>
+                                <span data-i18n="common.show.more">Покажи още</span>
+                            </button>
+                        </div>
+                    }
                 </section>
             }
 
@@ -244,12 +255,23 @@
                 </div>
                 @if (Model.OrganizerPosts.Any())
                 {
-                    <div class="social-post-list social-post-list--stream">
+                    <div class="social-post-list social-post-list--stream" data-progressive-list data-initial-count="6" data-step-count="4">
                         @foreach (var post in Model.OrganizerPosts)
                         {
-                            <partial name="_PostCard" model="post" />
+                            <div data-progressive-item>
+                                <partial name="_PostCard" model="post" />
+                            </div>
                         }
                     </div>
+                    @if (Model.OrganizerPosts.Count > 6)
+                    {
+                        <div class="evt-load-more evt-load-more--compact">
+                            <button type="button" class="evt-btn evt-btn-ghost" data-progressive-more>
+                                <i class="bi bi-plus-circle"></i>
+                                <span data-i18n="common.show.more">Покажи още</span>
+                            </button>
+                        </div>
+                    }
                 }
                 else
                 {

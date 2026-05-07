@@ -1,5 +1,8 @@
 @model OrganizerEventsViewModel
 @{
+    var returnUrl = Context.Request.Path + Context.Request.QueryString;
+}
+@{
     ViewData["Title"] = "Моите събития";
 }
 
@@ -19,6 +22,28 @@
             </a>
         </div>
     </div>
+
+    <section class="groove-table-card mb-4" style="padding:1rem;">
+        <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3">
+            <div>
+                <span class="groove-kicker">VIP boost</span>
+                <h2 class="h5 mb-1">Буустове за събития.</h2>
+                <p class="text-muted mb-0">
+                    Налични: <strong>@Model.VipBoostCreditsAvailable</strong>
+                    · Използвани: <strong>@Model.VipBoostCreditsUsed</strong>.
+                    VIP събитията получават по-силен ranking в Home и препоръките.
+                </p>
+            </div>
+            <form asp-action="BuyVipBoostCredits" method="post" class="d-flex gap-2 flex-wrap">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="returnUrl" value="@returnUrl" />
+                <input type="number" name="quantity" value="1" min="1" max="20" class="form-control" style="max-width:88px;" />
+                <button class="groove-button groove-button-dark" type="submit">
+                    <i class="bi bi-stars"></i> Тестова покупка
+                </button>
+            </form>
+        </div>
+    </section>
 
     @if (Model.Events.Count == 0)
     {
@@ -40,6 +65,7 @@
                             <th>Дата</th>
                             <th>Билети</th>
                             <th>Статус</th>
+                            <th>VIP</th>
                             <th></th>
                         </tr>
                     </thead>
@@ -56,6 +82,16 @@
                                 <td>
                                     @ev.TicketsCount вида
                                     <span class="text-muted small d-block">@ev.SoldTicketsCount продадени</span>
+                                </td>
+                                <td>
+                                    @if (ev.VipBoostScore > 0)
+                                    {
+                                        <span class="evt-card__chip evt-card__chip--vip" style="position:static;">VIP x@ev.VipBoostScore</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted small">-</span>
+                                    }
                                 </td>
                                 <td>
                                     @if (ev.HasPendingChanges)
@@ -82,6 +118,17 @@
                                         <a asp-controller="Tickets" asp-action="Manage" asp-route-id="@ev.Id" class="groove-button groove-button-paper">
                                             <i class="bi bi-ticket-perforated"></i> Билети
                                         </a>
+                                        @if (ev.IsApproved)
+                                        {
+                                            <form asp-action="BoostEvent" method="post" class="m-0">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="eventId" value="@ev.Id" />
+                                                <input type="hidden" name="returnUrl" value="@returnUrl" />
+                                                <button class="groove-button groove-button-dark" type="submit" @(Model.VipBoostCreditsAvailable <= 0 ? "disabled" : "")>
+                                                    <i class="bi bi-stars"></i> VIP
+                                                </button>
+                                            </form>
+                                        }
                                     </div>
                                 </td>
                             </tr>

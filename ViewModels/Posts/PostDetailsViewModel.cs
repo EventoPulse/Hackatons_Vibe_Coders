@@ -17,6 +17,9 @@ namespace EventsApp.ViewModels.Posts
         public int LikesCount { get; set; }
         public int SavesCount { get; set; }
         public int CommentsCount { get; set; }
+        public int RootCommentsCount { get; set; }
+        public int VisibleRootCommentsCount { get; set; }
+        public bool HasMoreComments => VisibleRootCommentsCount < RootCommentsCount;
         public bool CurrentUserLiked { get; set; }
         public bool CurrentUserSaved { get; set; }
         public string? OrganizerImageUrl { get; set; }
@@ -39,6 +42,8 @@ namespace EventsApp.ViewModels.Posts
         public bool IsOrganizerPageAuthor { get; set; }
         public string Content { get; set; } = null!;
         public DateTime CreatedAt { get; set; }
+        public int LikesCount { get; set; }
+        public bool CurrentUserLiked { get; set; }
         public bool CanDelete { get; set; }
         public IReadOnlyList<PostCommentViewModel> Replies { get; set; } = Array.Empty<PostCommentViewModel>();
     }

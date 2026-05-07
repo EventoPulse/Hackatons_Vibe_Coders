@@ -14,9 +14,11 @@ namespace EventsApp.Models
             this.Events = new HashSet<Event>();
             this.Posts = new HashSet<Post>();
             this.PostComments = new HashSet<PostComment>();
+            this.PostCommentLikes = new HashSet<PostCommentLike>();
             this.PostLikes = new HashSet<PostLike>();
             this.PostSaves = new HashSet<PostSave>();
             this.EventComments = new HashSet<EventComment>();
+            this.EventCommentLikes = new HashSet<EventCommentLike>();
             this.EventLikes = new HashSet<EventLike>();
             this.EventSaves = new HashSet<EventSave>();
             this.EventAttendances = new HashSet<EventAttendance>();
@@ -73,11 +75,15 @@ namespace EventsApp.Models
 
         public ICollection<PostComment> PostComments { get; set; }
 
+        public ICollection<PostCommentLike> PostCommentLikes { get; set; }
+
         public ICollection<PostLike> PostLikes { get; set; }
 
         public ICollection<PostSave> PostSaves { get; set; }
 
         public ICollection<EventComment> EventComments { get; set; }
+
+        public ICollection<EventCommentLike> EventCommentLikes { get; set; }
 
         public ICollection<EventLike> EventLikes { get; set; }
 

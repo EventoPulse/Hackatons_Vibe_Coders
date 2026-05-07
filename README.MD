@@ -214,15 +214,54 @@ ADMIN_EMAIL=<your admin email>
 ADMIN_PASSWORD=<strong admin password>
 OPENAI_API_KEY=<optional, for AI features>
 GOOGLE_MAPS_KEY=<optional, for maps>
+EMAIL_ENABLED=false
 SMTP_HOST=<optional, for account emails>
 SMTP_PORT=587
 SMTP_USERNAME=<optional>
 SMTP_PASSWORD=<optional>
 SMTP_FROM_EMAIL=<optional>
 SMTP_FROM_NAME=Evento
+SMTP_ENABLE_SSL=true
 ```
 
 `ADMIN_PASSWORD` must satisfy the production password rules: at least 10 characters, uppercase, lowercase, number, and symbol.
+
+### Account Emails and Password Reset
+
+ASP.NET Identity provides the account email pages, including:
+
+```text
+/Identity/Account/ForgotPassword
+/Identity/Account/ResetPassword
+```
+
+Emails are sent through SMTP when email is enabled. For local development you can keep:
+
+```text
+EMAIL_ENABLED=false
+```
+
+For Railway or production set:
+
+```text
+EMAIL_ENABLED=true
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USERNAME=<mailbox or SMTP username>
+SMTP_PASSWORD=<SMTP app password or provider password>
+SMTP_FROM_EMAIL=<from address, optional if same as SMTP_USERNAME>
+SMTP_FROM_NAME=Evento
+SMTP_ENABLE_SSL=true
+```
+
+The app also accepts Railway-style aliases:
+
+```text
+SMTP_USER=<same as SMTP_USERNAME>
+SMTP_PASS=<same as SMTP_PASSWORD>
+```
+
+For a real domain email, use a dedicated mailbox or transactional email provider and set the same SMTP variables in Railway. Do not commit SMTP passwords or app passwords to git.
 
 ### Railway Storage Bucket
 

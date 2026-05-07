@@ -34,6 +34,14 @@ namespace EventsApp.Models
         SoldOut = 2,
     }
 
+    public enum EventOccurrenceDisplayMode
+    {
+        [Display(Name = "Покажи всички дати")]
+        ShowAllDates = 0,
+        [Display(Name = "Само най-близката дата")]
+        NextAvailableOnly = 1,
+    }
+
     public enum RecurringEditScope
     {
         [Display(Name = "Само тази дата")]
@@ -53,6 +61,7 @@ namespace EventsApp.Models
             this.Interval = 1;
             this.TimeZone = "Europe/Sofia";
             this.Status = EventSeriesStatus.Published;
+            this.OccurrenceDisplayMode = EventOccurrenceDisplayMode.ShowAllDates;
             this.Occurrences = new HashSet<EventOccurrence>();
         }
 
@@ -101,6 +110,9 @@ namespace EventsApp.Models
 
         [MaxLength(64)]
         public string? DaysOfWeek { get; set; }
+
+        [Required]
+        public EventOccurrenceDisplayMode OccurrenceDisplayMode { get; set; }
 
         [Required]
         public DateTime StartDate { get; set; }

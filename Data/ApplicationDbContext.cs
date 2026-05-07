@@ -20,17 +20,23 @@ namespace EventsApp.Data
 
         public DbSet<EventChangeRequest> EventChangeRequests { get; set; } = null!;
 
+        public DbSet<EventBoost> EventBoosts { get; set; } = null!;
+
         public DbSet<Post> Posts { get; set; } = null!;
 
         public DbSet<PostImage> PostImages { get; set; } = null!;
 
         public DbSet<PostComment> PostComments { get; set; } = null!;
 
+        public DbSet<PostCommentLike> PostCommentLikes { get; set; } = null!;
+
         public DbSet<PostLike> PostLikes { get; set; } = null!;
 
         public DbSet<PostSave> PostSaves { get; set; } = null!;
 
         public DbSet<EventComment> EventComments { get; set; } = null!;
+
+        public DbSet<EventCommentLike> EventCommentLikes { get; set; } = null!;
 
         public DbSet<EventLike> EventLikes { get; set; } = null!;
 
@@ -95,6 +101,8 @@ namespace EventsApp.Data
             builder.Entity<OrganizerData>(entity =>
             {
                 entity.HasKey(o => o.OrganizerId);
+                entity.Property(o => o.VipBoostCreditsAvailable).HasDefaultValue(1);
+                entity.Property(o => o.VipBoostCreditsUsed).HasDefaultValue(0);
 
                 entity.HasOne(o => o.Organizer)
                       .WithOne(u => u.OrganizerData)
@@ -208,6 +216,22 @@ namespace EventsApp.Data
                 entity.HasIndex(r => new { r.OrganizerId, r.Status });
             });
 
+            builder.Entity<EventBoost>(entity =>
+            {
+                entity.HasOne(b => b.Event)
+                      .WithMany(e => e.Boosts)
+                      .HasForeignKey(b => b.EventId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(b => b.Organizer)
+                      .WithMany()
+                      .HasForeignKey(b => b.OrganizerId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasIndex(b => new { b.EventId, b.CreatedAt });
+                entity.HasIndex(b => new { b.OrganizerId, b.CreatedAt });
+            });
+
             builder.Entity<EventSeries>(entity =>
             {
                 entity.HasOne(s => s.Event)
@@ -296,6 +320,21 @@ namespace EventsApp.Data
                 entity.HasIndex(pc => pc.ParentCommentId);
             });
 
+            builder.Entity<PostCommentLike>(entity =>
+            {
+                entity.HasOne(pcl => pcl.PostComment)
+                      .WithMany(pc => pc.Likes)
+                      .HasForeignKey(pcl => pcl.PostCommentId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(pcl => pcl.User)
+                      .WithMany(u => u.PostCommentLikes)
+                      .HasForeignKey(pcl => pcl.UserId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasIndex(pcl => new { pcl.PostCommentId, pcl.UserId }).IsUnique();
+            });
+
             builder.Entity<PostLike>(entity =>
             {
                 entity.HasOne(pl => pl.Post)
@@ -354,6 +393,21 @@ namespace EventsApp.Data
                       .OnDelete(DeleteBehavior.NoAction);
 
                 entity.HasIndex(ec => ec.ParentCommentId);
+            });
+
+            builder.Entity<EventCommentLike>(entity =>
+            {
+                entity.HasOne(ecl => ecl.EventComment)
+                      .WithMany(ec => ec.Likes)
+                      .HasForeignKey(ecl => ecl.EventCommentId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(ecl => ecl.User)
+                      .WithMany(u => u.EventCommentLikes)
+                      .HasForeignKey(ecl => ecl.UserId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasIndex(ecl => new { ecl.EventCommentId, ecl.UserId }).IsUnique();
             });
 
             builder.Entity<EventLike>(entity =>
@@ -535,6 +589,8 @@ namespace EventsApp.Data
                       .OnDelete(DeleteBehavior.SetNull);
 
                 entity.HasIndex(a => new { a.UserId, a.ActivityType, a.CreatedAt });
+                entity.HasIndex(a => new { a.EventId, a.ActivityType, a.CreatedAt });
+                entity.HasIndex(a => new { a.PostId, a.ActivityType, a.CreatedAt });
             });
 
             builder.Entity<ApplicationUser>(entity =>

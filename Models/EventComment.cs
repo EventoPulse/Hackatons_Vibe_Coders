@@ -10,6 +10,7 @@ namespace EventsApp.Models
         {
             this.CreatedAt = DateTime.UtcNow;
             this.Replies = new HashSet<EventComment>();
+            this.Likes = new HashSet<EventCommentLike>();
         }
 
         [Key]
@@ -45,6 +46,8 @@ namespace EventsApp.Models
         public EventComment? ParentComment { get; set; }
 
         public ICollection<EventComment> Replies { get; set; }
+
+        public ICollection<EventCommentLike> Likes { get; set; }
 
         [Required]
         [MinLength(GlobalConstants.Comment.ContentMinLength)]

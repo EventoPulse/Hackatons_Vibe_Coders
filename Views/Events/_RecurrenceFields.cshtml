@@ -65,7 +65,30 @@
                 </label>
             }
         </div>
+        <div class="form-text mb-2" data-event-weekdays-help>
+            Ако не избереш ден, системата ще използва деня от началната дата. После можеш да отменяш отделни дати, без да пипаш цялата серия.
+        </div>
         <span asp-validation-for="SelectedDaysOfWeek" class="text-danger small"></span>
+
+        <div class="mb-3" data-event-occurrence-visibility>
+            <label asp-for="OccurrenceDisplayMode" class="form-label"></label>
+            <div class="event-choice-grid event-choice-grid--compact">
+                <label class="event-choice-card">
+                    <input asp-for="OccurrenceDisplayMode" type="radio" value="@EventOccurrenceDisplayMode.ShowAllDates" />
+                    <span>
+                        <strong>Всички дати</strong>
+                        <span>Потребителят избира конкретна дата от списък.</span>
+                    </span>
+                </label>
+                <label class="event-choice-card">
+                    <input asp-for="OccurrenceDisplayMode" type="radio" value="@EventOccurrenceDisplayMode.NextAvailableOnly" />
+                    <span>
+                        <strong>Само най-близката дата</strong>
+                        <span>Подходящо за седмични събития, когато искаш бърза покупка без избор.</span>
+                    </span>
+                </label>
+            </div>
+        </div>
 
         <div class="groove-form-grid">
             <div class="mb-3">

@@ -48,10 +48,11 @@ namespace EventsApp.Controllers
             return View(feed);
         }
 
-        public async Task<IActionResult> Details(int id)
+        public async Task<IActionResult> Details(int id, int commentsToShow = 8)
         {
             var userId = _userManager.GetUserId(User);
             var isAdmin = User.IsInRole(GlobalConstants.Roles.Admin);
+            commentsToShow = Math.Clamp(commentsToShow, 8, 60);
 
             var post = await _db.Posts
                 .AsNoTracking()
@@ -62,19 +63,48 @@ namespace EventsApp.Controllers
                 .Include(p => p.Images)
                 .Include(p => p.Likes)
                 .Include(p => p.Saves)
-                .Include(p => p.Comments)
-                    .ThenInclude(c => c.User)
-                .Include(p => p.Comments)
-                    .ThenInclude(c => c.AuthorOrganizerProfile)
                 .FirstOrDefaultAsync(p => p.Id == id);
 
             if (post == null) return NotFound();
 
-            var comments = post.Comments.ToList();
-            var repliesByParentId = comments
+            if (userId != null)
+            {
+                await _socialFeed.TrackActivityAsync(userId, UserActivityType.PostViewed, postId: id);
+            }
+
+            var commentsCount = await _db.PostComments
+                .AsNoTracking()
+                .CountAsync(c => c.PostId == id);
+            var rootCommentsCount = await _db.PostComments
+                .AsNoTracking()
+                .CountAsync(c => c.PostId == id && c.ParentCommentId == null);
+            var rootComments = await _db.PostComments
+                .AsNoTracking()
+                .Where(c => c.PostId == id && c.ParentCommentId == null)
+                .Include(c => c.User)
+                .Include(c => c.AuthorOrganizerProfile)
+                .Include(c => c.Likes)
+                .OrderByDescending(c => c.Likes.Count)
+                .ThenByDescending(c => c.CreatedAt)
+                .Take(commentsToShow)
+                .ToListAsync();
+            var rootCommentIds = rootComments.Select(c => c.Id).ToList();
+            var replies = rootCommentIds.Count == 0
+                ? new List<PostComment>()
+                : await _db.PostComments
+                    .AsNoTracking()
+                    .Where(c => c.PostId == id && c.ParentCommentId.HasValue && rootCommentIds.Contains(c.ParentCommentId.Value))
+                    .Include(c => c.User)
+                    .Include(c => c.AuthorOrganizerProfile)
+                    .Include(c => c.Likes)
+                    .OrderByDescending(c => c.Likes.Count)
+                    .ThenByDescending(c => c.CreatedAt)
+                    .ToListAsync();
+            var comments = rootComments.Concat(replies).ToList();
+            var repliesByParentId = replies
                 .Where(c => c.ParentCommentId.HasValue)
                 .GroupBy(c => c.ParentCommentId!.Value)
-                .ToDictionary(g => g.Key, g => g.OrderBy(r => r.CreatedAt).ToList());
+                .ToDictionary(g => g.Key, g => g.OrderByDescending(r => r.Likes.Count).ThenByDescending(r => r.CreatedAt).ToList());
 
             return View(new PostDetailsViewModel
             {
@@ -99,12 +129,15 @@ namespace EventsApp.Controllers
                     .ToList(),
                 LikesCount = post.Likes.Count,
                 SavesCount = post.Saves.Count,
-                CommentsCount = comments.Count,
+                CommentsCount = commentsCount,
+                RootCommentsCount = rootCommentsCount,
+                VisibleRootCommentsCount = rootComments.Count,
                 CurrentUserLiked = userId != null && post.Likes.Any(l => l.UserId == userId),
                 CurrentUserSaved = userId != null && post.Saves.Any(s => s.UserId == userId),
                 Comments = comments
                     .Where(c => c.ParentCommentId == null)
-                    .OrderByDescending(c => c.CreatedAt)
+                    .OrderByDescending(c => c.Likes.Count)
+                    .ThenByDescending(c => c.CreatedAt)
                     .Select(c => ToCommentViewModel(c, userId, isAdmin, repliesByParentId))
                     .ToList(),
                 CanEdit = isAdmin || post.OrganizerId == userId,
@@ -455,6 +488,107 @@ namespace EventsApp.Controllers
             return RedirectToAction(nameof(Details), new { id = postId });
         }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize]
+        public async Task<IActionResult> LikeComment(int commentId)
+        {
+            var userId = _userManager.GetUserId(User)!;
+            var comment = await _db.PostComments
+                .AsNoTracking()
+                .Select(c => new { c.Id, c.PostId })
+                .FirstOrDefaultAsync(c => c.Id == commentId);
+
+            if (comment == null)
+            {
+                return NotFound();
+            }
+
+            var exists = await _db.PostCommentLikes
+                .AnyAsync(l => l.PostCommentId == commentId && l.UserId == userId);
+
+            if (!exists)
+            {
+                _db.PostCommentLikes.Add(new PostCommentLike
+                {
+                    PostCommentId = commentId,
+                    UserId = userId,
+                });
+                await _db.SaveChangesAsync();
+            }
+
+            if (IsAjaxRequest())
+            {
+                var likesCount = await _db.PostCommentLikes.CountAsync(l => l.PostCommentId == commentId);
+                return Json(new
+                {
+                    commentId,
+                    liked = true,
+                    likesCount,
+                    actionUrl = Url.Action(nameof(UnlikeComment)),
+                    mode = "unlike",
+                });
+            }
+
+            return Redirect((Url.Action(nameof(Details), new { id = comment.PostId }) ?? $"/Posts/Details/{comment.PostId}") + "#comment-" + commentId);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize]
+        public async Task<IActionResult> UnlikeComment(int commentId)
+        {
+            var userId = _userManager.GetUserId(User)!;
+            var like = await _db.PostCommentLikes
+                .Include(l => l.PostComment)
+                .FirstOrDefaultAsync(l => l.PostCommentId == commentId && l.UserId == userId);
+
+            if (like == null)
+            {
+                var postId = await _db.PostComments
+                    .AsNoTracking()
+                    .Where(c => c.Id == commentId)
+                    .Select(c => (int?)c.PostId)
+                    .FirstOrDefaultAsync();
+
+                if (IsAjaxRequest() && postId.HasValue)
+                {
+                    var likesCount = await _db.PostCommentLikes.CountAsync(l => l.PostCommentId == commentId);
+                    return Json(new
+                    {
+                        commentId,
+                        liked = false,
+                        likesCount,
+                        actionUrl = Url.Action(nameof(LikeComment)),
+                        mode = "like",
+                    });
+                }
+
+                return postId.HasValue
+                    ? Redirect((Url.Action(nameof(Details), new { id = postId.Value }) ?? $"/Posts/Details/{postId.Value}") + "#comment-" + commentId)
+                    : NotFound();
+            }
+
+            var targetPostId = like.PostComment.PostId;
+            _db.PostCommentLikes.Remove(like);
+            await _db.SaveChangesAsync();
+
+            if (IsAjaxRequest())
+            {
+                var likesCount = await _db.PostCommentLikes.CountAsync(l => l.PostCommentId == commentId);
+                return Json(new
+                {
+                    commentId,
+                    liked = false,
+                    likesCount,
+                    actionUrl = Url.Action(nameof(LikeComment)),
+                    mode = "like",
+                });
+            }
+
+            return Redirect((Url.Action(nameof(Details), new { id = targetPostId }) ?? $"/Posts/Details/{targetPostId}") + "#comment-" + commentId);
+        }
+
         private async Task<MediaUploadResult?> ResolveMediaAsync(PostCreateEditViewModel input)
         {
             if (input.MediaFile != null && input.MediaFile.Length > 0)
@@ -513,6 +647,14 @@ namespace EventsApp.Controllers
                 .ToListAsync();
         }
 
+        private bool IsAjaxRequest()
+        {
+            return string.Equals(
+                Request.Headers["X-Requested-With"].ToString(),
+                "XMLHttpRequest",
+                StringComparison.OrdinalIgnoreCase);
+        }
+
         private static string GetCommentDisplayName(PostComment comment)
         {
             return comment.AuthorType == AuthorIdentityType.OrganizerPage && comment.AuthorOrganizerProfile != null
@@ -540,6 +682,8 @@ namespace EventsApp.Controllers
                 IsOrganizerPageAuthor = comment.AuthorType == AuthorIdentityType.OrganizerPage,
                 Content = comment.Content,
                 CreatedAt = comment.CreatedAt,
+                LikesCount = comment.Likes.Count,
+                CurrentUserLiked = currentUserId != null && comment.Likes.Any(l => l.UserId == currentUserId),
                 CanDelete = isAdmin || comment.UserId == currentUserId,
                 Replies = repliesByParentId.TryGetValue(comment.Id, out var replies)
                     ? replies.Select(r => ToCommentViewModel(r, currentUserId, isAdmin, new Dictionary<int, List<PostComment>>())).ToList()

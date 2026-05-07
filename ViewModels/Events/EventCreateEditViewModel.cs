@@ -84,6 +84,9 @@ namespace EventsApp.ViewModels.Events
         [Display(Name = "Повтаря се в")]
         public List<DayOfWeek> SelectedDaysOfWeek { get; set; } = new();
 
+        [Display(Name = "Как потребителите виждат датите")]
+        public EventOccurrenceDisplayMode OccurrenceDisplayMode { get; set; } = EventOccurrenceDisplayMode.ShowAllDates;
+
         [DataType(DataType.Date)]
         [Display(Name = "Начална дата на серията")]
         public DateTime? RecurrenceStartDate { get; set; }

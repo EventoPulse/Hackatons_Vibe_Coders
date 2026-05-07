@@ -19,6 +19,7 @@ namespace EventsApp.ViewModels.Events
         public EventRecurrenceType RecurrenceType { get; set; } = EventRecurrenceType.None;
         public int RecurrenceInterval { get; set; } = 1;
         public List<DayOfWeek> SelectedDaysOfWeek { get; set; } = new();
+        public EventOccurrenceDisplayMode OccurrenceDisplayMode { get; set; } = EventOccurrenceDisplayMode.ShowAllDates;
         public DateTime? RecurrenceStartDate { get; set; }
         public DateTime? RecurrenceEndDate { get; set; }
         public TimeSpan? RecurrenceStartTime { get; set; }

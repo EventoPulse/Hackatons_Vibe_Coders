@@ -259,6 +259,10 @@
         'common.open': { bg: 'Отвори', en: 'Open' },
         'common.edit': { bg: 'Редакция', en: 'Edit' },
         'common.delete': { bg: 'Изтрий', en: 'Delete' },
+        'common.showing': { bg: 'Показани', en: 'Showing' },
+        'common.show.more': { bg: 'Покажи още', en: 'Show more' },
+        'comments.threads': { bg: 'нишки', en: 'threads' },
+        'comments.show.more': { bg: 'Покажи още коментари', en: 'Show more comments' },
         'event.price.free': { bg: 'Безплатно', en: 'Free' },
         'event.price.from': { bg: 'от', en: 'from' },
 

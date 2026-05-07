@@ -24,7 +24,8 @@ namespace EventsApp.Services.Email
             }
 
             var host = _configuration["Email:Smtp:Host"];
-            var fromEmail = _configuration["Email:From:Email"];
+            var username = _configuration["Email:Smtp:Username"];
+            var fromEmail = _configuration["Email:From:Email"] ?? username;
             if (string.IsNullOrWhiteSpace(host) || string.IsNullOrWhiteSpace(fromEmail))
             {
                 _logger.LogWarning("Email is enabled but SMTP host or from email is missing.");
@@ -33,7 +34,6 @@ namespace EventsApp.Services.Email
 
             var port = _configuration.GetValue("Email:Smtp:Port", 587);
             var enableSsl = _configuration.GetValue("Email:Smtp:EnableSsl", true);
-            var username = _configuration["Email:Smtp:Username"];
             var password = _configuration["Email:Smtp:Password"];
             var fromName = _configuration["Email:From:Name"] ?? "Evento";
 

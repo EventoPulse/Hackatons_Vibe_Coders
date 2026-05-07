@@ -21,6 +21,9 @@ namespace EventsApp.ViewModels.Events
         public int SavesCount { get; set; }
         public int GoingCount { get; set; }
         public int InterestedCount { get; set; }
+        public int ViewsCount { get; set; }
+        public int VipBoostScore { get; set; }
+        public bool IsVipBoosted => VipBoostScore > 0;
         public bool CurrentUserLiked { get; set; }
         public bool CurrentUserSaved { get; set; }
         public EventAttendanceStatus? CurrentUserAttendanceStatus { get; set; }

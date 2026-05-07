@@ -186,6 +186,9 @@ namespace EventsApp.Controllers
             var ticket = await _db.Tickets
                 .Include(t => t.Event)
                     .ThenInclude(e => e.OrganizerProfile)
+                .Include(t => t.Event)
+                    .ThenInclude(e => e.EventSeries)
+                        .ThenInclude(s => s!.Occurrences)
                 .FirstOrDefaultAsync(t => t.Id == id);
 
             if (ticket == null) return NotFound();
@@ -281,6 +284,24 @@ namespace EventsApp.Controllers
             }
             EventOccurrence? occurrence = null;
             var startsAt = ticket.Event.StartTime;
+            var canManageEvent = User.IsInRole(GlobalConstants.Roles.Admin) || ticket.Event.OrganizerId == userId;
+            if (!canManageEvent
+                && ticket.Event.EventSeries?.OccurrenceDisplayMode == EventOccurrenceDisplayMode.NextAvailableOnly)
+            {
+                var nextOccurrence = ticket.Event.EventSeries.Occurrences
+                    .Where(o => o.Status == EventOccurrenceStatus.Scheduled && o.StartDateTime > DateTime.UtcNow)
+                    .OrderBy(o => o.StartDateTime)
+                    .FirstOrDefault();
+
+                if (nextOccurrence == null)
+                {
+                    TempData["StatusMessage"] = "Няма налична следваща дата за покупка.";
+                    return RedirectToAction("Details", "Events", new { id = ticket.EventId });
+                }
+
+                occurrenceId = nextOccurrence.Id;
+            }
+
             if (occurrenceId.HasValue)
             {
                 occurrence = await _db.EventOccurrences

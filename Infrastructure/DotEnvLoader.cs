@@ -78,17 +78,28 @@ namespace EventsApp.Infrastructure
                 {
                     mapped["Email:Smtp:Port"] = kv.Value;
                 }
-                if (string.Equals(kv.Key, "SMTP_USERNAME", StringComparison.OrdinalIgnoreCase))
+                if (string.Equals(kv.Key, "SMTP_USERNAME", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(kv.Key, "SMTP_USER", StringComparison.OrdinalIgnoreCase))
                 {
                     mapped["Email:Smtp:Username"] = kv.Value;
                 }
-                if (string.Equals(kv.Key, "SMTP_PASSWORD", StringComparison.OrdinalIgnoreCase))
+                if (string.Equals(kv.Key, "SMTP_PASSWORD", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(kv.Key, "SMTP_PASS", StringComparison.OrdinalIgnoreCase))
                 {
                     mapped["Email:Smtp:Password"] = kv.Value;
                 }
                 if (string.Equals(kv.Key, "SMTP_FROM_EMAIL", StringComparison.OrdinalIgnoreCase))
                 {
                     mapped["Email:From:Email"] = kv.Value;
+                }
+                if (string.Equals(kv.Key, "SMTP_ENABLE_SSL", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(kv.Key, "SMTP_SSL", StringComparison.OrdinalIgnoreCase))
+                {
+                    mapped["Email:Smtp:EnableSsl"] = kv.Value;
+                }
+                if (string.Equals(kv.Key, "EMAIL_ENABLED", StringComparison.OrdinalIgnoreCase))
+                {
+                    mapped["Email:Enabled"] = kv.Value;
                 }
                 if (string.Equals(kv.Key, "SMTP_FROM_NAME", StringComparison.OrdinalIgnoreCase))
                 {

@@ -29,6 +29,9 @@ namespace EventsApp.ViewModels.Events
         public int GoingCount { get; set; }
         public int InterestedCount { get; set; }
         public int CommentsCount { get; set; }
+        public int RootCommentsCount { get; set; }
+        public int VisibleRootCommentsCount { get; set; }
+        public bool HasMoreComments => VisibleRootCommentsCount < RootCommentsCount;
         public bool CurrentUserLiked { get; set; }
         public bool CurrentUserSaved { get; set; }
         public bool CurrentUserPinned { get; set; }
@@ -41,6 +44,7 @@ namespace EventsApp.ViewModels.Events
         public IReadOnlyList<EventTicketOptionViewModel> Tickets { get; set; } = Array.Empty<EventTicketOptionViewModel>();
         public bool IsRecurring { get; set; }
         public int? EventSeriesId { get; set; }
+        public EventOccurrenceDisplayMode OccurrenceDisplayMode { get; set; } = EventOccurrenceDisplayMode.ShowAllDates;
         public int? SelectedOccurrenceId { get; set; }
         public EventOccurrenceStatus? SelectedOccurrenceStatus { get; set; }
         public IReadOnlyList<EventOccurrenceOptionViewModel> Occurrences { get; set; } = Array.Empty<EventOccurrenceOptionViewModel>();
@@ -75,6 +79,8 @@ namespace EventsApp.ViewModels.Events
         public bool IsOrganizerPageAuthor { get; set; }
         public string Content { get; set; } = null!;
         public DateTime CreatedAt { get; set; }
+        public int LikesCount { get; set; }
+        public bool CurrentUserLiked { get; set; }
         public bool CanDelete { get; set; }
         public IReadOnlyList<EventCommentViewModel> Replies { get; set; } = Array.Empty<EventCommentViewModel>();
     }

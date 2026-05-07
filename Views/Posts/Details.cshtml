@@ -249,7 +249,7 @@
                 <div class="groove-list-stack">
                     @foreach (var c in Model.Comments)
                     {
-                        <article class="groove-list-item social-comment-item" id="comment-@c.Id">
+                        <article class="groove-list-item social-comment-item" id="comment-@c.Id" data-comment-like-surface data-comment-item data-comment-id="@c.Id" data-comment-likes="@c.LikesCount" data-comment-created="@c.CreatedAt.Ticks">
                             <div class="d-flex gap-3">
                                 @if (!string.IsNullOrWhiteSpace(c.AuthorImageUrl))
                                 {
@@ -271,6 +271,25 @@
                                     <span class="groove-badge ms-2" data-i18n="@c.AuthorBadgeKey">@c.AuthorBadgeText</span>
                                     <p class="groove-list-meta mt-1">@c.CreatedAt.ToString("dd.MM.yyyy HH:mm")</p>
                                     <p>@c.Content</p>
+                                    <div class="social-comment-toolbar">
+                                        @if (User.Identity?.IsAuthenticated == true)
+                                        {
+                                            var commentLikeAction = c.CurrentUserLiked ? "UnlikeComment" : "LikeComment";
+                                            var commentLikeMode = c.CurrentUserLiked ? "unlike" : "like";
+                                            <form asp-action="@commentLikeAction" method="post" class="m-0" data-comment-like-form="@commentLikeMode">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="commentId" value="@c.Id" />
+                                                <button class="comment-like-button @(c.CurrentUserLiked ? "is-liked" : "")" type="submit" title="Like">
+                                                    <i class="bi @(c.CurrentUserLiked ? "bi-heart-fill" : "bi-heart")"></i>
+                                                    <span data-comment-like-count>@c.LikesCount</span>
+                                                </button>
+                                            </form>
+                                        }
+                                        else
+                                        {
+                                            <span class="comment-like-button is-static"><i class="bi bi-heart"></i> <span>@c.LikesCount</span></span>
+                                        }
+                                    </div>
                                     @if (User.Identity?.IsAuthenticated == true)
                                     {
                                         <details class="social-comment-reply">
@@ -312,7 +331,7 @@
                                 <div class="social-comment-replies">
                                     @foreach (var reply in c.Replies)
                                     {
-                                        <article class="social-comment-reply-item" id="comment-@reply.Id">
+                                        <article class="social-comment-reply-item" id="comment-@reply.Id" data-comment-like-surface data-comment-item data-comment-id="@reply.Id" data-comment-likes="@reply.LikesCount" data-comment-created="@reply.CreatedAt.Ticks">
                                             @if (!string.IsNullOrWhiteSpace(reply.AuthorImageUrl))
                                             {
                                                 <img src="@reply.AuthorImageUrl" alt="@reply.UserName" class="social-avatar-xs" />
@@ -333,6 +352,25 @@
                                                 <span class="groove-badge ms-2" data-i18n="@reply.AuthorBadgeKey">@reply.AuthorBadgeText</span>
                                                 <p class="groove-list-meta mt-1">@reply.CreatedAt.ToString("dd.MM.yyyy HH:mm")</p>
                                                 <p>@reply.Content</p>
+                                                <div class="social-comment-toolbar">
+                                                    @if (User.Identity?.IsAuthenticated == true)
+                                                    {
+                                                        var replyLikeAction = reply.CurrentUserLiked ? "UnlikeComment" : "LikeComment";
+                                                        var replyLikeMode = reply.CurrentUserLiked ? "unlike" : "like";
+                                                        <form asp-action="@replyLikeAction" method="post" class="m-0" data-comment-like-form="@replyLikeMode">
+                                                            @Html.AntiForgeryToken()
+                                                            <input type="hidden" name="commentId" value="@reply.Id" />
+                                                            <button class="comment-like-button @(reply.CurrentUserLiked ? "is-liked" : "")" type="submit" title="Like">
+                                                                <i class="bi @(reply.CurrentUserLiked ? "bi-heart-fill" : "bi-heart")"></i>
+                                                                <span data-comment-like-count>@reply.LikesCount</span>
+                                                            </button>
+                                                        </form>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="comment-like-button is-static"><i class="bi bi-heart"></i> <span>@reply.LikesCount</span></span>
+                                                    }
+                                                </div>
                                             </div>
                                             @if (reply.CanDelete)
                                             {
@@ -355,6 +393,25 @@
                                 </form>
                             }
                         </article>
+                    }
+                </div>
+                <div class="comments-progressive-footer">
+                    <span>
+                        <span data-i18n="common.showing">Показани</span>
+                        <strong>@Model.VisibleRootCommentsCount</strong> / <strong>@Model.RootCommentsCount</strong>
+                        <span data-i18n="comments.threads">нишки</span>
+                    </span>
+                    @if (Model.HasMoreComments)
+                    {
+                        var nextComments = Math.Min(Model.RootCommentsCount, Model.VisibleRootCommentsCount + 8);
+                        <a asp-action="Details"
+                           asp-route-id="@Model.Id"
+                           asp-route-commentsToShow="@nextComments"
+                           asp-fragment="comments"
+                           class="groove-button groove-button-paper">
+                            <i class="bi bi-chat-left-text"></i>
+                            <span data-i18n="comments.show.more">Покажи още коментари</span>
+                        </a>
                     }
                 </div>
             </div>

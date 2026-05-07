@@ -3,8 +3,9 @@
 @using System.Text.Json.Serialization
 @{
     ViewData["Title"] = "Начало";
-    var hasRealEvents = Model.Events.Count > 0;
+    var hasRealEvents = Model.TotalEventsCount > 0;
     var hasRealMapPins = Model.MapMarkers.Count > 0;
+    var visibleEventCount = Math.Min(Model.TotalEventsCount, Model.Page * Model.PageSize);
 
     var mapJsonOptions = new JsonSerializerOptions(JsonSerializerDefaults.Web);
     mapJsonOptions.Converters.Add(new JsonStringEnumConverter());
@@ -80,7 +81,7 @@
             </div>
 
             <div class="evt-hero__stats">
-                <span><strong id="home-total-events-count">@Model.Events.Count</strong> <span data-i18n="home.stats.nights">записани нощи</span></span>
+                <span><strong id="home-total-events-count">@Model.TotalEventsCount</strong> <span data-i18n="home.stats.nights">записани нощи</span></span>
                 <span><strong id="home-city-count">@visibleCityCount</strong> <span data-i18n="home.stats.cities">града</span></span>
                 <span><strong id="home-event-count">@Model.MapMarkers.Count</strong> <span data-i18n="home.stats.pins">карфици</span></span>
             </div>
@@ -258,20 +259,31 @@
             @if (hasRealEvents)
             {
                 <div id="event-cards-grid" class="evt-grid">
-                    @foreach (var ev in Model.Events)
-                    {
-                        <div class="evt-grid__cell"
-                             data-event-id="@ev.Id"
-                             data-event-title="@ev.Title"
-                             data-event-city="@ev.City"
-                             data-event-address="@ev.Address"
-                             data-event-genre="@ev.Genre"
-                             data-event-start="@ev.StartTime.ToString("O")"
-                             data-event-free="@ev.IsFreeEvent.ToString().ToLowerInvariant()">
-                            <partial name="_EventCard" model="ev" />
-                        </div>
-                    }
+                    <partial name="_EventGridItems" model="Model.Events" />
                 </div>
+                @if (Model.HasMoreEvents)
+                {
+                    var nextEventsUrl = Url.Action("Index", new
+                    {
+                        search = Model.Search,
+                        city = Model.City,
+                        genre = Model.Genre,
+                        dateFrom = Model.DateFrom?.ToString("yyyy-MM-dd"),
+                        dateTo = Model.DateTo?.ToString("yyyy-MM-dd"),
+                        sort = Model.Sort,
+                        page = Model.Page + 1,
+                        partial = true
+                    });
+                    <div class="evt-load-more" data-home-event-load-more data-page="@Model.Page" data-page-size="@Model.PageSize" data-total="@Model.TotalEventsCount">
+                        <span class="evt-load-more__meta">
+                            <span data-i18n="common.showing">Показани</span> <strong data-loaded-count>@visibleEventCount</strong> / <strong>@Model.TotalEventsCount</strong>
+                        </span>
+                        <button type="button" class="evt-btn evt-btn-ghost" data-load-more-url="@nextEventsUrl">
+                            <i class="bi bi-plus-circle"></i>
+                            <span data-i18n="common.show.more">Покажи още</span>
+                        </button>
+                    </div>
+                }
             }
             else
             {

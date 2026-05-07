@@ -10,6 +10,7 @@ namespace EventsApp.Models
         {
             this.CreatedAt = DateTime.UtcNow;
             this.Approved = false;
+            this.VipBoostCreditsAvailable = 1;
         }
 
         [Key]
@@ -37,6 +38,18 @@ namespace EventsApp.Models
 
         [Required]
         public bool Approved { get; set; }
+
+        [Required]
+        public int VipBoostCreditsAvailable { get; set; }
+
+        [Required]
+        public int VipBoostCreditsUsed { get; set; }
+
+        [Required]
+        public bool FirstApprovalBoostGranted { get; set; }
+
+        [Required]
+        public bool FirstApprovalBoostNoticeSeen { get; set; }
 
         [Required]
         public DateTime CreatedAt { get; set; }

@@ -107,7 +107,14 @@ namespace EventsApp.Controllers
             var user = await _userManager.FindByIdAsync(id);
             if (user == null) return NotFound();
 
+            var wasApproved = org.Approved;
             org.Approved = !org.Approved;
+            if (!wasApproved && org.Approved && !org.FirstApprovalBoostGranted)
+            {
+                org.VipBoostCreditsAvailable = Math.Max(1, org.VipBoostCreditsAvailable);
+                org.FirstApprovalBoostGranted = true;
+                org.FirstApprovalBoostNoticeSeen = false;
+            }
             await _db.SaveChangesAsync();
 
             if (org.Approved)
@@ -321,6 +328,7 @@ namespace EventsApp.Controllers
             series.RecurrenceType = payload.RecurrenceType;
             series.Interval = Math.Max(1, payload.RecurrenceInterval);
             series.DaysOfWeek = SerializeDays(payload.SelectedDaysOfWeek);
+            series.OccurrenceDisplayMode = payload.OccurrenceDisplayMode;
             series.StartDate = payload.RecurrenceStartDate!.Value.Date;
             series.EndDate = payload.RecurrenceEndDate!.Value.Date;
             series.StartTime = payload.RecurrenceStartTime!.Value;

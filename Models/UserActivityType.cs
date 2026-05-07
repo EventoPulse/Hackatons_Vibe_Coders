@@ -10,5 +10,6 @@ namespace EventsApp.Models
         PostLiked = 6,
         PostSaved = 7,
         UserFollowed = 8,
+        PostViewed = 9,
     }
 }

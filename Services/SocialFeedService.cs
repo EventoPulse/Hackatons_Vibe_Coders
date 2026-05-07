@@ -48,27 +48,28 @@ namespace EventsApp.Services
                     .AsNoTracking()
                     .Where(a => a.UserId == userId && a.EventId != null)
                     .OrderByDescending(a => a.CreatedAt)
-                    .Take(120)
+                    .Take(220)
                     .Select(a => new UserEventSignal
                     {
                         Genre = a.Event!.Genre,
                         City = a.Event.City,
                         OrganizerId = a.Event.OrganizerId,
                         ActivityType = a.ActivityType,
+                        CreatedAt = a.CreatedAt,
                     })
                     .ToListAsync(cancellationToken);
 
             var genreScores = activitySignals
                 .GroupBy(s => s.Genre)
-                .ToDictionary(g => g.Key, g => g.Sum(s => ActivityWeight(s.ActivityType)));
+                .ToDictionary(g => g.Key, g => g.Sum(s => ActivityWeight(s.ActivityType, s.CreatedAt, now)));
 
             var cityScores = activitySignals
                 .GroupBy(s => s.City, StringComparer.OrdinalIgnoreCase)
-                .ToDictionary(g => g.Key, g => g.Sum(s => ActivityWeight(s.ActivityType)), StringComparer.OrdinalIgnoreCase);
+                .ToDictionary(g => g.Key, g => g.Sum(s => ActivityWeight(s.ActivityType, s.CreatedAt, now)), StringComparer.OrdinalIgnoreCase);
 
             var organizerScores = activitySignals
                 .GroupBy(s => s.OrganizerId)
-                .ToDictionary(g => g.Key, g => g.Sum(s => ActivityWeight(s.ActivityType)));
+                .ToDictionary(g => g.Key, g => g.Sum(s => ActivityWeight(s.ActivityType, s.CreatedAt, now)));
 
             var hasPersonalSignals = (prefs?.PreferredGenre != null)
                 || !string.IsNullOrWhiteSpace(prefs?.PreferredCity)
@@ -92,8 +93,15 @@ namespace EventsApp.Services
             var candidateEvents = await QueryEventCards(_db.Events
                     .AsNoTracking()
                     .Where(e => e.IsApproved && e.StartTime >= now)
-                    .OrderBy(e => e.StartTime)
-                    .Take(80),
+                    .OrderByDescending(e => (e.Boosts.Sum(b => (int?)b.CreditsSpent) ?? 0) * 120
+                        + e.Attendances.Count(a => a.Status == EventAttendanceStatus.Going) * 7
+                        + e.Attendances.Count(a => a.Status == EventAttendanceStatus.Interested) * 3
+                        + e.Likes.Count * 3
+                        + e.Comments.Count * 4
+                        + e.Saves.Count * 4
+                        + e.UserActivities.Count(a => a.ActivityType == UserActivityType.EventViewed) / 2)
+                    .ThenBy(e => e.StartTime)
+                    .Take(160),
                 userId,
                 cancellationToken);
 
@@ -121,7 +129,9 @@ namespace EventsApp.Services
             var trending = await QueryEventCards(_db.Events
                     .AsNoTracking()
                     .Where(e => e.IsApproved && e.StartTime >= now.AddDays(-2))
-                    .OrderByDescending(e => e.Likes.Count + e.Comments.Count + e.Saves.Count + (e.Attendances.Count * 2))
+                    .OrderByDescending(e => (e.Boosts.Sum(b => (int?)b.CreditsSpent) ?? 0) * 80
+                        + e.Likes.Count + e.Comments.Count + e.Saves.Count + (e.Attendances.Count * 2)
+                        + e.UserActivities.Count(a => a.ActivityType == UserActivityType.EventViewed) / 3)
                     .ThenBy(e => e.StartTime)
                     .Take(8),
                 userId,
@@ -230,6 +240,26 @@ namespace EventsApp.Services
             if (string.IsNullOrWhiteSpace(userId))
             {
                 return;
+            }
+
+            var now = DateTime.UtcNow;
+            if ((activityType == UserActivityType.EventViewed && eventId.HasValue)
+                || (activityType == UserActivityType.PostViewed && postId.HasValue))
+            {
+                var recentCutoff = now.AddMinutes(-10);
+                var alreadyTracked = await _db.UserActivities
+                    .AsNoTracking()
+                    .AnyAsync(a => a.UserId == userId
+                        && a.ActivityType == activityType
+                        && a.EventId == eventId
+                        && a.PostId == postId
+                        && a.CreatedAt >= recentCutoff,
+                        cancellationToken);
+
+                if (alreadyTracked)
+                {
+                    return;
+                }
             }
 
             _db.UserActivities.Add(new UserActivity
@@ -347,6 +377,8 @@ namespace EventsApp.Services
                     SavesCount = e.Saves.Count,
                     GoingCount = e.Attendances.Count(a => a.Status == EventAttendanceStatus.Going),
                     InterestedCount = e.Attendances.Count(a => a.Status == EventAttendanceStatus.Interested),
+                    ViewsCount = e.UserActivities.Count(a => a.ActivityType == UserActivityType.EventViewed),
+                    VipBoostScore = e.Boosts.Sum(b => (int?)b.CreditsSpent) ?? 0,
                     CurrentUserLiked = userId != null && e.Likes.Any(l => l.UserId == userId),
                     CurrentUserSaved = userId != null && e.Saves.Any(s => s.UserId == userId),
                     CurrentUserAttendanceStatus = userId == null
@@ -420,7 +452,8 @@ namespace EventsApp.Services
             if (cityScores.TryGetValue(ev.City, out var cityScore)) score += cityScore;
             if (organizerScores.TryGetValue(ev.OrganizerId, out var organizerScore)) score += organizerScore;
 
-            score += Math.Min(40, ev.LikesCount * 3 + ev.CommentsCount * 4 + ev.SavesCount * 4 + ev.GoingCount * 5 + ev.InterestedCount * 2);
+            score += ev.VipBoostScore * 120;
+            score += Math.Min(90, ev.LikesCount * 3 + ev.CommentsCount * 4 + ev.SavesCount * 4 + ev.GoingCount * 7 + ev.InterestedCount * 3 + ev.ViewsCount / 2);
 
             var daysAway = Math.Max(0, (ev.StartTime - now).TotalDays);
             score += Math.Max(0, 24 - (int)Math.Min(24, daysAway));
@@ -428,17 +461,21 @@ namespace EventsApp.Services
             return score;
         }
 
-        private static int ActivityWeight(UserActivityType activityType)
+        private static int ActivityWeight(UserActivityType activityType, DateTime createdAt, DateTime now)
         {
-            return activityType switch
+            var baseWeight = activityType switch
             {
-                UserActivityType.EventGoing => 18,
-                UserActivityType.EventInterested => 14,
-                UserActivityType.EventSaved => 12,
-                UserActivityType.EventLiked => 9,
-                UserActivityType.EventViewed => 4,
+                UserActivityType.EventGoing => 24,
+                UserActivityType.EventInterested => 18,
+                UserActivityType.EventSaved => 15,
+                UserActivityType.EventLiked => 12,
+                UserActivityType.EventViewed => 5,
                 _ => 1,
             };
+
+            var ageDays = (now - createdAt).TotalDays;
+            var recency = ageDays <= 7 ? 8 : ageDays <= 30 ? 4 : ageDays <= 90 ? 2 : 0;
+            return baseWeight + recency;
         }
 
         private class UserEventSignal
@@ -447,6 +484,7 @@ namespace EventsApp.Services
             public string City { get; set; } = null!;
             public string OrganizerId { get; set; } = null!;
             public UserActivityType ActivityType { get; set; }
+            public DateTime CreatedAt { get; set; }
         }
     }
 }

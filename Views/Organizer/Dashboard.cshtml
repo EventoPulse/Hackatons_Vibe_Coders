@@ -60,6 +60,10 @@
     else
     {
         var approvalClass = Model.Approved ? "groove-status-badge-success" : "groove-status-badge-warning";
+        var hasOrganizerPage = Model.ActivePageId.HasValue || Model.Pages.Any();
+        var hasEvent = Model.EventsCount > 0;
+        var hasTickets = Model.TicketTypesCount > 0;
+        var hasBoostReady = Model.VipBoostCreditsAvailable > 0;
 
         <div class="groove-page-hero">
             <div class="groove-page-hero__copy">
@@ -111,6 +115,53 @@
                 }
             </div>
         </div>
+
+        @if (Model.ShowFirstBoostNotice)
+        {
+            <section class="organizer-boost-celebration my-4">
+                <div>
+                    <span class="groove-kicker">Нов organizer boost</span>
+                    <h2>Профилът ти е одобрен. Имаш 1 VIP boost за старт.</h2>
+                    <p>Използвай го върху най-важното си събитие, за да се показва по-високо в Home и препоръките.</p>
+                </div>
+                <div class="organizer-boost-celebration__actions">
+                    <a asp-action="Events" class="groove-button groove-button-dark">
+                        <i class="bi bi-stars"></i> Избери събитие
+                    </a>
+                    <form asp-action="DismissFirstBoostNotice" method="post">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="returnUrl" value="@($"{Context.Request.Path}{Context.Request.QueryString}")" />
+                        <button type="submit" class="groove-button groove-button-paper">Разбрах</button>
+                    </form>
+                </div>
+            </section>
+        }
+
+        <section class="organizer-help-grid my-4" aria-label="Помощ за организатора">
+            <article class="organizer-help-card">
+                <span class="groove-kicker">Първи стъпки</span>
+                <h2>Публикувай без да се чудиш кое следва.</h2>
+                <ul class="organizer-checklist">
+                    <li class="@(hasOrganizerPage ? "is-done" : "")"><i class="bi @(hasOrganizerPage ? "bi-check-circle-fill" : "bi-circle")"></i> Public page</li>
+                    <li class="@(hasEvent ? "is-done" : "")"><i class="bi @(hasEvent ? "bi-check-circle-fill" : "bi-circle")"></i> Първо събитие</li>
+                    <li class="@(hasTickets ? "is-done" : "")"><i class="bi @(hasTickets ? "bi-check-circle-fill" : "bi-circle")"></i> Билети или free вход</li>
+                    <li class="@(hasBoostReady ? "is-done" : "")"><i class="bi @(hasBoostReady ? "bi-stars" : "bi-circle")"></i> VIP boost готов</li>
+                </ul>
+            </article>
+            <article class="organizer-help-card organizer-help-card--soft">
+                <span class="groove-kicker">Съвет</span>
+                <h2>Преди да пуснеш събитие</h2>
+                <p>Провери снимка, public page, дати, билети и как изглежда страницата за потребителите. Ако редактираш вече одобрено събитие, старото остава видимо, докато admin одобри новите промени.</p>
+                <div class="d-flex flex-wrap gap-2">
+                    <a asp-controller="Events" asp-action="Create" class="groove-button groove-button-paper">
+                        <i class="bi bi-calendar-plus"></i> Ново събитие
+                    </a>
+                    <a asp-action="Events" class="groove-button groove-button-paper">
+                        <i class="bi bi-list-check"></i> Моите събития
+                    </a>
+                </div>
+            </article>
+        </section>
 
         <section class="groove-table-card my-4" style="padding:1rem;">
             <div class="d-flex flex-column flex-lg-row justify-content-between gap-3">
@@ -212,6 +263,21 @@
             </article>
         </div>
 
+        <section class="groove-table-card my-4" style="padding:1rem;">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <span class="groove-kicker">Гледания</span>
+                    <h2 class="h5 mb-1">@Model.TotalViews общо</h2>
+                    <p class="text-muted mb-0">@Model.Last30DaysViews гледания през последните 30 дни.</p>
+                </div>
+                <div class="col-md-6">
+                    <span class="groove-kicker">VIP boost</span>
+                    <h2 class="h5 mb-1">@Model.VipBoostCreditsAvailable налични</h2>
+                    <p class="text-muted mb-0">@Model.VipBoostCreditsUsed използвани. Нов organizer започва с 1 free boost.</p>
+                </div>
+            </div>
+        </section>
+
         <section class="groove-page-section">
             <div class="groove-section-bar">
                 <div>
@@ -280,6 +346,26 @@
                     </div>
                 </div>
             </div>
+
+            @if (Model.TopByViews.Count > 0)
+            {
+                <div class="row g-3 mt-1">
+                    <div class="col-12">
+                        <div class="groove-table-card" style="padding:1rem;">
+                            <h3 class="h6 mb-3">Топ събития по гледания</h3>
+                            <ul class="list-unstyled mb-0">
+                                @foreach (var t in Model.TopByViews)
+                                {
+                                    <li class="d-flex flex-wrap justify-content-between gap-2 py-2 border-bottom">
+                                        <a asp-controller="Events" asp-action="Details" asp-route-id="@t.EventId" class="fw-semibold text-decoration-none">@t.Title</a>
+                                        <span class="text-muted">@t.Views гледания · @t.UniqueViewers уникални</span>
+                                    </li>
+                                }
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            }
 
             <div class="row g-3 mt-1">
                 <div class="col-lg-6">
@@ -360,6 +446,8 @@
                                     <th data-i18n="org.th.start">Начало</th>
                                     <th data-i18n="org.th.status">Статус</th>
                                     <th data-i18n="org.th.sold">Продадени</th>
+                                    <th>Гледания</th>
+                                    <th>VIP</th>
                                     <th></th>
                                 </tr>
                             </thead>
@@ -382,6 +470,20 @@
                                             }
                                         </td>
                                         <td>@row.Sold</td>
+                                        <td>
+                                            <strong>@row.Views</strong>
+                                            <span class="text-muted small d-block">@row.UniqueViewers уникални</span>
+                                        </td>
+                                        <td>
+                                            @if (row.VipBoostScore > 0)
+                                            {
+                                                <span class="evt-card__chip evt-card__chip--vip" style="position:static;">VIP x@row.VipBoostScore</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted small">-</span>
+                                            }
+                                        </td>
                                         <td>
                                             <div class="groove-list-actions">
                                                 <a asp-controller="Events" asp-action="Edit" asp-route-id="@row.EventId" class="groove-button groove-button-paper">

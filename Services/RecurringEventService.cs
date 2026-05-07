@@ -70,6 +70,7 @@ namespace EventsApp.Services
 
             var existing = await _db.EventOccurrences
                 .Include(o => o.UserTickets)
+                .Include(o => o.SeatInventories)
                 .Where(o => o.EventSeriesId == series.Id)
                 .ToListAsync();
 
@@ -80,10 +81,13 @@ namespace EventsApp.Services
 
             foreach (var occurrence in editableExisting)
             {
-                var hasTickets = occurrence.UserTickets.Any();
+                var hasLockedActivity = occurrence.UserTickets.Any()
+                    || occurrence.SeatInventories.Any(i =>
+                        i.Status == EventSeatInventoryStatus.Reserved
+                        || i.Status == EventSeatInventoryStatus.Sold);
                 if (generatedMap.TryGetValue(occurrence.StartDateTime, out var generatedOccurrence))
                 {
-                    if (!hasTickets)
+                    if (!hasLockedActivity)
                     {
                         occurrence.EndDateTime = generatedOccurrence.EndDateTime;
                     }
@@ -92,7 +96,7 @@ namespace EventsApp.Services
                     continue;
                 }
 
-                if (!hasTickets)
+                if (!hasLockedActivity)
                 {
                     _db.EventOccurrences.Remove(occurrence);
                 }
@@ -139,7 +143,13 @@ namespace EventsApp.Services
 
             if (series.RecurrenceType == EventRecurrenceType.Weekly)
             {
-                if (selectedDays.Count > 0 && !selectedDays.Contains(date.DayOfWeek))
+                if (selectedDays.Count == 0)
+                {
+                    return date.DayOfWeek == startDate.DayOfWeek
+                        && ((int)Math.Floor((date.Date - startDate.Date).TotalDays / 7)) % series.Interval == 0;
+                }
+
+                if (!selectedDays.Contains(date.DayOfWeek))
                 {
                     return false;
                 }

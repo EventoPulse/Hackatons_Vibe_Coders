@@ -98,10 +98,11 @@ namespace EventsApp.Controllers
             return RedirectToAction("Index", "Home", new { search, city, genre, dateFrom });
         }
 
-        public async Task<IActionResult> Details(int id, int? occurrenceId)
+        public async Task<IActionResult> Details(int id, int? occurrenceId, int commentsToShow = 8)
         {
             var userId = _userManager.GetUserId(User);
             var isAdmin = User.IsInRole(GlobalConstants.Roles.Admin);
+            commentsToShow = Math.Clamp(commentsToShow, 8, 60);
 
             var ev = await _db.Events
                 .AsNoTracking()
@@ -122,10 +123,6 @@ namespace EventsApp.Controllers
                 .Include(e => e.Saves)
                 .Include(e => e.Attendances)
                 .Include(e => e.Tickets)
-                .Include(e => e.Comments)
-                    .ThenInclude(c => c.User)
-                .Include(e => e.Comments)
-                    .ThenInclude(c => c.AuthorOrganizerProfile)
                 .FirstOrDefaultAsync(e => e.Id == id);
 
             if (ev == null)
@@ -144,12 +141,49 @@ namespace EventsApp.Controllers
             var selectedOccurrence = occurrences.FirstOrDefault(o => o.Id == occurrenceId)
                 ?? occurrences.FirstOrDefault(o => o.Status == EventOccurrenceStatus.Scheduled && o.StartDateTime > DateTime.UtcNow)
                 ?? occurrences.FirstOrDefault();
+            var canEditEvent = isAdmin || ev.OrganizerId == userId;
+            if (!canEditEvent
+                && ev.EventSeries?.OccurrenceDisplayMode == EventOccurrenceDisplayMode.NextAvailableOnly
+                && selectedOccurrence != null)
+            {
+                selectedOccurrence = occurrences
+                    .FirstOrDefault(o => o.Status == EventOccurrenceStatus.Scheduled && o.StartDateTime > DateTime.UtcNow)
+                    ?? selectedOccurrence;
+            }
 
-            var comments = ev.Comments.ToList();
-            var repliesByParentId = comments
+            var commentsCount = await _db.EventComments
+                .AsNoTracking()
+                .CountAsync(c => c.EventId == id);
+            var rootCommentsCount = await _db.EventComments
+                .AsNoTracking()
+                .CountAsync(c => c.EventId == id && c.ParentCommentId == null);
+            var rootComments = await _db.EventComments
+                .AsNoTracking()
+                .Where(c => c.EventId == id && c.ParentCommentId == null)
+                .Include(c => c.User)
+                .Include(c => c.AuthorOrganizerProfile)
+                .Include(c => c.Likes)
+                .OrderByDescending(c => c.Likes.Count)
+                .ThenByDescending(c => c.CreatedAt)
+                .Take(commentsToShow)
+                .ToListAsync();
+            var rootCommentIds = rootComments.Select(c => c.Id).ToList();
+            var replies = rootCommentIds.Count == 0
+                ? new List<EventComment>()
+                : await _db.EventComments
+                    .AsNoTracking()
+                    .Where(c => c.EventId == id && c.ParentCommentId.HasValue && rootCommentIds.Contains(c.ParentCommentId.Value))
+                    .Include(c => c.User)
+                    .Include(c => c.AuthorOrganizerProfile)
+                    .Include(c => c.Likes)
+                    .OrderByDescending(c => c.Likes.Count)
+                    .ThenByDescending(c => c.CreatedAt)
+                    .ToListAsync();
+            var comments = rootComments.Concat(replies).ToList();
+            var repliesByParentId = replies
                 .Where(c => c.ParentCommentId.HasValue)
                 .GroupBy(c => c.ParentCommentId!.Value)
-                .ToDictionary(g => g.Key, g => g.OrderBy(r => r.CreatedAt).ToList());
+                .ToDictionary(g => g.Key, g => g.OrderByDescending(r => r.Likes.Count).ThenByDescending(r => r.CreatedAt).ToList());
 
             if (ev.VenueLayoutId.HasValue && ev.TicketingMode != EventTicketingMode.GeneralAdmission)
             {
@@ -181,7 +215,9 @@ namespace EventsApp.Controllers
                 SavesCount = ev.Saves.Count,
                 GoingCount = ev.Attendances.Count(a => a.Status == EventAttendanceStatus.Going),
                 InterestedCount = ev.Attendances.Count(a => a.Status == EventAttendanceStatus.Interested),
-                CommentsCount = comments.Count,
+                CommentsCount = commentsCount,
+                RootCommentsCount = rootCommentsCount,
+                VisibleRootCommentsCount = rootComments.Count,
                 CurrentUserLiked = userId != null && ev.Likes.Any(l => l.UserId == userId),
                 CurrentUserSaved = userId != null && ev.Saves.Any(s => s.UserId == userId),
                 CurrentUserPinned = userId != null && await _db.Users.AnyAsync(u => u.Id == userId && u.PinnedEventId == ev.Id),
@@ -194,14 +230,16 @@ namespace EventsApp.Controllers
                         .FirstOrDefault(),
                 Comments = comments
                     .Where(c => c.ParentCommentId == null)
-                    .OrderByDescending(c => c.CreatedAt)
+                    .OrderByDescending(c => c.Likes.Count)
+                    .ThenByDescending(c => c.CreatedAt)
                     .Select(c => ToCommentViewModel(c, userId, isAdmin, repliesByParentId))
                     .ToList(),
-                CanEdit = isAdmin || ev.OrganizerId == userId,
-                CanDelete = isAdmin || ev.OrganizerId == userId,
-                CanManageTickets = isAdmin || ev.OrganizerId == userId,
+                CanEdit = canEditEvent,
+                CanDelete = canEditEvent,
+                CanManageTickets = canEditEvent,
                 IsRecurring = ev.EventSeries != null && ev.EventSeries.RecurrenceType != EventRecurrenceType.None,
                 EventSeriesId = ev.EventSeries?.Id,
+                OccurrenceDisplayMode = ev.EventSeries?.OccurrenceDisplayMode ?? EventOccurrenceDisplayMode.ShowAllDates,
                 SelectedOccurrenceId = selectedOccurrence?.Id,
                 SelectedOccurrenceStatus = selectedOccurrence?.Status,
                 TicketingMode = ev.TicketingMode,
@@ -546,6 +584,7 @@ namespace EventsApp.Controllers
                 RecurrenceType = ev.EventSeries?.RecurrenceType ?? EventRecurrenceType.None,
                 RecurrenceInterval = ev.EventSeries?.Interval ?? 1,
                 SelectedDaysOfWeek = ParseDaysForInput(ev.EventSeries?.DaysOfWeek),
+                OccurrenceDisplayMode = ev.EventSeries?.OccurrenceDisplayMode ?? EventOccurrenceDisplayMode.ShowAllDates,
                 RecurrenceStartDate = ev.EventSeries?.StartDate.Date,
                 RecurrenceEndDate = ev.EventSeries?.EndDate.Date,
                 RecurrenceStartTime = ev.EventSeries?.StartTime,
@@ -1048,6 +1087,120 @@ namespace EventsApp.Controllers
             return RedirectToAction(nameof(Details), new { id = eventId });
         }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize]
+        public async Task<IActionResult> LikeComment(int commentId)
+        {
+            var userId = _userManager.GetUserId(User)!;
+            var isAdmin = User.IsInRole(GlobalConstants.Roles.Admin);
+            var comment = await _db.EventComments
+                .AsNoTracking()
+                .Select(c => new { c.Id, c.EventId, c.Event.IsApproved, c.Event.OrganizerId })
+                .FirstOrDefaultAsync(c => c.Id == commentId);
+
+            if (comment == null)
+            {
+                return NotFound();
+            }
+
+            if (!comment.IsApproved && !isAdmin && comment.OrganizerId != userId)
+            {
+                return NotFound();
+            }
+
+            var exists = await _db.EventCommentLikes
+                .AnyAsync(l => l.EventCommentId == commentId && l.UserId == userId);
+
+            if (!exists)
+            {
+                _db.EventCommentLikes.Add(new EventCommentLike
+                {
+                    EventCommentId = commentId,
+                    UserId = userId,
+                });
+                await _db.SaveChangesAsync();
+            }
+
+            if (IsAjaxRequest())
+            {
+                var likesCount = await _db.EventCommentLikes.CountAsync(l => l.EventCommentId == commentId);
+                return Json(new
+                {
+                    commentId,
+                    liked = true,
+                    likesCount,
+                    actionUrl = Url.Action(nameof(UnlikeComment)),
+                    mode = "unlike",
+                });
+            }
+
+            return Redirect((Url.Action(nameof(Details), new { id = comment.EventId }) ?? $"/Events/Details/{comment.EventId}") + "#comment-" + commentId);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize]
+        public async Task<IActionResult> UnlikeComment(int commentId)
+        {
+            var userId = _userManager.GetUserId(User)!;
+            var isAdmin = User.IsInRole(GlobalConstants.Roles.Admin);
+            var like = await _db.EventCommentLikes
+                .Include(l => l.EventComment)
+                    .ThenInclude(c => c.Event)
+                .FirstOrDefaultAsync(l => l.EventCommentId == commentId && l.UserId == userId);
+
+            if (like == null)
+            {
+                var eventId = await _db.EventComments
+                    .AsNoTracking()
+                    .Where(c => c.Id == commentId)
+                    .Select(c => (int?)c.EventId)
+                    .FirstOrDefaultAsync();
+
+                if (IsAjaxRequest() && eventId.HasValue)
+                {
+                    var likesCount = await _db.EventCommentLikes.CountAsync(l => l.EventCommentId == commentId);
+                    return Json(new
+                    {
+                        commentId,
+                        liked = false,
+                        likesCount,
+                        actionUrl = Url.Action(nameof(LikeComment)),
+                        mode = "like",
+                    });
+                }
+
+                return eventId.HasValue
+                    ? Redirect((Url.Action(nameof(Details), new { id = eventId.Value }) ?? $"/Events/Details/{eventId.Value}") + "#comment-" + commentId)
+                    : NotFound();
+            }
+
+            var targetEventId = like.EventComment.EventId;
+            if (!like.EventComment.Event.IsApproved && !isAdmin && like.EventComment.Event.OrganizerId != userId)
+            {
+                return NotFound();
+            }
+
+            _db.EventCommentLikes.Remove(like);
+            await _db.SaveChangesAsync();
+
+            if (IsAjaxRequest())
+            {
+                var likesCount = await _db.EventCommentLikes.CountAsync(l => l.EventCommentId == commentId);
+                return Json(new
+                {
+                    commentId,
+                    liked = false,
+                    likesCount,
+                    actionUrl = Url.Action(nameof(LikeComment)),
+                    mode = "like",
+                });
+            }
+
+            return Redirect((Url.Action(nameof(Details), new { id = targetEventId }) ?? $"/Events/Details/{targetEventId}") + "#comment-" + commentId);
+        }
+
         [Authorize]
         public async Task<IActionResult> Recommended()
         {
@@ -1055,25 +1208,61 @@ namespace EventsApp.Controllers
             var prefs = await _db.UserPreferences.AsNoTracking().FirstOrDefaultAsync(p => p.UserId == userId);
 
             var now = DateTime.UtcNow;
-            var query = _db.Events
+            var recentSignals = await _db.UserActivities
                 .AsNoTracking()
-                .Where(e => e.IsApproved && e.StartTime >= now);
+                .Where(a => a.UserId == userId && a.EventId != null)
+                .OrderByDescending(a => a.CreatedAt)
+                .Take(220)
+                .Select(a => new
+                {
+                    a.Event!.Genre,
+                    a.Event.City,
+                    a.Event.OrganizerId,
+                    a.ActivityType,
+                    a.CreatedAt,
+                })
+                .ToListAsync();
 
-            if (prefs != null)
+            int SignalWeight(UserActivityType type, DateTime createdAt)
             {
-                if (prefs.PreferredGenre.HasValue)
+                var baseWeight = type switch
                 {
-                    query = query.Where(e => e.Genre == prefs.PreferredGenre.Value);
-                }
+                    UserActivityType.EventGoing => 24,
+                    UserActivityType.EventInterested => 18,
+                    UserActivityType.EventSaved => 15,
+                    UserActivityType.EventLiked => 12,
+                    UserActivityType.EventViewed => 5,
+                    _ => 1,
+                };
 
-                if (!string.IsNullOrWhiteSpace(prefs.PreferredCity))
-                {
-                    query = query.Where(e => e.City == prefs.PreferredCity);
-                }
+                var ageDays = (now - createdAt).TotalDays;
+                var recency = ageDays <= 7 ? 8 : ageDays <= 30 ? 4 : ageDays <= 90 ? 2 : 0;
+                return baseWeight + recency;
             }
 
-            var events = await query
-                .OrderBy(e => e.StartTime)
+            var genreScores = recentSignals
+                .GroupBy(s => s.Genre)
+                .ToDictionary(g => g.Key, g => g.Sum(s => SignalWeight(s.ActivityType, s.CreatedAt)));
+            var cityScores = recentSignals
+                .GroupBy(s => s.City, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(g => g.Key, g => g.Sum(s => SignalWeight(s.ActivityType, s.CreatedAt)), StringComparer.OrdinalIgnoreCase);
+            var organizerScores = recentSignals
+                .GroupBy(s => s.OrganizerId)
+                .ToDictionary(g => g.Key, g => g.Sum(s => SignalWeight(s.ActivityType, s.CreatedAt)));
+
+            var candidates = await _db.Events
+                .AsNoTracking()
+                .Where(e => e.IsApproved && e.StartTime >= now)
+                .OrderByDescending(e =>
+                    (e.Boosts.Sum(b => (int?)b.CreditsSpent) ?? 0) * 120 +
+                    e.Attendances.Count(a => a.Status == EventAttendanceStatus.Going) * 7 +
+                    e.Attendances.Count(a => a.Status == EventAttendanceStatus.Interested) * 3 +
+                    e.Likes.Count * 3 +
+                    e.Comments.Count * 4 +
+                    e.Saves.Count * 4 +
+                    e.UserActivities.Count(a => a.ActivityType == UserActivityType.EventViewed))
+                .ThenBy(e => e.StartTime)
+                .Take(160)
                 .Select(e => new EventCardViewModel
                 {
                     Id = e.Id,
@@ -1092,6 +1281,8 @@ namespace EventsApp.Controllers
                     SavesCount = e.Saves.Count,
                     GoingCount = e.Attendances.Count(a => a.Status == EventAttendanceStatus.Going),
                     InterestedCount = e.Attendances.Count(a => a.Status == EventAttendanceStatus.Interested),
+                    ViewsCount = e.UserActivities.Count(a => a.ActivityType == UserActivityType.EventViewed),
+                    VipBoostScore = e.Boosts.Sum(b => (int?)b.CreditsSpent) ?? 0,
                     CurrentUserLiked = e.Likes.Any(l => l.UserId == userId),
                     CurrentUserSaved = e.Saves.Any(s => s.UserId == userId),
                     CurrentUserAttendanceStatus = e.Attendances
@@ -1106,7 +1297,31 @@ namespace EventsApp.Controllers
                 })
                 .ToListAsync();
 
-            ViewBag.HasPreferences = prefs != null;
+            int Score(EventCardViewModel ev)
+            {
+                var score = 0;
+                if (prefs?.PreferredGenre == ev.Genre) score += 70;
+                if (!string.IsNullOrWhiteSpace(prefs?.PreferredCity)
+                    && string.Equals(prefs.PreferredCity, ev.City, StringComparison.OrdinalIgnoreCase)) score += 45;
+                if (genreScores.TryGetValue(ev.Genre, out var genreScore)) score += genreScore;
+                if (cityScores.TryGetValue(ev.City, out var cityScore)) score += cityScore;
+                if (organizerScores.TryGetValue(ev.OrganizerId, out var organizerScore)) score += organizerScore;
+
+                score += ev.VipBoostScore * 120;
+                score += Math.Min(85, ev.LikesCount * 3 + ev.CommentsCount * 4 + ev.SavesCount * 4 + ev.GoingCount * 7 + ev.InterestedCount * 3 + ev.ViewsCount / 2);
+
+                var daysAway = Math.Max(0, (ev.StartTime - now).TotalDays);
+                score += Math.Max(0, 32 - (int)Math.Min(32, daysAway));
+                return score;
+            }
+
+            var events = candidates
+                .OrderByDescending(Score)
+                .ThenBy(e => e.StartTime)
+                .Take(24)
+                .ToList();
+
+            ViewBag.HasPreferences = prefs != null || recentSignals.Count > 0;
             return View(events);
         }
 
@@ -1222,11 +1437,6 @@ namespace EventsApp.Controllers
                 ModelState.AddModelError(nameof(input.RecurrenceInterval), "Интервалът трябва да е поне 1.");
             }
 
-            if (input.RecurrenceType == EventRecurrenceType.Weekly && input.SelectedDaysOfWeek.Count == 0)
-            {
-                ModelState.AddModelError(nameof(input.SelectedDaysOfWeek), "Избери поне един ден от седмицата.");
-            }
-
             if (input.RecurrenceStartDate.HasValue && input.RecurrenceEndDate.HasValue)
             {
                 var rangeDays = (input.RecurrenceEndDate.Value.Date - input.RecurrenceStartDate.Value.Date).Days;
@@ -1291,6 +1501,7 @@ namespace EventsApp.Controllers
                 RecurrenceType = input.RecurrenceType,
                 RecurrenceInterval = Math.Max(1, input.RecurrenceInterval),
                 SelectedDaysOfWeek = input.SelectedDaysOfWeek.Distinct().OrderBy(d => d).ToList(),
+                OccurrenceDisplayMode = input.OccurrenceDisplayMode,
                 RecurrenceStartDate = input.RecurrenceStartDate,
                 RecurrenceEndDate = input.RecurrenceEndDate,
                 RecurrenceStartTime = input.RecurrenceStartTime,
@@ -1325,6 +1536,7 @@ namespace EventsApp.Controllers
             series.RecurrenceType = input.RecurrenceType;
             series.Interval = Math.Max(1, input.RecurrenceInterval);
             series.DaysOfWeek = SerializeDays(input.SelectedDaysOfWeek);
+            series.OccurrenceDisplayMode = input.OccurrenceDisplayMode;
             series.StartDate = input.RecurrenceStartDate!.Value.Date;
             series.EndDate = input.RecurrenceEndDate!.Value.Date;
             series.StartTime = input.RecurrenceStartTime!.Value;
@@ -1501,6 +1713,14 @@ namespace EventsApp.Controllers
             vm.ActivePageName = context.Page?.DisplayName;
         }
 
+        private bool IsAjaxRequest()
+        {
+            return string.Equals(
+                Request.Headers["X-Requested-With"].ToString(),
+                "XMLHttpRequest",
+                StringComparison.OrdinalIgnoreCase);
+        }
+
         private static string GetCommentDisplayName(EventComment comment)
         {
             return comment.AuthorType == AuthorIdentityType.OrganizerPage && comment.AuthorOrganizerProfile != null
@@ -1528,6 +1748,8 @@ namespace EventsApp.Controllers
                 IsOrganizerPageAuthor = comment.AuthorType == AuthorIdentityType.OrganizerPage,
                 Content = comment.Content,
                 CreatedAt = comment.CreatedAt,
+                LikesCount = comment.Likes.Count,
+                CurrentUserLiked = currentUserId != null && comment.Likes.Any(l => l.UserId == currentUserId),
                 CanDelete = isAdmin || comment.UserId == currentUserId,
                 Replies = repliesByParentId.TryGetValue(comment.Id, out var replies)
                     ? replies.Select(r => ToCommentViewModel(r, currentUserId, isAdmin, new Dictionary<int, List<EventComment>>())).ToList()

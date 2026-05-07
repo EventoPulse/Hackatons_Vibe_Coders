@@ -21,6 +21,7 @@ namespace EventsApp.Models
             this.Tickets = new HashSet<Ticket>();
             this.SeatInventories = new HashSet<EventSeatInventory>();
             this.ChangeRequests = new HashSet<EventChangeRequest>();
+            this.Boosts = new HashSet<EventBoost>();
             this.TicketingMode = EventTicketingMode.GeneralAdmission;
         }
 
@@ -107,5 +108,7 @@ namespace EventsApp.Models
         public ICollection<EventSeatInventory> SeatInventories { get; set; }
 
         public ICollection<EventChangeRequest> ChangeRequests { get; set; }
+
+        public ICollection<EventBoost> Boosts { get; set; }
     }
 }

@@ -33,6 +33,11 @@ namespace EventsApp.ViewModels.Organizer
         public int TicketsUsedCount { get; set; }
         public int TotalLikes { get; set; }
         public int TotalComments { get; set; }
+        public int TotalViews { get; set; }
+        public int Last30DaysViews { get; set; }
+        public int VipBoostCreditsAvailable { get; set; }
+        public int VipBoostCreditsUsed { get; set; }
+        public bool ShowFirstBoostNotice { get; set; }
         public decimal TotalRevenue { get; set; }
         public decimal AverageTicketPrice { get; set; }
         public int Last30DaysSold { get; set; }
@@ -40,6 +45,7 @@ namespace EventsApp.ViewModels.Organizer
 
         public IReadOnlyList<TopEventStat> TopByTicketsSold { get; set; } = Array.Empty<TopEventStat>();
         public IReadOnlyList<TopEventStat> TopByRevenue { get; set; } = Array.Empty<TopEventStat>();
+        public IReadOnlyList<TopEventStat> TopByViews { get; set; } = Array.Empty<TopEventStat>();
         public IReadOnlyList<GenreCountStat> GenreBreakdown { get; set; } = Array.Empty<GenreCountStat>();
         public IReadOnlyList<CityCountStat> CityBreakdown { get; set; } = Array.Empty<CityCountStat>();
         public IReadOnlyList<DailySalesPoint> SalesLast30Days { get; set; } = Array.Empty<DailySalesPoint>();
@@ -77,11 +83,19 @@ namespace EventsApp.ViewModels.Organizer
         public DateTime StartTime { get; set; }
         public bool HasActiveTickets { get; set; }
         public int Sold { get; set; }
+        public int Likes { get; set; }
+        public int Comments { get; set; }
+        public int Views { get; set; }
+        public int UniqueViewers { get; set; }
+        public int VipBoostScore { get; set; }
+        public bool CanBoost { get; set; }
     }
 
     public class OrganizerEventsViewModel
     {
         public IReadOnlyList<OrganizerEventRowViewModel> Events { get; set; } = Array.Empty<OrganizerEventRowViewModel>();
+        public int VipBoostCreditsAvailable { get; set; }
+        public int VipBoostCreditsUsed { get; set; }
     }
 
     public class OrganizerEventRowViewModel
@@ -95,6 +109,7 @@ namespace EventsApp.ViewModels.Organizer
         public string OrganizerPageName { get; set; } = null!;
         public int TicketsCount { get; set; }
         public int SoldTicketsCount { get; set; }
+        public int VipBoostScore { get; set; }
     }
 
     public class TopEventStat
@@ -103,6 +118,9 @@ namespace EventsApp.ViewModels.Organizer
         public string Title { get; set; } = null!;
         public int Sold { get; set; }
         public decimal Revenue { get; set; }
+        public int Views { get; set; }
+        public int UniqueViewers { get; set; }
+        public int EngagementScore { get; set; }
     }
 
     public class GenreCountStat

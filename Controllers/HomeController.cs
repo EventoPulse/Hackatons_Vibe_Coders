@@ -12,6 +12,9 @@ namespace EventsApp.Controllers
 {
     public class HomeController : Controller
     {
+        private const int EventPageSize = 12;
+        private const int MaxMapMarkers = 80;
+
         private readonly ApplicationDbContext _db;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly ILogger<HomeController> _logger;
@@ -26,10 +29,11 @@ namespace EventsApp.Controllers
             _logger = logger;
         }
 
-        public async Task<IActionResult> Index(string? search, string? city, EventGenre? genre, DateTime? dateFrom, DateTime? dateTo, string? sort)
+        public async Task<IActionResult> Index(string? search, string? city, EventGenre? genre, DateTime? dateFrom, DateTime? dateTo, string? sort, int page = 1, bool partial = false)
         {
             var isAdmin = User.IsInRole(GlobalConstants.Roles.Admin);
             var userId = _userManager.GetUserId(User);
+            page = Math.Max(1, page);
 
             var query = _db.Events.AsNoTracking().AsQueryable();
             if (!isAdmin)
@@ -78,10 +82,22 @@ namespace EventsApp.Controllers
                 query = query.Where(e => e.StartTime < to);
             }
 
-            var events = await QueryEventCards(ApplyEventSort(query, normalizedSort), userId)
+            var sortedQuery = ApplyEventSort(query, normalizedSort);
+            var totalEventsCount = await sortedQuery.CountAsync();
+            var events = await QueryEventCards(sortedQuery
+                    .Skip((page - 1) * EventPageSize)
+                    .Take(EventPageSize),
+                userId)
                 .ToListAsync();
 
-            var markers = BuildMarkers(events);
+            if (partial)
+            {
+                return PartialView("_EventGridItems", events);
+            }
+
+            var mapEvents = await QueryEventCards(sortedQuery.Take(MaxMapMarkers), userId)
+                .ToListAsync();
+            var markers = BuildMarkers(mapEvents);
             var now = DateTime.UtcNow;
             var tonightEnd = now.Date.AddDays(1);
             var weekendStart = GetWeekendStart(now);
@@ -177,6 +193,9 @@ namespace EventsApp.Controllers
                 DateFrom = dateFrom,
                 DateTo = dateTo,
                 Sort = normalizedSort,
+                Page = page,
+                PageSize = EventPageSize,
+                TotalEventsCount = totalEventsCount,
                 Events = events,
                 MapMarkers = markers,
                 Cities = cities,
@@ -206,13 +225,17 @@ namespace EventsApp.Controllers
             return sort switch
             {
                 "soon" => query
-                    .OrderBy(e => e.StartTime)
+                    .OrderByDescending(e => e.Boosts.Sum(b => (int?)b.CreditsSpent) ?? 0)
+                    .ThenBy(e => e.StartTime)
                     .ThenBy(e => e.Title),
                 "popular" => query
-                    .OrderByDescending(e => e.Attendances.Count * 2 + e.Likes.Count + e.Saves.Count + e.Comments.Count)
+                    .OrderByDescending(e => (e.Boosts.Sum(b => (int?)b.CreditsSpent) ?? 0) * 100
+                        + e.Attendances.Count * 2 + e.Likes.Count + e.Saves.Count + e.Comments.Count
+                        + e.UserActivities.Count(a => a.ActivityType == UserActivityType.EventViewed) / 2)
                     .ThenBy(e => e.StartTime),
                 _ => query
-                    .OrderByDescending(e => e.CreatedAt)
+                    .OrderByDescending(e => e.Boosts.Sum(b => (int?)b.CreditsSpent) ?? 0)
+                    .ThenByDescending(e => e.CreatedAt)
                     .ThenBy(e => e.StartTime),
             };
         }
@@ -237,6 +260,8 @@ namespace EventsApp.Controllers
                 SavesCount = e.Saves.Count,
                 GoingCount = e.Attendances.Count(a => a.Status == EventAttendanceStatus.Going),
                 InterestedCount = e.Attendances.Count(a => a.Status == EventAttendanceStatus.Interested),
+                ViewsCount = e.UserActivities.Count(a => a.ActivityType == UserActivityType.EventViewed),
+                VipBoostScore = e.Boosts.Sum(b => (int?)b.CreditsSpent) ?? 0,
                 CurrentUserLiked = userId != null && e.Likes.Any(l => l.UserId == userId),
                 CurrentUserSaved = userId != null && e.Saves.Any(s => s.UserId == userId),
                 CurrentUserAttendanceStatus = userId == null
