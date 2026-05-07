@@ -459,7 +459,7 @@
                 mapTypeControl: false,
                 streetViewControl: false,
                 fullscreenControl: true,
-                gestureHandling: 'greedy',
+                gestureHandling: 'cooperative',
                 styles: [
                     { featureType: 'poi.business', stylers: [{ visibility: 'off' }] },
                     { featureType: 'transit', elementType: 'labels.icon', stylers: [{ visibility: 'off' }] }
@@ -471,8 +471,10 @@
             );
             map.fitBounds(bgBounds);
 
-            // Fix tiles not covering full container on initial load
+            // Fix tiles not covering full container on initial load; also clear loading state
             google.maps.event.addListenerOnce(map, 'tilesloaded', function () {
+                var loadingEl = mapEl.querySelector('.map-loading-state');
+                if (loadingEl) loadingEl.style.display = 'none';
                 var center = map.getCenter();
                 google.maps.event.trigger(map, 'resize');
                 if (center) map.setCenter(center);

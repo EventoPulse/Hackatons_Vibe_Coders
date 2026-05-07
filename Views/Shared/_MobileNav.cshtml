@@ -1,0 +1,150 @@
+@using Microsoft.AspNetCore.Identity
+@using EventsApp.Models
+@using EventsApp.Common
+@inject SignInManager<ApplicationUser> SignInManager
+@inject UserManager<ApplicationUser> UserManager
+
+@{
+    var isAuthed = SignInManager.IsSignedIn(User);
+    var isAdmin = User.IsInRole(GlobalConstants.Roles.Admin);
+    var isOrganizer = User.IsInRole(GlobalConstants.Roles.Organizer);
+
+    ApplicationUser? currentUser = isAuthed ? await UserManager.GetUserAsync(User) : null;
+    var fullName = currentUser != null
+        ? string.Join(" ", new[] { currentUser.FirstName, currentUser.LastName }
+            .Where(s => !string.IsNullOrWhiteSpace(s)))
+        : "";
+    var displayName = !string.IsNullOrWhiteSpace(fullName) ? fullName
+        : (!string.IsNullOrWhiteSpace(currentUser?.UserName) ? currentUser!.UserName
+        : (!string.IsNullOrWhiteSpace(currentUser?.Email) ? currentUser!.Email : "Профил"));
+    var initials = !string.IsNullOrWhiteSpace(fullName)
+        ? string.Concat(fullName.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(w => w[0].ToString().ToUpper()))
+        : (displayName?.Length > 0 ? displayName[0].ToString().ToUpper() : "У");
+    var currentUserId = currentUser?.Id;
+
+    var ctrl = ViewContext.RouteData.Values["controller"] as string ?? "";
+    bool isHome = ctrl.Equals("Home", StringComparison.OrdinalIgnoreCase);
+    bool isFeed = ctrl.Equals("Posts", StringComparison.OrdinalIgnoreCase);
+    bool isMessages = ctrl.Equals("Messages", StringComparison.OrdinalIgnoreCase);
+    bool isPanel = ctrl.Equals("Admin", StringComparison.OrdinalIgnoreCase) || ctrl.Equals("Organizer", StringComparison.OrdinalIgnoreCase);
+}
+
+<nav class="evt-bottom-nav d-flex d-md-none" aria-label="Мобилна навигация">
+    <a asp-controller="Home" asp-action="Index"
+       class="evt-bottom-nav__item @(isHome ? "active" : "")">
+        <i class="bi bi-search"></i>
+        <span>Открий</span>
+    </a>
+    <a asp-controller="Posts" asp-action="Index"
+       class="evt-bottom-nav__item @(isFeed ? "active" : "")">
+        <i class="bi bi-compass"></i>
+        <span>Поток</span>
+    </a>
+    @if (isAuthed)
+    {
+        <a asp-controller="Messages" asp-action="Index"
+           class="evt-bottom-nav__item @(isMessages ? "active" : "")">
+            <i class="bi bi-chat-dots"></i>
+            <span>Съобщения</span>
+        </a>
+    }
+    @if (isAdmin)
+    {
+        <a asp-controller="Admin" asp-action="Index"
+           class="evt-bottom-nav__item @(isPanel ? "active" : "")">
+            <i class="bi bi-shield-check"></i>
+            <span>Admin</span>
+        </a>
+    }
+    else if (isOrganizer)
+    {
+        <a asp-controller="Organizer" asp-action="Dashboard"
+           class="evt-bottom-nav__item @(isPanel ? "active" : "")">
+            <i class="bi bi-speedometer2"></i>
+            <span>Панел</span>
+        </a>
+    }
+    @if (isAuthed)
+    {
+        <div class="evt-bottom-nav__item dropup">
+            <button type="button"
+                    class="evt-bottom-nav__profile-btn dropdown-toggle"
+                    data-bs-toggle="dropdown"
+                    data-bs-offset="0,8"
+                    aria-expanded="false"
+                    title="@displayName">
+                <span class="evt-avatar-circle evt-avatar-circle--sm">@initials</span>
+                <span>Профил</span>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end shadow">
+                <li class="px-3 py-2">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="evt-avatar-circle">@initials</span>
+                        <div class="lh-sm">
+                            <div class="fw-bold small">@displayName</div>
+                        </div>
+                    </div>
+                </li>
+                <li><hr class="dropdown-divider my-1" /></li>
+                <li>
+                    <a class="dropdown-item" asp-controller="Account" asp-action="Index">
+                        <i class="bi bi-columns-gap"></i> Overview
+                    </a>
+                </li>
+                @if (!string.IsNullOrWhiteSpace(currentUserId))
+                {
+                    <li>
+                        <a class="dropdown-item" asp-controller="Profiles" asp-action="Details" asp-route-id="@currentUserId">
+                            <i class="bi bi-person-lines-fill"></i> Публичен профил
+                        </a>
+                    </li>
+                }
+                <li>
+                    <a class="dropdown-item" asp-controller="Events" asp-action="Recommended">
+                        <i class="bi bi-stars"></i> Препоръчани
+                    </a>
+                </li>
+                <li>
+                    <a class="dropdown-item" asp-controller="Tickets" asp-action="MyTickets">
+                        <i class="bi bi-ticket-perforated"></i> Моите билети
+                    </a>
+                </li>
+                @if (isOrganizer || isAdmin)
+                {
+                    <li><hr class="dropdown-divider my-1" /></li>
+                    <li>
+                        <a class="dropdown-item" asp-controller="Organizer" asp-action="Dashboard">
+                            <i class="bi bi-speedometer2"></i> Organizer dashboard
+                        </a>
+                    </li>
+                }
+                @if (isAdmin)
+                {
+                    <li>
+                        <a class="dropdown-item" asp-controller="Admin" asp-action="Index">
+                            <i class="bi bi-shield-check"></i> Admin
+                        </a>
+                    </li>
+                }
+                <li><hr class="dropdown-divider my-1" /></li>
+                <li>
+                    <form asp-area="Identity" asp-page="/Account/Logout"
+                          asp-route-returnUrl="@Url.Action("Index", "Home", new { area = "" })"
+                          method="post">
+                        <button type="submit" class="dropdown-item text-danger">
+                            <i class="bi bi-box-arrow-right"></i> Изход
+                        </button>
+                    </form>
+                </li>
+            </ul>
+        </div>
+    }
+    else
+    {
+        <a asp-area="Identity" asp-page="/Account/Login"
+           class="evt-bottom-nav__item">
+            <i class="bi bi-box-arrow-in-right"></i>
+            <span>Вход</span>
+        </a>
+    }
+</nav>
