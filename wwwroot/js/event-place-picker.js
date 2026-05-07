@@ -204,7 +204,34 @@
 
         if (!addressInput && !mapEl) return;
 
-        whenMapsReady(setup);
+        var setupDone = false;
+        function trySetup() {
+            if (setupDone) return;
+            if (!(window.google && window.google.maps)) return;
+            setupDone = true;
+            try { setup(); } catch (e) {
+                console.error('[EventPlacePicker] init error:', e);
+                if (statusEl) statusEl.textContent = 'Картата не успя да се зареди. Моля, презаредете страницата.';
+                if (mapEl) mapEl.innerHTML = '<div style="height:100%;display:flex;align-items:center;justify-content:center;color:#6c757d;font-size:0.9rem;background:#f8f9fa;border-radius:0.5rem;">Картата временно не е достъпна.</div>';
+            }
+        }
+
+        whenMapsReady(trySetup);
+
+        // Poll fallback — handles cases where Maps JS was cached and
+        // the initGoogleMap callback fired before this script registered
+        var pollCount = 0;
+        var poll = window.setInterval(function () {
+            pollCount++;
+            if (window.google && window.google.maps) {
+                window.clearInterval(poll);
+                trySetup();
+            } else if (pollCount >= 20) {
+                window.clearInterval(poll);
+                if (statusEl) statusEl.textContent = 'Google Maps не успя да се зареди. Провери API ключа.';
+                if (mapEl) mapEl.innerHTML = '<div style="height:100%;display:flex;align-items:center;justify-content:center;color:#856404;background:#fff3cd;border-radius:0.5rem;padding:1rem;">⚠ Maps не е конфигуриран — провери Google Cloud Console (Places API + Geocoding API).</div>';
+            }
+        }, 300);
 
         function setup() {
             var bgBounds = new google.maps.LatLngBounds(
@@ -299,6 +326,11 @@
 
                     if (statusEl) statusEl.textContent = 'Pinned: ' + (place.formatted_address || addr);
                 });
+            }
+
+            if (addressInput && !(google.maps.places && google.maps.places.Autocomplete)) {
+                if (statusEl) statusEl.textContent = 'Places API не е активирано — включи го в Google Cloud Console.';
+                console.warn('[EventPlacePicker] google.maps.places.Autocomplete not available. Enable Places API in Cloud Console.');
             }
 
             if (addressInput && google.maps.places && google.maps.places.Autocomplete) {
