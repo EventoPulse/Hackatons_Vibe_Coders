@@ -105,6 +105,17 @@ namespace EventsApp.Infrastructure
                 {
                     mapped["Email:From:Name"] = kv.Value;
                 }
+                if (string.Equals(kv.Key, "APP_PUBLIC_URL", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(kv.Key, "PUBLIC_URL", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(kv.Key, "BASE_URL", StringComparison.OrdinalIgnoreCase))
+                {
+                    mapped["App:PublicUrl"] = kv.Value;
+                }
+                if (string.Equals(kv.Key, "GOOGLE_SITE_VERIFICATION", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(kv.Key, "GOOGLE_SEARCH_CONSOLE_VERIFICATION", StringComparison.OrdinalIgnoreCase))
+                {
+                    mapped["Google:SiteVerification"] = kv.Value;
+                }
                 if (string.Equals(kv.Key, "MEDIA_STORAGE", StringComparison.OrdinalIgnoreCase))
                 {
                     mapped["Media:Storage"] = kv.Value;

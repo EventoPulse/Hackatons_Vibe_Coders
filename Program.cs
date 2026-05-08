@@ -87,6 +87,7 @@ else
     builder.Services.AddSingleton<IRemoteMediaService, NullRemoteMediaService>();
 }
 builder.Services.AddSingleton<ITicketDocumentService, TicketDocumentService>();
+builder.Services.AddSingleton<IAppLinkService, AppLinkService>();
 builder.Services.AddTransient<IEmailSender, SmtpEmailSender>();
 builder.Services.AddScoped<ISocialFeedService, SocialFeedService>();
 builder.Services.AddScoped<IRecurringEventService, RecurringEventService>();

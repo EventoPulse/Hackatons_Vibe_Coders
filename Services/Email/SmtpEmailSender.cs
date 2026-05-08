@@ -17,29 +17,30 @@ namespace EventsApp.Services.Email
 
         public async Task SendEmailAsync(string email, string subject, string htmlMessage)
         {
-            if (!_configuration.GetValue("Email:Enabled", false))
+            if (!GetBool(false, "Email:Enabled", "EMAIL_ENABLED"))
             {
                 _logger.LogInformation("Email sending is disabled. Skipping message to {Email} with subject {Subject}.", email, subject);
                 return;
             }
 
-            var host = _configuration["Email:Smtp:Host"];
-            var username = _configuration["Email:Smtp:Username"];
-            var fromEmail = _configuration["Email:From:Email"] ?? username;
+            var host = GetSetting("Email:Smtp:Host", "SMTP_HOST");
+            var username = GetSetting("Email:Smtp:Username", "SMTP_USERNAME", "SMTP_USER");
+            var fromEmail = GetSetting("Email:From:Email", "SMTP_FROM_EMAIL") ?? username;
             if (string.IsNullOrWhiteSpace(host) || string.IsNullOrWhiteSpace(fromEmail))
             {
                 _logger.LogWarning("Email is enabled but SMTP host or from email is missing.");
                 return;
             }
 
-            var port = _configuration.GetValue("Email:Smtp:Port", 587);
-            var enableSsl = _configuration.GetValue("Email:Smtp:EnableSsl", true);
-            var password = _configuration["Email:Smtp:Password"];
-            var fromName = _configuration["Email:From:Name"] ?? "Evento";
+            var port = GetInt(587, "Email:Smtp:Port", "SMTP_PORT");
+            var enableSsl = GetBool(true, "Email:Smtp:EnableSsl", "SMTP_ENABLE_SSL", "SMTP_SSL");
+            var password = GetSetting("Email:Smtp:Password", "SMTP_PASSWORD", "SMTP_PASS");
+            var fromName = GetSetting("Email:From:Name", "SMTP_FROM_NAME") ?? "Evento";
 
             using var client = new SmtpClient(host, port)
             {
                 EnableSsl = enableSsl,
+                UseDefaultCredentials = false,
             };
 
             if (!string.IsNullOrWhiteSpace(username))
@@ -57,6 +58,46 @@ namespace EventsApp.Services.Email
             message.To.Add(email);
 
             await client.SendMailAsync(message);
+        }
+
+        private string? GetSetting(params string[] keys)
+        {
+            foreach (var key in keys)
+            {
+                var value = _configuration[key];
+                if (!string.IsNullOrWhiteSpace(value))
+                {
+                    return value;
+                }
+            }
+
+            return null;
+        }
+
+        private int GetInt(int fallback, params string[] keys)
+        {
+            foreach (var key in keys)
+            {
+                if (int.TryParse(_configuration[key], out var value))
+                {
+                    return value;
+                }
+            }
+
+            return fallback;
+        }
+
+        private bool GetBool(bool fallback, params string[] keys)
+        {
+            foreach (var key in keys)
+            {
+                if (bool.TryParse(_configuration[key], out var value))
+                {
+                    return value;
+                }
+            }
+
+            return fallback;
         }
     }
 }

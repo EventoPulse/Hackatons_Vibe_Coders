@@ -174,7 +174,7 @@
 
         // LOGIN
         'login.stamp':               { bg: 'Вход',          en: 'Login' },
-        'login.h1':                  { bg: 'Влез <span>вътре</span>.', en: 'Sign <span>in</span>.' },
+        'login.h1':                  { bg: 'Вход', en: 'Login' },
         'login.p':                   { bg: 'Добре дошъл отново в Evento. Влез, за да следиш събития, билети и любимите си сцени.', en: 'Welcome back to Evento. Sign in to track events, tickets and your favourite venues.' },
         'login.email.label':         { bg: 'Имейл или потребителско име', en: 'Email or username' },
         'login.password.label':      { bg: 'Парола',         en: 'Password' },

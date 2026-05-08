@@ -11264,3 +11264,560 @@ html[data-theme="dark"] .groove-form-panel .form-select {
     .groove-page-grid-3,
     .groove-page-grid-4 { grid-template-columns: 1fr !important; }
 }
+
+/* =====================================================
+   DARK MODE POLISH
+   Final contrast pass for legacy/bootstrap surfaces and
+   a cleaner messages experience.
+   ===================================================== */
+html[data-theme="dark"] {
+    --evt-bg: #0f1422;
+    --evt-surface: #171d2b;
+    --evt-surface-2: #202739;
+    --evt-surface-3: #283149;
+    --evt-card: #171d2b;
+    --evt-card-soft: #202739;
+    --evt-ink: #f6f7fb;
+    --evt-ink-soft: #d2d7e6;
+    --evt-mute: #a0a8bb;
+    --evt-line: rgba(255, 255, 255, 0.11);
+    --evt-accent: #7790ff;
+    --evt-accent-strong: #5b78ff;
+    --evt-accent-soft: rgba(119, 144, 255, 0.16);
+    --evt-danger: #ff6b5f;
+    --evt-shadow-card: 0 18px 50px -28px rgba(0, 0, 0, 0.85);
+}
+
+html[data-theme="dark"] body {
+    background:
+        radial-gradient(circle at top left, rgba(119, 144, 255, 0.10), transparent 34rem),
+        linear-gradient(180deg, #101624 0%, #0f1422 42%, #0d1320 100%) !important;
+    color: var(--evt-ink-soft) !important;
+}
+
+html[data-theme="dark"] .site-content {
+    color: var(--evt-ink-soft);
+}
+
+html[data-theme="dark"] .footer,
+html[data-theme="dark"] .bg-light {
+    background: #202739 !important;
+    border-color: var(--evt-line) !important;
+    color: var(--evt-mute) !important;
+}
+
+html[data-theme="dark"] .card,
+html[data-theme="dark"] .list-group-item,
+html[data-theme="dark"] .dropdown-menu,
+html[data-theme="dark"] .modal-content,
+html[data-theme="dark"] .offcanvas,
+html[data-theme="dark"] .table,
+html[data-theme="dark"] .form-check-label {
+    background-color: var(--evt-surface) !important;
+    border-color: var(--evt-line) !important;
+    color: var(--evt-ink-soft) !important;
+}
+
+html[data-theme="dark"] .table > :not(caption) > * > * {
+    background-color: transparent !important;
+    border-bottom-color: var(--evt-line) !important;
+    color: var(--evt-ink-soft) !important;
+}
+
+html[data-theme="dark"] a:not(.btn):not(.groove-button):not(.evt-btn):not(.evt-card__cta) {
+    color: #dce3ff;
+}
+
+html[data-theme="dark"] a:not(.btn):not(.groove-button):not(.evt-btn):not(.evt-card__cta):hover {
+    color: #ffffff;
+}
+
+html[data-theme="dark"] .text-muted,
+html[data-theme="dark"] small,
+html[data-theme="dark"] .small {
+    color: var(--evt-mute) !important;
+}
+
+html[data-theme="dark"] .form-control,
+html[data-theme="dark"] .form-select,
+html[data-theme="dark"] textarea,
+html[data-theme="dark"] input[type="text"],
+html[data-theme="dark"] input[type="email"],
+html[data-theme="dark"] input[type="password"],
+html[data-theme="dark"] input[type="number"],
+html[data-theme="dark"] input[type="search"],
+html[data-theme="dark"] input[type="url"],
+html[data-theme="dark"] input[type="date"],
+html[data-theme="dark"] input[type="time"],
+html[data-theme="dark"] input[type="datetime-local"] {
+    background-color: #202739 !important;
+    border-color: var(--evt-line) !important;
+    color: var(--evt-ink) !important;
+}
+
+html[data-theme="dark"] .form-control::placeholder,
+html[data-theme="dark"] input::placeholder,
+html[data-theme="dark"] textarea::placeholder {
+    color: #8790a7 !important;
+}
+
+html[data-theme="dark"] .groove-app-page,
+html[data-theme="dark"] .groove-feed-page,
+html[data-theme="dark"] .groove-form-shell {
+    --groove-card: var(--evt-surface);
+    --groove-ink: var(--evt-ink);
+    --groove-muted: var(--evt-mute);
+    background: transparent !important;
+    color: var(--evt-ink-soft) !important;
+}
+
+html[data-theme="dark"] .groove-page-hero,
+html[data-theme="dark"] .groove-feed-hero {
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+}
+
+html[data-theme="dark"] .groove-page-hero__copy h1,
+html[data-theme="dark"] .groove-panel-title,
+html[data-theme="dark"] .groove-page-section h2,
+html[data-theme="dark"] .groove-app-page h1,
+html[data-theme="dark"] .groove-app-page h2 {
+    color: var(--evt-ink) !important;
+}
+
+html[data-theme="dark"] .groove-page-hero__copy p,
+html[data-theme="dark"] .groove-panel-intro,
+html[data-theme="dark"] .groove-muted-copy,
+html[data-theme="dark"] .groove-page-section p {
+    color: var(--evt-ink-soft) !important;
+}
+
+html[data-theme="dark"] .groove-paper-card,
+html[data-theme="dark"] .groove-table-card,
+html[data-theme="dark"] .groove-form-panel,
+html[data-theme="dark"] .groove-info-card,
+html[data-theme="dark"] .groove-highlight-card,
+html[data-theme="dark"] .groove-empty-card,
+html[data-theme="dark"] .groove-ticket-card,
+html[data-theme="dark"] .groove-stat-card {
+    background: linear-gradient(180deg, rgba(32, 39, 57, 0.96), rgba(23, 29, 43, 0.98)) !important;
+    border-color: var(--evt-line) !important;
+    color: var(--evt-ink-soft) !important;
+    box-shadow: var(--evt-shadow-card) !important;
+}
+
+html[data-theme="dark"] .event-card.evt-card,
+html[data-theme="dark"] .evt-trending,
+html[data-theme="dark"] .evt-search-panel,
+html[data-theme="dark"] .evt-hero,
+html[data-theme="dark"] .evt-empty {
+    background: linear-gradient(180deg, rgba(32, 39, 57, 0.96), rgba(23, 29, 43, 0.98)) !important;
+    border-color: var(--evt-line) !important;
+    color: var(--evt-ink-soft) !important;
+    box-shadow: var(--evt-shadow-card) !important;
+}
+
+html[data-theme="dark"] .event-card.evt-card {
+    box-shadow: 0 16px 44px -30px rgba(0, 0, 0, 0.9) !important;
+}
+
+html[data-theme="dark"] .evt-card__title,
+html[data-theme="dark"] .evt-trending__body strong,
+html[data-theme="dark"] .evt-trending__head h3 {
+    color: var(--evt-ink) !important;
+}
+
+html[data-theme="dark"] .evt-card__meta,
+html[data-theme="dark"] .evt-card__action,
+html[data-theme="dark"] .evt-card__organizer,
+html[data-theme="dark"] .evt-trending__body small,
+html[data-theme="dark"] .evt-trending__rank {
+    color: var(--evt-mute) !important;
+}
+
+html[data-theme="dark"] .evt-card__manage a,
+html[data-theme="dark"] .evt-card__action:hover,
+html[data-theme="dark"] .evt-trending__row:hover {
+    background: var(--evt-surface-3) !important;
+    color: var(--evt-ink) !important;
+}
+
+html[data-theme="dark"] .evt-card__media,
+html[data-theme="dark"] .evt-trending__placeholder,
+html[data-theme="dark"] .evt-card__organizer-avatar {
+    background: var(--evt-surface-3) !important;
+}
+
+html[data-theme="dark"] .evt-card__chip,
+html[data-theme="dark"] .groove-badge,
+html[data-theme="dark"] .groove-status-badge {
+    border-color: rgba(255, 255, 255, 0.10) !important;
+    box-shadow: none !important;
+}
+
+html[data-theme="dark"] .site-navbar {
+    background: rgba(10, 16, 29, 0.84) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+    box-shadow: 0 10px 30px -26px rgba(0, 0, 0, 0.9) !important;
+}
+
+html[data-theme="dark"] .site-navbar .navbar-nav .nav-link,
+html[data-theme="dark"] .site-navbar form.form-inline .nav-link {
+    background: rgba(255, 255, 255, 0.06) !important;
+    border-color: rgba(255, 255, 255, 0.08) !important;
+    color: #cbd3e6 !important;
+    box-shadow: none !important;
+}
+
+html[data-theme="dark"] .site-navbar .navbar-nav .nav-link:hover,
+html[data-theme="dark"] .site-navbar .navbar-nav .nav-link:focus,
+html[data-theme="dark"] .site-navbar .navbar-nav .nav-link.text-warning {
+    background: rgba(119, 144, 255, 0.16) !important;
+    color: #ffffff !important;
+}
+
+/* Messages dark mode */
+html[data-theme="dark"] .social-messages-page {
+    --social-surface: rgba(23, 29, 43, 0.96);
+    --social-soft: rgba(32, 39, 57, 0.92);
+    --social-line: rgba(255, 255, 255, 0.11);
+    --social-ink: var(--evt-ink);
+    --social-muted: var(--evt-mute);
+    --social-teal: var(--evt-accent);
+    --social-red: var(--evt-danger);
+}
+
+html[data-theme="dark"] .social-messages-page .groove-page-hero {
+    margin-bottom: 20px;
+    padding: 14px 0 2px;
+}
+
+html[data-theme="dark"] .social-message-board {
+    padding: 0;
+    background: transparent !important;
+}
+
+html[data-theme="dark"] .social-message-panel,
+html[data-theme="dark"] .social-chat-shell {
+    background:
+        linear-gradient(180deg, rgba(32, 39, 57, 0.94), rgba(17, 23, 36, 0.96)) !important;
+    border: 1px solid var(--social-line) !important;
+    border-radius: 18px !important;
+    color: var(--evt-ink-soft) !important;
+    box-shadow: 0 24px 70px -42px rgba(0, 0, 0, 0.95) !important;
+}
+
+html[data-theme="dark"] .social-message-panel--requests {
+    background:
+        linear-gradient(135deg, rgba(119, 144, 255, 0.15), rgba(32, 39, 57, 0.90) 44%, rgba(17, 23, 36, 0.96)) !important;
+    border-color: rgba(119, 144, 255, 0.28) !important;
+}
+
+html[data-theme="dark"] .social-message-panel__head {
+    align-items: center;
+}
+
+html[data-theme="dark"] .social-message-panel__head h2,
+html[data-theme="dark"] .social-chat-header strong,
+html[data-theme="dark"] .social-conversation-row strong {
+    color: var(--evt-ink) !important;
+}
+
+html[data-theme="dark"] .social-conversation-row {
+    background: rgba(255, 255, 255, 0.045) !important;
+    border-color: rgba(255, 255, 255, 0.08) !important;
+    color: var(--evt-ink-soft) !important;
+    border-radius: 14px !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035);
+    transition: background 0.15s, border-color 0.15s, transform 0.15s;
+}
+
+html[data-theme="dark"] .social-conversation-row:hover {
+    background: rgba(119, 144, 255, 0.13) !important;
+    border-color: rgba(119, 144, 255, 0.32) !important;
+    color: var(--evt-ink) !important;
+    transform: translateY(-1px);
+}
+
+html[data-theme="dark"] .social-conversation-row.is-request {
+    background: rgba(255, 107, 95, 0.09) !important;
+    border-color: rgba(255, 107, 95, 0.28) !important;
+}
+
+html[data-theme="dark"] .social-conversation-row small,
+html[data-theme="dark"] .social-conversation-row time,
+html[data-theme="dark"] .social-author-link small {
+    color: var(--evt-mute) !important;
+}
+
+html[data-theme="dark"] .social-conversation-row img,
+html[data-theme="dark"] .social-conversation-row__fallback,
+html[data-theme="dark"] .social-avatar-xs--fallback {
+    background: linear-gradient(135deg, var(--evt-accent-strong), #9a8cff) !important;
+    color: #fff !important;
+    box-shadow: 0 8px 22px -12px rgba(119, 144, 255, 0.95);
+}
+
+html[data-theme="dark"] .social-empty-panel {
+    background: rgba(255, 255, 255, 0.045) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-radius: 14px !important;
+    color: var(--evt-ink-soft) !important;
+}
+
+html[data-theme="dark"] .social-empty-panel i {
+    color: var(--evt-accent) !important;
+}
+
+html[data-theme="dark"] .social-chat-header {
+    background: rgba(255, 255, 255, 0.04) !important;
+    border-bottom-color: var(--social-line) !important;
+}
+
+html[data-theme="dark"] .social-chat-thread {
+    background:
+        radial-gradient(circle at 10% 0%, rgba(119, 144, 255, 0.08), transparent 24rem),
+        rgba(11, 16, 28, 0.35);
+}
+
+html[data-theme="dark"] .social-message-bubble {
+    background: rgba(255, 255, 255, 0.065) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: var(--evt-ink-soft) !important;
+    border-radius: 16px 16px 16px 6px !important;
+    box-shadow: 0 12px 34px -28px rgba(0, 0, 0, 0.95);
+}
+
+html[data-theme="dark"] .social-message-bubble.is-mine {
+    background: linear-gradient(135deg, rgba(91, 120, 255, 0.86), rgba(119, 144, 255, 0.68)) !important;
+    border-color: rgba(191, 203, 255, 0.32);
+    color: #ffffff !important;
+    border-radius: 16px 16px 6px 16px !important;
+}
+
+html[data-theme="dark"] .social-message-bubble p,
+html[data-theme="dark"] .social-message-bubble__head strong {
+    color: inherit !important;
+}
+
+html[data-theme="dark"] .social-message-bubble__meta,
+html[data-theme="dark"] .social-message-bubble small {
+    color: rgba(222, 227, 244, 0.78) !important;
+}
+
+html[data-theme="dark"] .social-message-share-card,
+html[data-theme="dark"] .social-message-share-preview {
+    background: rgba(12, 18, 31, 0.72) !important;
+    border-color: rgba(255, 255, 255, 0.10) !important;
+    color: var(--evt-ink-soft) !important;
+    border-radius: 14px !important;
+}
+
+html[data-theme="dark"] .social-message-share-card strong,
+html[data-theme="dark"] .social-message-share-preview strong {
+    color: var(--evt-ink) !important;
+}
+
+html[data-theme="dark"] .social-message-request {
+    background: rgba(119, 144, 255, 0.13) !important;
+    border-color: rgba(119, 144, 255, 0.30) !important;
+    color: var(--evt-ink) !important;
+}
+
+html[data-theme="dark"] .social-message-request.is-actionable {
+    background: rgba(255, 107, 95, 0.10) !important;
+    border-color: rgba(255, 107, 95, 0.30) !important;
+}
+
+html[data-theme="dark"] .social-message-request p {
+    color: var(--evt-ink-soft) !important;
+}
+
+html[data-theme="dark"] .social-chat-compose {
+    background: rgba(17, 23, 36, 0.96) !important;
+    border-top-color: var(--social-line) !important;
+}
+
+html[data-theme="dark"] .social-chat-compose input {
+    background: rgba(255, 255, 255, 0.055) !important;
+    border-color: rgba(255, 255, 255, 0.10) !important;
+    color: var(--evt-ink) !important;
+    border-radius: 999px !important;
+}
+
+html[data-theme="dark"] .social-chat-compose input:focus {
+    border-color: rgba(119, 144, 255, 0.62) !important;
+    box-shadow: 0 0 0 4px rgba(119, 144, 255, 0.16) !important;
+}
+
+/* Dark mode follow-up: auth, account menu, quick cards */
+html[data-theme="dark"] #app-theme-btn {
+    background: #f4f6ff !important;
+    border-color: rgba(255, 255, 255, 0.85) !important;
+    color: #101624 !important;
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.18), 0 10px 24px -16px rgba(255, 255, 255, 0.9) !important;
+}
+
+html[data-theme="dark"] #app-theme-btn:hover {
+    background: #ffffff !important;
+    color: #4a5fff !important;
+}
+
+html[data-theme="dark"] .auth-zine-page {
+    --auth-card-dark: rgba(23, 29, 43, 0.96);
+    --auth-field-dark: rgba(255, 255, 255, 0.055);
+    color: var(--evt-ink-soft) !important;
+}
+
+html[data-theme="dark"] .auth-zine-copy h1 {
+    color: var(--evt-ink) !important;
+}
+
+html[data-theme="dark"] .auth-zine-copy p,
+html[data-theme="dark"] .auth-zine-alt {
+    color: var(--evt-mute) !important;
+}
+
+html[data-theme="dark"] .auth-zine-card {
+    background:
+        linear-gradient(180deg, rgba(32, 39, 57, 0.96), rgba(23, 29, 43, 0.98)) !important;
+    border-color: var(--evt-line) !important;
+    box-shadow: var(--evt-shadow-card) !important;
+}
+
+html[data-theme="dark"] .auth-zine-field label,
+html[data-theme="dark"] .auth-zine-check {
+    color: var(--evt-ink) !important;
+}
+
+html[data-theme="dark"] .auth-zine-field input {
+    background: var(--auth-field-dark) !important;
+    border-color: rgba(255, 255, 255, 0.11) !important;
+    color: var(--evt-ink) !important;
+}
+
+html[data-theme="dark"] .auth-zine-field input:focus {
+    border-color: rgba(119, 144, 255, 0.64) !important;
+    box-shadow: 0 0 0 4px rgba(119, 144, 255, 0.16) !important;
+}
+
+html[data-theme="dark"] .auth-zine-check input {
+    accent-color: var(--evt-accent);
+}
+
+html[data-theme="dark"] .auth-zine-alt a {
+    color: #ffffff !important;
+    text-decoration-color: rgba(255, 255, 255, 0.85) !important;
+}
+
+html[data-theme="dark"] .site-account-menu .dropdown-menu,
+html[data-theme="dark"] .evt-bottom-nav .dropdown-menu {
+    background: rgba(17, 23, 36, 0.98) !important;
+    border-color: var(--evt-line) !important;
+    box-shadow: 0 22px 60px -30px rgba(0, 0, 0, 0.95) !important;
+}
+
+html[data-theme="dark"] .site-account-menu .dropdown-item,
+html[data-theme="dark"] .evt-bottom-nav .dropdown-item,
+html[data-theme="dark"] .dropdown-item {
+    color: var(--evt-ink-soft) !important;
+    opacity: 1 !important;
+}
+
+html[data-theme="dark"] .site-account-menu .dropdown-item i,
+html[data-theme="dark"] .evt-bottom-nav .dropdown-item i {
+    color: var(--evt-mute) !important;
+}
+
+html[data-theme="dark"] .site-account-menu .dropdown-item:hover,
+html[data-theme="dark"] .site-account-menu .dropdown-item:focus,
+html[data-theme="dark"] .evt-bottom-nav .dropdown-item:hover,
+html[data-theme="dark"] .evt-bottom-nav .dropdown-item:focus,
+html[data-theme="dark"] .dropdown-item:hover,
+html[data-theme="dark"] .dropdown-item:focus {
+    background: rgba(119, 144, 255, 0.16) !important;
+    color: #ffffff !important;
+}
+
+html[data-theme="dark"] .site-account-menu .dropdown-divider,
+html[data-theme="dark"] .evt-bottom-nav .dropdown-divider {
+    border-color: var(--evt-line) !important;
+}
+
+html[data-theme="dark"] .site-account-menu form .dropdown-item,
+html[data-theme="dark"] .evt-bottom-nav form .dropdown-item {
+    color: #ffb7b0 !important;
+}
+
+html[data-theme="dark"] .site-account-menu form .dropdown-item:hover,
+html[data-theme="dark"] .evt-bottom-nav form .dropdown-item:hover {
+    background: rgba(255, 107, 95, 0.14) !important;
+    color: #ffffff !important;
+}
+
+html[data-theme="dark"] .groove-link,
+html[data-theme="dark"] a.groove-link {
+    color: #dfe6ff !important;
+    border-bottom-color: rgba(223, 230, 255, 0.88) !important;
+    text-decoration-color: rgba(223, 230, 255, 0.88) !important;
+}
+
+html[data-theme="dark"] .groove-link:hover,
+html[data-theme="dark"] a.groove-link:hover {
+    color: #ffffff !important;
+    border-bottom-color: #ffffff !important;
+}
+
+.admin-action-card {
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+    color: inherit !important;
+    text-decoration: none !important;
+    transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+
+.admin-action-card:hover,
+.admin-action-card:focus-visible {
+    transform: translateY(-2px) !important;
+    color: inherit !important;
+    text-decoration: none !important;
+}
+
+.admin-action-card p {
+    flex: 1 1 auto;
+}
+
+.admin-action-card__cta {
+    display: inline-flex;
+    align-items: center;
+    width: fit-content;
+    margin-top: auto;
+    color: #2456ff;
+    font-weight: 800;
+    text-decoration: underline;
+    text-underline-offset: 0.18rem;
+}
+
+.admin-action-card__cta::after {
+    content: "→";
+    margin-left: 0.35rem;
+}
+
+html[data-theme="dark"] .admin-action-card {
+    border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+html[data-theme="dark"] .admin-action-card:hover,
+html[data-theme="dark"] .admin-action-card:focus-visible {
+    background:
+        linear-gradient(180deg, rgba(40, 49, 73, 0.98), rgba(23, 29, 43, 0.98)) !important;
+    border-color: rgba(119, 144, 255, 0.46) !important;
+    box-shadow: 0 22px 60px -36px rgba(0, 0, 0, 0.95) !important;
+}
+
+html[data-theme="dark"] .admin-action-card__cta {
+    color: #ffffff !important;
+    text-decoration-color: rgba(255, 255, 255, 0.86) !important;
+}

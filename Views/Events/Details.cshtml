@@ -241,11 +241,19 @@
             <div class="groove-info-card event-occurrence-card">
                 <div class="event-occurrence-card__head">
                     <div>
-                        <span class="groove-kicker">Период</span>
-                        <p class="mb-0">
-                            @firstOccurrence.StartDateTime.ToString("dd.MM.yyyy") - @lastOccurrence.StartDateTime.ToString("dd.MM.yyyy")
-                            · @Model.Occurrences.Count дати
-                        </p>
+                        @if (showAllOccurrences)
+                        {
+                            <span class="groove-kicker">Период</span>
+                            <p class="mb-0">
+                                @firstOccurrence.StartDateTime.ToString("dd.MM.yyyy") - @lastOccurrence.StartDateTime.ToString("dd.MM.yyyy")
+                                · @Model.Occurrences.Count дати
+                            </p>
+                        }
+                        else
+                        {
+                            <span class="groove-kicker">Следваща дата</span>
+                            <p class="mb-0">Организаторът показва само най-близката предстояща дата.</p>
+                        }
                     </div>
                     <div class="event-occurrence-card__selected">
                         <span>@(showAllOccurrences ? "Избрана дата" : "Следваща дата")</span>

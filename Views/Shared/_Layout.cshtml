@@ -1,10 +1,37 @@
 @using EventsApp.Common
+@inject IConfiguration Configuration
+@{
+    var googleSiteVerification = Configuration["Google:SiteVerification"]
+        ?? Configuration["GOOGLE_SITE_VERIFICATION"]
+        ?? Configuration["GOOGLE_SEARCH_CONSOLE_VERIFICATION"];
+    var publicUrl = (Configuration["App:PublicUrl"]
+        ?? Configuration["APP_PUBLIC_URL"]
+        ?? Configuration["PUBLIC_URL"])?.TrimEnd('/');
+    var requestPath = $"{Context.Request.PathBase}{Context.Request.Path}";
+    var canonicalUrl = string.IsNullOrWhiteSpace(publicUrl)
+        ? null
+        : publicUrl + (string.IsNullOrWhiteSpace(requestPath) ? "/" : requestPath);
+}
 <!DOCTYPE html>
 <html lang="bg">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="x-app-lang" content="bg" />
+    <meta name="description" content="Evento - събития, билети и парти вечери около теб." />
+    @if (!string.IsNullOrWhiteSpace(googleSiteVerification))
+    {
+        <meta name="google-site-verification" content="@googleSiteVerification" />
+    }
+    @if (!string.IsNullOrWhiteSpace(canonicalUrl))
+    {
+        <link rel="canonical" href="@canonicalUrl" />
+        <meta property="og:url" content="@canonicalUrl" />
+    }
+    <meta property="og:site_name" content="Evento" />
+    <meta property="og:title" content="Evento" />
+    <meta property="og:description" content="Открий събития, купи билети и следи любимите си сцени." />
+    <meta property="og:type" content="website" />
     <title>@ViewData["Title"] - Evento</title>
 
     <script>

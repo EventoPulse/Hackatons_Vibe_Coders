@@ -5,10 +5,13 @@ using EventsApp.Services;
 using EventsApp.ViewModels.Tickets;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using System.Data;
+using System.Net;
+using System.Text;
 
 namespace EventsApp.Controllers
 {
@@ -20,19 +23,28 @@ namespace EventsApp.Controllers
         private readonly ITicketDocumentService _docs;
         private readonly IMediaUploadService _mediaUpload;
         private readonly ISeatReservationService _seatReservations;
+        private readonly IEmailSender _emailSender;
+        private readonly IAppLinkService _appLinks;
+        private readonly ILogger<TicketsController> _logger;
 
         public TicketsController(
             ApplicationDbContext db,
             UserManager<ApplicationUser> userManager,
             ITicketDocumentService docs,
             IMediaUploadService mediaUpload,
-            ISeatReservationService seatReservations)
+            ISeatReservationService seatReservations,
+            IEmailSender emailSender,
+            IAppLinkService appLinks,
+            ILogger<TicketsController> logger)
         {
             _db = db;
             _userManager = userManager;
             _docs = docs;
             _mediaUpload = mediaUpload;
             _seatReservations = seatReservations;
+            _emailSender = emailSender;
+            _appLinks = appLinks;
+            _logger = logger;
         }
 
         // ---------- ORGANIZER MANAGEMENT ----------
@@ -400,6 +412,7 @@ namespace EventsApp.Controllers
             }
 
             List<UserTicket> userTickets;
+            decimal purchasedUnitPrice = 0m;
             await using var purchaseDbTransaction = await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable);
             try
             {
@@ -460,6 +473,7 @@ namespace EventsApp.Controllers
                 }
 
                 var unitPrice = ticket.Price + (selectedSeat?.Section.PriceModifier ?? 0m);
+                purchasedUnitPrice = unitPrice;
                 var purchaseGroupId = Guid.NewGuid();
                 var purchaseTransaction = new Transaction
                 {
@@ -514,6 +528,15 @@ namespace EventsApp.Controllers
                 TempData["StatusMessage"] = "Този билет или място току-що беше заето. Опитай отново.";
                 return RedirectToAction("Details", "Events", new { id = ticket.EventId, occurrenceId });
             }
+
+            var buyer = await _userManager.GetUserAsync(User);
+            await SendPurchaseEmailAsync(
+                buyer,
+                ticket,
+                occurrence,
+                selectedSeat,
+                userTickets,
+                purchasedUnitPrice);
 
             TempData["StatusMessage"] = quantity == 1
                 ? "Покупката е завършена - билетът е готов."
@@ -687,6 +710,82 @@ namespace EventsApp.Controllers
 
         // ---------- HELPERS ----------
 
+        private async Task SendPurchaseEmailAsync(
+            ApplicationUser? buyer,
+            Ticket ticket,
+            EventOccurrence? occurrence,
+            Seat? seat,
+            IReadOnlyCollection<UserTicket> userTickets,
+            decimal unitPrice)
+        {
+            if (buyer == null || string.IsNullOrWhiteSpace(buyer.Email) || userTickets.Count == 0)
+            {
+                return;
+            }
+
+            try
+            {
+                var startsAt = occurrence?.StartDateTime ?? ticket.Event.StartTime;
+                var endsAt = occurrence?.EndDateTime ?? ticket.Event.EndTime;
+                var eventUrl = _appLinks.ToAbsoluteUrl(
+                    Request,
+                    Url.Action("Details", "Events", new { id = ticket.EventId, occurrenceId = occurrence?.Id })
+                    ?? $"/Events/Details/{ticket.EventId}");
+                var ticketRows = new StringBuilder();
+
+                foreach (var userTicket in userTickets)
+                {
+                    var detailsUrl = _appLinks.ToAbsoluteUrl(
+                        Request,
+                        Url.Action(nameof(Details), "Tickets", new { id = userTicket.Id })
+                        ?? $"/Tickets/Details/{userTicket.Id}");
+                    var pdfUrl = _appLinks.ToAbsoluteUrl(
+                        Request,
+                        Url.Action(nameof(DownloadPdf), "Tickets", new { id = userTicket.Id })
+                        ?? $"/Tickets/DownloadPdf/{userTicket.Id}");
+                    var attendee = string.IsNullOrWhiteSpace(userTicket.AttendeeName)
+                        ? string.Empty
+                        : $" - {WebUtility.HtmlEncode(userTicket.AttendeeName)}";
+
+                    ticketRows.Append($"""
+                        <li style="margin:10px 0">
+                            <strong>{WebUtility.HtmlEncode(ticket.Name)}{attendee}</strong><br />
+                            <a href="{WebUtility.HtmlEncode(detailsUrl)}">Отвори билета</a>
+                            &nbsp;|&nbsp;
+                            <a href="{WebUtility.HtmlEncode(pdfUrl)}">Изтегли PDF</a>
+                        </li>
+                        """);
+                }
+
+                var seatLine = seat == null
+                    ? string.Empty
+                    : $"<p><strong>Място:</strong> {WebUtility.HtmlEncode(GetSeatLabel(seat))}</p>";
+                var total = unitPrice * userTickets.Count;
+
+                await _emailSender.SendEmailAsync(
+                    buyer.Email,
+                    $"Билет за {ticket.Event.Title} - Evento",
+                    $"""
+                    <div style="font-family:Arial,sans-serif;line-height:1.5;color:#111827">
+                        <h2>Билетите ти са готови</h2>
+                        <p><strong>Събитие:</strong> {WebUtility.HtmlEncode(ticket.Event.Title)}</p>
+                        <p><strong>Дата:</strong> {startsAt:dd.MM.yyyy HH:mm} - {endsAt:HH:mm}</p>
+                        <p><strong>Място:</strong> {WebUtility.HtmlEncode(ticket.Event.City)}, {WebUtility.HtmlEncode(ticket.Event.Address)}</p>
+                        {seatLine}
+                        <p><strong>Сума:</strong> {FormatMoney(total)}</p>
+                        <p><a href="{WebUtility.HtmlEncode(eventUrl)}" style="display:inline-block;background:#5b4bff;color:#ffffff;padding:12px 18px;border-radius:10px;text-decoration:none;font-weight:700">Виж събитието</a></p>
+                        <h3>Твоите билети</h3>
+                        <ul style="padding-left:18px">{ticketRows}</ul>
+                        <p style="color:#6b7280">Пази този имейл. QR кодът и PDF билетът са достъпни през линковете по-горе.</p>
+                    </div>
+                    """);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send purchase email for ticket {TicketId} to user {UserId}.", ticket.Id, buyer.Id);
+            }
+        }
+
         private async Task<bool> CanValidateEventAsync(string userId, Event ev)
         {
             if (ev.OrganizerId == userId)
@@ -744,6 +843,11 @@ namespace EventsApp.Controllers
         private static string GetSeatLabel(Seat seat)
         {
             return string.IsNullOrWhiteSpace(seat.Label) ? seat.Row + seat.Number : seat.Label;
+        }
+
+        private static string FormatMoney(decimal amount)
+        {
+            return amount <= 0m ? "Безплатно" : $"{amount:0.00} лв.";
         }
 
         private static List<string?> NormalizeAttendeeNames(

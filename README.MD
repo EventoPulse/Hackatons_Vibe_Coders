@@ -101,11 +101,13 @@ Required in production:
 - `DATABASE_URL`
 - `ADMIN_EMAIL`
 - `ADMIN_PASSWORD`
+- `APP_PUBLIC_URL`
 
 Useful optional keys:
 
 - `OPENAI_API_KEY`
 - `GOOGLE_MAPS_KEY`
+- `GOOGLE_SITE_VERIFICATION`
 - `EMAIL_ENABLED`
 - `SMTP_HOST`
 - `SMTP_PORT`
