@@ -7573,13 +7573,20 @@ html[data-theme="dark"] .evt-hero__map-locate:hover {
     background: #6b85ff;
 }
 
-/* AI search "Smart търсене" pill — white bg with purple text was washed out on dark */
+/* AI search "Smart търсене" pill — white-on-white in dark mode */
 html[data-theme="dark"] .evt-ai-search-btn {
-    background: #fff;
-    color: #4a3fc7;
+    background: #ffffff !important;
+    color: #2456ff !important;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
+}
+html[data-theme="dark"] .evt-ai-search-btn span,
+html[data-theme="dark"] .evt-ai-search-btn i {
+    color: #2456ff !important;
+    text-shadow: none !important;
 }
 html[data-theme="dark"] .evt-ai-search-btn:hover {
-    background: #f5f5ff;
+    background: #eef2ff !important;
+    color: #1d44d6 !important;
 }
 
 /* Free / price pill on event cards — must not be a bright bar in dark mode */
