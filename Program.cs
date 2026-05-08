@@ -123,6 +123,49 @@ builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
 
+    options.OnRejected = async (context, cancellationToken) =>
+    {
+        var logger = context.HttpContext.RequestServices.GetRequiredService<ILoggerFactory>()
+            .CreateLogger("RateLimit");
+        var ip = context.HttpContext.Connection.RemoteIpAddress?.ToString() ?? "?";
+        var path = context.HttpContext.Request.Path.Value ?? "?";
+        logger.LogWarning("Rate limit hit. IP={Ip} Path={Path} Method={Method}",
+            ip, path, context.HttpContext.Request.Method);
+
+        if (context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter))
+        {
+            context.HttpContext.Response.Headers["Retry-After"] = ((int)retryAfter.TotalSeconds).ToString();
+        }
+
+        var accept = context.HttpContext.Request.Headers["Accept"].ToString();
+        var requestedWith = context.HttpContext.Request.Headers["X-Requested-With"].ToString();
+        var wantsJson = accept.Contains("application/json", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(requestedWith, "XMLHttpRequest", StringComparison.OrdinalIgnoreCase);
+
+        if (wantsJson)
+        {
+            context.HttpContext.Response.ContentType = "application/json";
+            await context.HttpContext.Response.WriteAsync(
+                "{\"error\":\"too_many_requests\",\"message\":\"Прекалено много заявки. Опитай след малко.\"}",
+                cancellationToken);
+            return;
+        }
+
+        context.HttpContext.Response.ContentType = "text/html; charset=utf-8";
+        await context.HttpContext.Response.WriteAsync(
+            "<!doctype html><html lang='bg'><head><meta charset='utf-8'><title>Прекалено много заявки</title>" +
+            "<style>body{margin:0;font-family:-apple-system,Segoe UI,Roboto,sans-serif;background:#131826;color:#f5f6fa;" +
+            "display:flex;align-items:center;justify-content:center;min-height:100vh}" +
+            ".card{max-width:420px;background:#1b2030;border:1px solid #2a3142;border-radius:18px;padding:32px;text-align:center}" +
+            "h1{margin:0 0 8px;font-size:24px;font-weight:800}" +
+            "p{margin:0 0 18px;color:#c5cad8;line-height:1.55}" +
+            "a{color:#6b85ff;text-decoration:none;font-weight:700}</style></head>" +
+            "<body><div class='card'><h1>Прекалено много заявки</h1>" +
+            "<p>Опитай отново след минута. Ако смяташ, че това е грешка, презареди страницата по-късно.</p>" +
+            "<a href='/'>← Към началото</a></div></body></html>",
+            cancellationToken);
+    };
+
     options.AddPolicy("ai-light", context =>
         RateLimitPartition.GetFixedWindowLimiter("ai-light:" + GetRateLimitKey(context), _ => new FixedWindowRateLimiterOptions
         {
@@ -152,6 +195,58 @@ builder.Services.AddRateLimiter(options =>
             QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
             AutoReplenishment = true,
         }));
+
+    // Brute-force protection for login / register / password reset
+    options.AddPolicy("auth", context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            "auth:" + (context.Connection.RemoteIpAddress?.ToString() ?? "anonymous"),
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 10,
+                Window = TimeSpan.FromMinutes(5),
+                QueueLimit = 0,
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                AutoReplenishment = true,
+            }));
+
+    // Like / save / attend / follow / buy — bot protection on social actions
+    options.AddPolicy("interactions", context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            "interactions:" + GetRateLimitKey(context),
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 120,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                AutoReplenishment = true,
+            }));
+
+    // Create / edit content (events, posts, comments, tickets) — anti-spam
+    options.AddPolicy("content-write", context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            "content-write:" + GetRateLimitKey(context),
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 30,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                AutoReplenishment = true,
+            }));
+
+    // Public read endpoints (search, etc) — basic DoS protection
+    options.AddPolicy("public-read", context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            "public-read:" + GetRateLimitKey(context),
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 200,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                AutoReplenishment = true,
+            }));
 });
 
 var app = builder.Build();
@@ -223,7 +318,18 @@ app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
 
-app.MapRazorPages();
+app.MapRazorPages()
+    .Add(builder =>
+    {
+        if (builder is RouteEndpointBuilder route
+            && route.RoutePattern.RawText is string pattern
+            && (pattern.Contains("Account/ForgotPassword", StringComparison.OrdinalIgnoreCase)
+                || pattern.Contains("Account/ResetPassword", StringComparison.OrdinalIgnoreCase)
+                || pattern.Contains("Account/ResendEmailConfirmation", StringComparison.OrdinalIgnoreCase)))
+        {
+            builder.Metadata.Add(new EnableRateLimitingAttribute("auth"));
+        }
+    });
 
 app.Run();
 

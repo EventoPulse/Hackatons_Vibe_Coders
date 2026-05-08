@@ -8,6 +8,7 @@ using EventsApp.ViewModels.Social;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 
 namespace EventsApp.Controllers
@@ -520,6 +521,7 @@ namespace EventsApp.Controllers
         [Authorize]
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [EnableRateLimiting("interactions")]
         public async Task<IActionResult> Follow(string id, string? returnUrl)
         {
             var currentUserId = _userManager.GetUserId(User)!;
@@ -547,6 +549,7 @@ namespace EventsApp.Controllers
         [Authorize]
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [EnableRateLimiting("interactions")]
         public async Task<IActionResult> Unfollow(string id, string? returnUrl)
         {
             var currentUserId = _userManager.GetUserId(User)!;

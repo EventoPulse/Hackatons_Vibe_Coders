@@ -8,10 +8,12 @@ using EventsApp.ViewModels.Posts;
 using EventsApp.ViewModels.Search;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 
 namespace EventsApp.Controllers
 {
+    [EnableRateLimiting("public-read")]
     public class SearchController : Controller
     {
         private const int ResultsPerSection = 12;

@@ -6,6 +6,7 @@ using EventsApp.ViewModels.Tickets;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using System.Data;
 
@@ -266,6 +267,7 @@ namespace EventsApp.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [EnableRateLimiting("interactions")]
         public async Task<IActionResult> Buy(Guid id, int? occurrenceId, int? seatId, int quantity = 1, [FromForm] List<string>? attendeeNames = null)
         {
             var userId = _userManager.GetUserId(User)!;

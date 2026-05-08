@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 
 namespace EventsApp.Controllers
@@ -373,6 +374,7 @@ namespace EventsApp.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Roles = GlobalConstants.Roles.Admin + "," + GlobalConstants.Roles.Organizer)]
+        [EnableRateLimiting("content-write")]
         public async Task<IActionResult> Create(EventCreateEditViewModel input)
         {
             var userId = _userManager.GetUserId(User)!;
@@ -604,6 +606,7 @@ namespace EventsApp.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Roles = GlobalConstants.Roles.Admin + "," + GlobalConstants.Roles.Organizer)]
+        [EnableRateLimiting("content-write")]
         public async Task<IActionResult> Edit(int id, EventCreateEditViewModel input)
         {
             var userId = _userManager.GetUserId(User)!;
@@ -914,6 +917,7 @@ namespace EventsApp.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize]
+        [EnableRateLimiting("interactions")]
         public async Task<IActionResult> Like(int id, string? returnUrl)
         {
             var userId = _userManager.GetUserId(User)!;
@@ -940,6 +944,7 @@ namespace EventsApp.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize]
+        [EnableRateLimiting("interactions")]
         public async Task<IActionResult> Save(int id, string? returnUrl)
         {
             var userId = _userManager.GetUserId(User)!;
@@ -967,6 +972,7 @@ namespace EventsApp.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize]
+        [EnableRateLimiting("interactions")]
         public async Task<IActionResult> Unsave(int id, string? returnUrl)
         {
             var userId = _userManager.GetUserId(User)!;
@@ -993,6 +999,7 @@ namespace EventsApp.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize]
+        [EnableRateLimiting("interactions")]
         public async Task<IActionResult> Attendance(int id, EventAttendanceStatus status, string? returnUrl)
         {
             if (!await _db.Events.AnyAsync(e => e.Id == id))
@@ -1057,6 +1064,7 @@ namespace EventsApp.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize]
+        [EnableRateLimiting("interactions")]
         public async Task<IActionResult> Unlike(int id, string? returnUrl)
         {
             var userId = _userManager.GetUserId(User)!;

@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 
 namespace EventsApp.Controllers
@@ -176,6 +177,7 @@ namespace EventsApp.Controllers
         [ValidateAntiForgeryToken]
         [RequestSizeLimit(UploadSizeLimit)]
         [Authorize]
+        [EnableRateLimiting("content-write")]
         public async Task<IActionResult> Create(PostCreateEditViewModel input)
         {
             if (!await _permissions.CanCreatePostAsync(User))
@@ -345,6 +347,7 @@ namespace EventsApp.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize]
+        [EnableRateLimiting("interactions")]
         public async Task<IActionResult> Like(int id, string? returnUrl)
         {
             var userId = _userManager.GetUserId(User)!;
