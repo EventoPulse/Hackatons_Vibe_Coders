@@ -241,7 +241,7 @@ static string GetRateLimitKey(HttpContext context)
 
 static bool UseS3MediaStorage(IConfiguration configuration, bool isDevelopment)
 {
-    var configuredMode = configuration["Media:Storage"] ?? configuration["MEDIA_STORAGE"];
+    var configuredMode = configuration["MEDIA_STORAGE"] ?? configuration["Media:Storage"];
     if (string.Equals(configuredMode, "S3", StringComparison.OrdinalIgnoreCase) ||
         string.Equals(configuredMode, "RailwayBucket", StringComparison.OrdinalIgnoreCase))
     {
