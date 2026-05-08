@@ -85,6 +85,9 @@
                                         <a asp-controller="Tickets" asp-action="Manage" asp-route-id="@ev.Id" class="groove-button groove-button-paper">
                                             <i class="bi bi-ticket-perforated"></i> Билети
                                         </a>
+                                        <a asp-controller="Events" asp-action="Delete" asp-route-id="@ev.Id" class="groove-button groove-button-paper">
+                                            <i class="bi bi-trash"></i> Изтрий
+                                        </a>
                                         @if (ev.HasPendingChanges)
                                         {
                                             <a asp-action="EventChange" asp-route-id="@ev.Id" class="groove-button groove-button-paper">

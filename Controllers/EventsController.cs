@@ -818,6 +818,16 @@ namespace EventsApp.Controllers
                 return Forbid();
             }
 
+            var hasSoldTickets = !isAdmin && await _db.Tickets
+                .Where(t => t.EventId == ev.Id)
+                .SelectMany(t => t.UserTickets)
+                .AnyAsync(ut => ut.Transaction.Status == GlobalConstants.TransactionStatuses.Paid);
+            if (hasSoldTickets)
+            {
+                TempData["StatusMessage"] = "Събитието не може да бъде изтрито, защото вече има купени билети.";
+                return RedirectToAction(nameof(Details), new { id = ev.Id });
+            }
+
             return View(ev);
         }
 
@@ -861,15 +871,44 @@ namespace EventsApp.Controllers
                 return Forbid();
             }
 
+            var hasSoldTickets = !isAdmin && await _db.Tickets
+                .Where(t => t.EventId == ev.Id)
+                .SelectMany(t => t.UserTickets)
+                .AnyAsync(ut => ut.Transaction.Status == GlobalConstants.TransactionStatuses.Paid);
+            if (hasSoldTickets)
+            {
+                TempData["StatusMessage"] = "Събитието не може да бъде изтрито, защото вече има купени билети.";
+                return RedirectToAction(nameof(Details), new { id = ev.Id });
+            }
+
+            await using var transaction = await _db.Database.BeginTransactionAsync();
             var occurrenceIds = ev.EventSeries?.Occurrences.Select(o => o.Id).ToList() ?? new List<int>();
+            var ticketIds = await _db.Tickets
+                .Where(t => t.EventId == ev.Id)
+                .Select(t => t.Id)
+                .ToListAsync();
             var inventories = await _db.EventSeatInventories
                 .Where(i => i.EventId == ev.Id || (i.EventOccurrenceId.HasValue && occurrenceIds.Contains(i.EventOccurrenceId.Value)))
                 .ToListAsync();
             _db.EventSeatInventories.RemoveRange(inventories);
+            var userTickets = await _db.UserTickets
+                .Where(ut => ticketIds.Contains(ut.TicketId)
+                    || (ut.EventOccurrenceId.HasValue && occurrenceIds.Contains(ut.EventOccurrenceId.Value)))
+                .ToListAsync();
+            _db.UserTickets.RemoveRange(userTickets);
+            await _db.Messages
+                .Where(m => m.SharedEventId == ev.Id)
+                .ExecuteUpdateAsync(setters => setters.SetProperty(m => m.SharedEventId, (int?)null));
+            await _db.Posts
+                .Where(p => p.EventId == ev.Id)
+                .ExecuteUpdateAsync(setters => setters.SetProperty(p => p.EventId, (int?)null));
             _db.Events.Remove(ev);
             await _db.SaveChangesAsync();
+            await transaction.CommitAsync();
             TempData["StatusMessage"] = "Събитието е изтрито.";
-            return RedirectToAction("Index", "Home");
+            return isAdmin
+                ? RedirectToAction("Events", "Admin")
+                : RedirectToAction("Events", "Organizer");
         }
 
         [HttpPost]
