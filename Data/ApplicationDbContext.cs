@@ -1,11 +1,12 @@
 using EventsApp.Models;
+using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
 namespace EventsApp.Data
 {
-    public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
+    public class ApplicationDbContext : IdentityDbContext<ApplicationUser>, IDataProtectionKeyContext
     {
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
             : base(options)
@@ -85,6 +86,10 @@ namespace EventsApp.Data
         public DbSet<DayPlanItem> DayPlanItems { get; set; } = null!;
 
         public DbSet<UserPushSubscription> UserPushSubscriptions { get; set; } = null!;
+
+        public DbSet<DataProtectionKey> DataProtectionKeys { get; set; } = null!;
+
+        public DbSet<PasswordResetRequest> PasswordResetRequests { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -611,6 +616,23 @@ namespace EventsApp.Data
 
                 entity.HasIndex(s => s.Endpoint).IsUnique();
                 entity.HasIndex(s => new { s.UserId, s.LastSeenAt });
+            });
+
+            builder.Entity<PasswordResetRequest>(entity =>
+            {
+                entity.HasKey(r => r.Id);
+                entity.Property(r => r.Id).HasMaxLength(32);
+                entity.Property(r => r.Email).HasMaxLength(256);
+                entity.Property(r => r.Code).IsRequired();
+
+                entity.HasOne(r => r.User)
+                      .WithMany()
+                      .HasForeignKey(r => r.UserId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(r => r.UserId);
+                entity.HasIndex(r => r.ExpiresAt);
+                entity.HasIndex(r => r.UsedAt);
             });
 
             builder.Entity<Ticket>(entity =>

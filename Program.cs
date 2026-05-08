@@ -6,6 +6,7 @@ using EventsApp.Services;
 using EventsApp.Services.AI;
 using EventsApp.Services.Email;
 using EventsApp.Services.Geocoding;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
@@ -44,6 +45,10 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options
         .UseNpgsql(connectionString)
         .ConfigureWarnings(warnings => warnings.Ignore(RelationalEventId.BoolWithDefaultWarning)));
+
+builder.Services.AddDataProtection()
+    .SetApplicationName("Evento")
+    .PersistKeysToDbContext<ApplicationDbContext>();
 
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
