@@ -1,42 +1,10 @@
 @model ConversationDetailsViewModel
 @{
-
-<script src="https://cdn.jsdelivr.net/npm/@microsoft/signalr@7.0.5/dist/browser/signalr.min.js"></script>
-<script>
+    ViewData["Title"] = Model.OtherUserName;
+    var initial = string.IsNullOrWhiteSpace(Model.OtherUserName) ? "?" : Model.OtherUserName[..1].ToUpperInvariant();
 }
-        // SignalR realtime updates
-        try {
-            var conversationToken = '@Model.Token';
-            var currentUserId = '@(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "")';
-            if (window.signalR && typeof buildBubble === 'function') {
-                var connection = new signalR.HubConnectionBuilder()
-                    .withUrl('/hubs/chat')
-                    .withAutomaticReconnect()
-                    .build();
 
-                connection.on('NewMessage', function (m) {
-                    if (!m || !m.id) return;
-                    if (m.id <= lastId) return;
-                    var wasAtBottom = thread.scrollHeight - thread.scrollTop - thread.clientHeight < 80;
-                    m.isMine = (m.senderId === currentUserId);
-                    thread.appendChild(buildBubble(m));
-                    lastId = m.id;
-                    if (wasAtBottom) scrollBottom();
-                });
-
-                connection.start().then(function () {
-                    connection.invoke('JoinConversation', conversationToken).catch(function () { });
-                }).catch(function (err) { console && console.error && console.error(err); });
-
-                window.addEventListener('beforeunload', function () {
-                    try { connection.invoke('LeaveConversation', conversationToken); } catch (e) { }
-                });
-            }
-        } catch (e) { console && console.error && console.error(e); }
-    })();
-
-    (function () {
-        function closeAllMenus() {
+<section class="groove-app-page social-messages-page">
     <div class="social-chat-shell">
         <header class="social-chat-header">
             <a asp-action="Index" class="btn btn-sm btn-outline-secondary" title="Back" data-i18n-title="common.back">
@@ -274,9 +242,11 @@
 
 @if (Model.Status == ConversationStatus.Accepted)
 {
+    <script src="https://cdn.jsdelivr.net/npm/@@microsoft/signalr@7.0.5/dist/browser/signalr.min.js"></script>
     <script>
     (function () {
         var conversationToken = '@Model.Token';
+        var currentUserId = '@(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "")';
         var thread = document.querySelector('.social-chat-thread');
         var lastId = @(Model.Messages.Count > 0 ? Model.Messages[^1].Id : 0);
         var pollTimer = null;
@@ -330,6 +300,34 @@
             }
             article.appendChild(meta);
             return article;
+        }
+
+        try {
+            if (window.signalR) {
+                var connection = new signalR.HubConnectionBuilder()
+                    .withUrl('/hubs/chat')
+                    .withAutomaticReconnect()
+                    .build();
+
+                connection.on('NewMessage', function (m) {
+                    if (!m || !m.id || m.id <= lastId) return;
+                    var wasAtBottom = thread.scrollHeight - thread.scrollTop - thread.clientHeight < 80;
+                    m.isMine = m.senderId === currentUserId;
+                    thread.appendChild(buildBubble(m));
+                    lastId = m.id;
+                    if (wasAtBottom) scrollBottom();
+                });
+
+                connection.start().then(function () {
+                    connection.invoke('JoinConversation', conversationToken).catch(function () { });
+                }).catch(function (err) { if (console && console.error) console.error(err); });
+
+                window.addEventListener('beforeunload', function () {
+                    try { connection.invoke('LeaveConversation', conversationToken); } catch (e) { }
+                });
+            }
+        } catch (e) {
+            if (console && console.error) console.error(e);
         }
 
         function schedule(delay) {

@@ -81,6 +81,8 @@ namespace EventsApp.Areas.Identity.Pages.Account
                         <h2>Смяна на парола</h2>
                         <p>Получихме заявка за смяна на паролата в Evento.</p>
                         <p><a href="{encodedUrl}" style="display:inline-block;background:#5b4bff;color:#ffffff;padding:12px 18px;border-radius:10px;text-decoration:none;font-weight:700">Смени паролата</a></p>
+                        <p style="margin-top:18px">Ако бутонът не се отваря, копирай този линк в браузъра:</p>
+                        <p style="word-break:break-all"><a href="{encodedUrl}">{encodedUrl}</a></p>
                         <p>Ако не си заявил това, можеш спокойно да игнорираш този имейл.</p>
                     </div>
                     """);
