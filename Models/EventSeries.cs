@@ -91,6 +91,9 @@ namespace EventsApp.Models
         [Required]
         public EventGenre Category { get; set; }
 
+        [MaxLength(512)]
+        public string? GenreTags { get; set; }
+
         [Required]
         [MaxLength(GlobalConstants.Event.AddressMaxLength)]
         public string Location { get; set; } = null!;

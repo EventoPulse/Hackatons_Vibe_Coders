@@ -73,6 +73,47 @@ namespace EventsApp.Common
             return false;
         }
 
+        public static IReadOnlyList<string> GetCanonicalCities()
+        {
+            return Coords
+                .Keys
+                .Where(IsAscii)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(city => city)
+                .ToArray();
+        }
+
+        public static IReadOnlyDictionary<string, (double Lat, double Lng)> GetCanonicalCoordinates()
+        {
+            return Coords
+                .Where(kv => IsAscii(kv.Key))
+                .GroupBy(kv => kv.Key, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(
+                    group => group.Key,
+                    group => group.First().Value,
+                    StringComparer.OrdinalIgnoreCase);
+        }
+
+        public static string? GetCanonicalName(string? city)
+        {
+            if (string.IsNullOrWhiteSpace(city))
+            {
+                return null;
+            }
+
+            var trimmed = city.Trim();
+            if (!Coords.TryGetValue(trimmed, out var match))
+            {
+                return trimmed;
+            }
+
+            return Coords
+                .Where(kv => kv.Value.Lat == match.Lat && kv.Value.Lng == match.Lng && IsAscii(kv.Key))
+                .Select(kv => kv.Key)
+                .OrderBy(name => name)
+                .FirstOrDefault() ?? trimmed;
+        }
+
         public static IReadOnlyList<string> GetEquivalentNames(string? city)
         {
             if (string.IsNullOrWhiteSpace(city))
@@ -91,6 +132,11 @@ namespace EventsApp.Common
                 .Select(kv => kv.Key)
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToArray();
+        }
+
+        private static bool IsAscii(string value)
+        {
+            return !string.IsNullOrWhiteSpace(value) && value.All(ch => ch < 128);
         }
     }
 }

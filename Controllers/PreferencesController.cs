@@ -1,3 +1,4 @@
+using EventsApp.Common;
 using EventsApp.Data;
 using EventsApp.Models;
 using EventsApp.ViewModels.Preferences;
@@ -30,7 +31,7 @@ namespace EventsApp.Controllers
             return View(new PreferencesViewModel
             {
                 PreferredGenres = prefs.PreferredGenres.ToList(),
-                PreferredCity = prefs.PreferredCity,
+                PreferredCity = CityCoordinates.GetCanonicalName(prefs.PreferredCity) ?? prefs.PreferredCity,
                 MinAge = prefs.MinAge,
                 MaxDistanceKm = prefs.MaxDistanceKm,
             });
@@ -46,7 +47,7 @@ namespace EventsApp.Controllers
                 : new PreferencesViewModel
                 {
                     PreferredGenres = prefs.PreferredGenres.ToList(),
-                    PreferredCity = prefs.PreferredCity,
+                    PreferredCity = CityCoordinates.GetCanonicalName(prefs.PreferredCity) ?? prefs.PreferredCity,
                     MinAge = prefs.MinAge,
                     MaxDistanceKm = prefs.MaxDistanceKm,
                 };
@@ -71,13 +72,14 @@ namespace EventsApp.Controllers
             var genres = (input.PreferredGenres ?? new List<EventGenre>())
                 .Distinct()
                 .ToList();
+            var preferredCity = CityCoordinates.GetCanonicalName(input.PreferredCity);
 
             if (prefs == null)
             {
                 var created = new UserPreferences
                 {
                     UserId = userId,
-                    PreferredCity = input.PreferredCity,
+                    PreferredCity = preferredCity,
                     MinAge = input.MinAge,
                     MaxDistanceKm = input.MaxDistanceKm,
                 };
@@ -87,7 +89,7 @@ namespace EventsApp.Controllers
             else
             {
                 prefs.PreferredGenres = genres;
-                prefs.PreferredCity = input.PreferredCity;
+                prefs.PreferredCity = preferredCity;
                 prefs.MinAge = input.MinAge;
                 prefs.MaxDistanceKm = input.MaxDistanceKm;
             }

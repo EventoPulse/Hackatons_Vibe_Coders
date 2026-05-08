@@ -1,3 +1,4 @@
+using EventsApp.Common;
 using EventsApp.Models;
 
 namespace EventsApp.ViewModels.Events
@@ -11,6 +12,8 @@ namespace EventsApp.ViewModels.Events
         public string City { get; set; } = null!;
         public DateTime StartTime { get; set; }
         public EventGenre Genre { get; set; }
+        public string? GenreTags { get; set; }
+        public IReadOnlyList<EventGenre> Genres => EventGenreTags.Parse(GenreTags, Genre);
         public bool IsApproved { get; set; }
         public bool HasPendingChanges { get; set; }
         public string OrganizerId { get; set; } = null!;

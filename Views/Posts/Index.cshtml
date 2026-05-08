@@ -6,6 +6,37 @@
     var isSignedIn = User.Identity?.IsAuthenticated == true;
     var canCreatePublicContent = await Permissions.CanCreatePostAsync(User);
     var currentUserId = User.FindFirstValue(System.Security.Claims.ClaimTypes.NameIdentifier);
+    var activeFilter = Model.ActiveFilter ?? "all";
+    var activeSort = Model.ActiveSort ?? "recent";
+    var feedFilters = new[]
+    {
+        new { Key = "all", LabelKey = "feed.filter.all", Label = "Всички", Icon = "bi-grid-3x3-gap" },
+        new { Key = "following", LabelKey = "feed.filter.following", Label = "Следвани", Icon = "bi-person-heart" },
+        new { Key = "events", LabelKey = "feed.filter.events", Label = "За събития", Icon = "bi-calendar-event" },
+        new { Key = "media", LabelKey = "feed.filter.media", Label = "С медия", Icon = "bi-image" },
+        new { Key = "saved", LabelKey = "feed.filter.saved", Label = "Запазени", Icon = "bi-bookmark" },
+        new { Key = "hot", LabelKey = "feed.filter.hot", Label = "Най-активни", Icon = "bi-fire" },
+    };
+    var mainTitleKey = activeFilter switch
+    {
+        "following" => "feed.main.following",
+        "events" => "feed.main.events",
+        "media" => "feed.main.media",
+        "saved" => "feed.main.saved",
+        "hot" => "feed.main.hot",
+        _ => "feed.posts.title",
+    };
+    var mainTitle = activeFilter switch
+    {
+        "following" => "Постове от хората и страниците, които следиш.",
+        "events" => "Публикации, вързани към събития.",
+        "media" => "Постове със снимки и видео.",
+        "saved" => "Твоите запазени публикации.",
+        "hot" => "Постове с най-много реакции.",
+        _ => "Новини от организатори и свежи постове.",
+    };
+    var emptyPostsKey = activeFilter == "all" ? "profile.no.posts" : "feed.filter.empty";
+    var emptyPostsText = activeFilter == "all" ? "Все още няма публикации." : "Няма публикации за този филтър.";
 }
 
 <section class="groove-feed-page social-feed-page social-feed-page--stream">
@@ -34,12 +65,42 @@
                    data-mobile-lazy-input
                    readonly
                    autocomplete="off" />
+            <input type="hidden" name="filter" value="@(activeFilter == "all" ? "" : activeFilter)" />
+            <input type="hidden" name="sort" value="@activeSort" />
             <button type="submit" class="groove-button groove-button-primary" data-i18n="feed.search.action">Търси</button>
             @if (!string.IsNullOrWhiteSpace(Model.SearchQuery))
             {
                 <a asp-controller="Posts" asp-action="Index" class="groove-button groove-button-paper" data-i18n="common.clear">Изчисти</a>
             }
         </form>
+
+        <div class="social-feed-filter-panel">
+            <div class="social-feed-filter-rail" aria-label="Feed filters">
+                @foreach (var option in feedFilters)
+                {
+                    var isActive = activeFilter == option.Key;
+                    <a asp-controller="Posts"
+                       asp-action="Index"
+                       asp-route-q="@Model.SearchQuery"
+                       asp-route-filter="@(option.Key == "all" ? null : option.Key)"
+                       asp-route-sort="@activeSort"
+                       class="social-feed-filter-chip @(isActive ? "is-active" : "")">
+                        <i class="bi @option.Icon"></i>
+                        <span data-i18n="@option.LabelKey">@option.Label</span>
+                    </a>
+                }
+            </div>
+            <form asp-controller="Posts" asp-action="Index" method="get" class="social-feed-sort-form">
+                <input type="hidden" name="q" value="@Model.SearchQuery" />
+                <input type="hidden" name="filter" value="@(activeFilter == "all" ? "" : activeFilter)" />
+                <label for="feed-sort" data-i18n="feed.sort.label">Подреди</label>
+                <select id="feed-sort" name="sort" onchange="this.form.submit()">
+                    <option value="recent" selected="@(activeSort == "recent")" data-i18n="feed.sort.recent">Най-нови</option>
+                    <option value="popular" selected="@(activeSort == "popular")" data-i18n="feed.sort.popular">Популярни</option>
+                    <option value="discussed" selected="@(activeSort == "discussed")" data-i18n="feed.sort.discussed">С разговор</option>
+                </select>
+            </form>
+        </div>
 
         @if (!string.IsNullOrWhiteSpace(Model.SearchQuery))
         {
@@ -134,7 +195,7 @@
 
     <div class="social-feed-shell social-feed-shell--stream">
         <main class="social-feed-main">
-            @if (Model.FriendsActivity.Any())
+            @if (activeFilter == "all" && Model.FriendsActivity.Any())
             {
                 <section class="social-feed-section social-feed-section--stream">
                     <div class="social-section-heading social-section-heading--compact">
@@ -167,12 +228,16 @@
                 <div class="social-section-heading social-section-heading--compact">
                     <div>
                         <span class="groove-kicker" data-i18n="feed.posts.kicker">Публикации</span>
-                        <h2 data-i18n="feed.posts.title">Новини от организатори и свежи постове.</h2>
+                        <h2 data-i18n="@mainTitleKey">@mainTitle</h2>
                     </div>
+                    <span class="social-feed-count-pill" title="@mainTitle">
+                        <i class="bi bi-layers"></i>
+                        @Model.VisiblePostsCount
+                    </span>
                 </div>
                 @if (Model.OrganizerPosts.Any())
                 {
-                    <div class="social-post-list social-post-list--stream" data-progressive-list data-initial-count="6" data-step-count="4">
+                    <div class="social-post-list social-post-list--stream" data-progressive-list data-initial-count="8" data-step-count="6">
                         @foreach (var post in Model.OrganizerPosts)
                         {
                             <div data-progressive-item>
@@ -180,7 +245,7 @@
                             </div>
                         }
                     </div>
-                    @if (Model.OrganizerPosts.Count > 6)
+                    @if (Model.OrganizerPosts.Count > 8)
                     {
                         <div class="evt-load-more evt-load-more--compact">
                             <button type="button" class="evt-btn evt-btn-ghost" data-progressive-more>
@@ -194,7 +259,7 @@
                 {
                     <div class="social-empty-panel">
                         <i class="bi bi-journal-text"></i>
-                        <span data-i18n="profile.no.posts">Все още няма публикации.</span>
+                        <span data-i18n="@emptyPostsKey">@emptyPostsText</span>
                     </div>
                 }
             </section>

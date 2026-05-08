@@ -10,7 +10,7 @@ namespace EventsApp.Services
 {
     public interface ISocialFeedService
     {
-        Task<FeedViewModel> BuildFeedAsync(string? userId, string? searchTerm = null, CancellationToken cancellationToken = default);
+        Task<FeedViewModel> BuildFeedAsync(string? userId, string? searchTerm = null, string? filter = null, string? sort = null, CancellationToken cancellationToken = default);
         Task TrackActivityAsync(string userId, UserActivityType activityType, int? eventId = null, int? postId = null, string? targetUserId = null, string? value = null, CancellationToken cancellationToken = default);
     }
 
@@ -23,10 +23,12 @@ namespace EventsApp.Services
             _db = db;
         }
 
-        public async Task<FeedViewModel> BuildFeedAsync(string? userId, string? searchTerm = null, CancellationToken cancellationToken = default)
+        public async Task<FeedViewModel> BuildFeedAsync(string? userId, string? searchTerm = null, string? filter = null, string? sort = null, CancellationToken cancellationToken = default)
         {
             var now = DateTime.UtcNow;
             var normalizedSearch = string.IsNullOrWhiteSpace(searchTerm) ? null : searchTerm.Trim();
+            var normalizedFilter = NormalizeFeedFilter(filter);
+            var normalizedSort = normalizedFilter == "hot" ? "popular" : NormalizeFeedSort(sort);
             var followedIds = userId == null
                 ? new List<string>()
                 : await _db.Follows
@@ -151,13 +153,10 @@ namespace EventsApp.Services
                 ? new List<PostCardViewModel>()
                 : await QueryPostCards(friendPostsQuery, userId, cancellationToken);
 
-            var organizerPosts = await QueryPostCards(_db.Posts
-                    .AsNoTracking()
-                    .Where(p => p.EventId != null
-                        || (p.OrganizerProfile != null && p.OrganizerProfile.IsActive && p.OrganizerProfile.IsApproved)
-                        || (p.Organizer.OrganizerData != null && p.Organizer.OrganizerData.Approved))
-                    .OrderByDescending(p => p.CreatedAt)
-                    .Take(12),
+            var organizerPosts = await QueryPostCards(ApplyPostSort(
+                    BuildPostFeedQuery(normalizedFilter, userId, followedIds),
+                    normalizedSort)
+                    .Take(36),
                 userId,
                 cancellationToken);
 
@@ -197,6 +196,9 @@ namespace EventsApp.Services
                 OrganizerPosts = organizerPosts,
                 SuggestedProfiles = suggestedProfiles,
                 SearchQuery = normalizedSearch,
+                ActiveFilter = normalizedFilter,
+                ActiveSort = normalizedSort,
+                VisiblePostsCount = organizerPosts.Count,
                 SearchResults = searchResults,
                 HasPersonalSignals = hasPersonalSignals,
                 PreferredCity = prefs?.PreferredCity,
@@ -243,6 +245,74 @@ namespace EventsApp.Services
             });
 
             await _db.SaveChangesAsync(cancellationToken);
+        }
+
+        private IQueryable<Post> BuildPostFeedQuery(string filter, string? userId, IReadOnlyCollection<string> followedIds)
+        {
+            var query = VisiblePostsQuery();
+
+            return filter switch
+            {
+                "following" => userId == null || followedIds.Count == 0
+                    ? query.Where(p => false)
+                    : query.Where(p => followedIds.Contains(p.OrganizerId)),
+                "events" => query.Where(p => p.EventId != null),
+                "media" => query.Where(p => p.Images.Any()),
+                "saved" => userId == null
+                    ? query.Where(p => false)
+                    : query.Where(p => p.Saves.Any(s => s.UserId == userId)),
+                "hot" => query,
+                _ => query,
+            };
+        }
+
+        private IQueryable<Post> VisiblePostsQuery()
+        {
+            return _db.Posts
+                .AsNoTracking()
+                .Where(p => p.EventId != null
+                    || (p.OrganizerProfile != null && p.OrganizerProfile.IsActive && p.OrganizerProfile.IsApproved)
+                    || (p.Organizer.OrganizerData != null && p.Organizer.OrganizerData.Approved));
+        }
+
+        private static IQueryable<Post> ApplyPostSort(IQueryable<Post> query, string sort)
+        {
+            return sort switch
+            {
+                "popular" => query
+                    .OrderByDescending(p => p.Likes.Count * 3
+                        + p.Comments.Count * 4
+                        + p.Saves.Count * 2
+                        + p.UserActivities.Count(a => a.ActivityType == UserActivityType.PostViewed) / 2)
+                    .ThenByDescending(p => p.CreatedAt),
+                "discussed" => query
+                    .OrderByDescending(p => p.Comments.Count)
+                    .ThenByDescending(p => p.CreatedAt),
+                _ => query.OrderByDescending(p => p.CreatedAt),
+            };
+        }
+
+        private static string NormalizeFeedFilter(string? filter)
+        {
+            return filter?.Trim().ToLowerInvariant() switch
+            {
+                "following" => "following",
+                "events" => "events",
+                "media" => "media",
+                "saved" => "saved",
+                "hot" => "hot",
+                _ => "all",
+            };
+        }
+
+        private static string NormalizeFeedSort(string? sort)
+        {
+            return sort?.Trim().ToLowerInvariant() switch
+            {
+                "popular" => "popular",
+                "discussed" => "discussed",
+                _ => "recent",
+            };
         }
 
         private async Task<List<FeedSearchResultViewModel>> SearchProfilesAsync(string searchTerm, string? currentUserId, CancellationToken cancellationToken)

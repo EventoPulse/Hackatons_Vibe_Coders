@@ -11,6 +11,7 @@
     var isHot = heat >= 8;
     var isToday = Model.StartTime.Date == DateTime.UtcNow.Date;
     var organizerInitial = !string.IsNullOrWhiteSpace(Model.OrganizerName) ? Model.OrganizerName.Trim()[..1].ToUpper() : "?";
+    var cardGenres = Model.Genres.Take(EventGenreTags.MaxGenresPerEvent).ToList();
 }
 
 <div class="card event-card evt-card" data-event-id="@Model.Id">
@@ -87,6 +88,16 @@
                 </span>
             }
         </div>
+
+        @if (cardGenres.Count > 1)
+        {
+            <div class="evt-card__genres">
+                @foreach (var genre in cardGenres)
+                {
+                    <span data-i18n="@($"genre.{genre}")">@genre.GetDisplayName()</span>
+                }
+            </div>
+        }
 
         @if (Model.OrganizerProfileId.HasValue)
         {

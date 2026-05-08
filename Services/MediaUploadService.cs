@@ -18,12 +18,16 @@ namespace EventsApp.Services
     public interface IRemoteMediaService
     {
         Task<string?> CreateReadUrlAsync(string mediaKey, CancellationToken cancellationToken = default);
+        Task DeleteAsync(string mediaUrlOrKey, CancellationToken cancellationToken = default);
     }
 
     public sealed class NullRemoteMediaService : IRemoteMediaService
     {
         public Task<string?> CreateReadUrlAsync(string mediaKey, CancellationToken cancellationToken = default)
             => Task.FromResult<string?>(null);
+
+        public Task DeleteAsync(string mediaUrlOrKey, CancellationToken cancellationToken = default)
+            => Task.CompletedTask;
     }
 
     public class MediaUploadService : IMediaUploadService

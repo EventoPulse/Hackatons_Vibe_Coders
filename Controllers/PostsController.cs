@@ -45,10 +45,10 @@ namespace EventsApp.Controllers
             _mentions = mentions;
         }
 
-        public async Task<IActionResult> Index(string? q)
+        public async Task<IActionResult> Index(string? q, string? filter, string? sort)
         {
             var userId = _userManager.GetUserId(User);
-            var feed = await _socialFeed.BuildFeedAsync(userId, q);
+            var feed = await _socialFeed.BuildFeedAsync(userId, q, filter, sort);
             return View(feed);
         }
 

@@ -397,6 +397,10 @@ namespace EventsApp.Migrations
                     b.Property<int>("Genre")
                         .HasColumnType("integer");
 
+                    b.Property<string>("GenreTags")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
                     b.Property<string>("ImageUrl")
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
@@ -806,6 +810,10 @@ namespace EventsApp.Migrations
 
                     b.Property<int>("Category")
                         .HasColumnType("integer");
+
+                    b.Property<string>("GenreTags")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
 
                     b.Property<string>("City")
                         .IsRequired()

@@ -1,3 +1,4 @@
+using EventsApp.Common;
 using EventsApp.Models;
 using EventsApp.ViewModels.Layouts;
 using EventsApp.ViewModels.Social;
@@ -13,6 +14,8 @@ namespace EventsApp.ViewModels.Events
         public DateTime StartTime { get; set; }
         public DateTime EndTime { get; set; }
         public EventGenre Genre { get; set; }
+        public string? GenreTags { get; set; }
+        public IReadOnlyList<EventGenre> Genres => EventGenreTags.Parse(GenreTags, Genre);
         public string? ImageUrl { get; set; }
         public bool IsApproved { get; set; }
         public bool HasPendingChanges { get; set; }

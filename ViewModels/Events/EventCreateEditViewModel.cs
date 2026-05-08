@@ -42,6 +42,8 @@ namespace EventsApp.ViewModels.Events
         [Display(Name = "Жанр")]
         public EventGenre Genre { get; set; }
 
+        public List<EventGenre> SelectedGenres { get; set; } = new();
+
         [Display(Name = "Публична страница")]
         public int? OrganizerProfileId { get; set; }
 

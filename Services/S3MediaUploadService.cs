@@ -114,6 +114,29 @@ namespace EventsApp.Services
             return Task.FromResult<string?>(_client.GetPreSignedURL(request));
         }
 
+        public async Task DeleteAsync(string mediaUrlOrKey, CancellationToken cancellationToken = default)
+        {
+            var key = NormalizeMediaKey(mediaUrlOrKey);
+            if (string.IsNullOrWhiteSpace(key))
+            {
+                return;
+            }
+
+            try
+            {
+                await _client.DeleteObjectAsync(new DeleteObjectRequest
+                {
+                    BucketName = _bucket,
+                    Key = key,
+                }, cancellationToken);
+                _logger.LogInformation("Deleted S3 media {Key}", key);
+            }
+            catch (AmazonS3Exception ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                _logger.LogDebug("S3 media {Key} was already missing.", key);
+            }
+        }
+
         public void Dispose()
         {
             _client.Dispose();
@@ -211,13 +234,23 @@ namespace EventsApp.Services
         {
             if (string.IsNullOrWhiteSpace(mediaKey) ||
                 mediaKey.Contains("..", StringComparison.Ordinal) ||
-                mediaKey.Contains("\\", StringComparison.Ordinal) ||
-                mediaKey.StartsWith("/", StringComparison.Ordinal))
+                mediaKey.Contains("\\", StringComparison.Ordinal))
             {
                 return string.Empty;
             }
 
-            var key = Uri.UnescapeDataString(mediaKey).Trim('/');
+            var key = Uri.UnescapeDataString(mediaKey).Trim();
+            if (Uri.TryCreate(key, UriKind.Absolute, out var uri))
+            {
+                key = uri.AbsolutePath;
+            }
+
+            if (key.StartsWith("/media/", StringComparison.OrdinalIgnoreCase))
+            {
+                key = key["/media/".Length..];
+            }
+
+            key = key.Trim('/');
             if (string.IsNullOrWhiteSpace(_keyPrefix))
             {
                 return key;

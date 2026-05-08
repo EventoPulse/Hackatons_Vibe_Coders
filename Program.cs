@@ -97,12 +97,14 @@ builder.Services.AddTransient<IEmailSender, SmtpEmailSender>();
 builder.Services.AddScoped<IPushNotificationService, WebPushNotificationService>();
 builder.Services.AddScoped<IMentionService, MentionService>();
 builder.Services.AddScoped<ISocialFeedService, SocialFeedService>();
+builder.Services.AddScoped<IEventDeletionService, EventDeletionService>();
 builder.Services.AddScoped<IRecurringEventService, RecurringEventService>();
 builder.Services.AddScoped<ILayoutService, LayoutService>();
 builder.Services.AddScoped<ISeatReservationService, SeatReservationService>();
 builder.Services.AddScoped<IPlatformPermissionService, PlatformPermissionService>();
 builder.Services.AddScoped<IBusinessContextService, BusinessContextService>();
 builder.Services.AddScoped<IActingIdentityService, ActingIdentityService>();
+builder.Services.AddHostedService<ExpiredEventCleanupHostedService>();
 
 builder.Services.Configure<AiOptions>(builder.Configuration.GetSection(AiOptions.SectionName));
 builder.Services.Configure<SirmaAiOptions>(builder.Configuration.GetSection(SirmaAiOptions.SectionName));

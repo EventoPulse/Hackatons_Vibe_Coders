@@ -12,6 +12,9 @@ namespace EventsApp.ViewModels.Social
         public IReadOnlyList<ProfileSummaryViewModel> SuggestedProfiles { get; set; } = Array.Empty<ProfileSummaryViewModel>();
         public IReadOnlyList<FeedSearchResultViewModel> SearchResults { get; set; } = Array.Empty<FeedSearchResultViewModel>();
         public string? SearchQuery { get; set; }
+        public string ActiveFilter { get; set; } = "all";
+        public string ActiveSort { get; set; } = "recent";
+        public int VisiblePostsCount { get; set; }
         public bool HasPersonalSignals { get; set; }
         public string? PreferredCity { get; set; }
         public string? CurrentUserDisplayName { get; set; }

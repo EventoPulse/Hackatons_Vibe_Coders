@@ -11,6 +11,7 @@ namespace EventsApp.ViewModels.Events
         public DateTime StartTime { get; set; }
         public DateTime EndTime { get; set; }
         public EventGenre Genre { get; set; }
+        public string? GenreTags { get; set; }
         public int? OrganizerProfileId { get; set; }
         public int? BusinessWorkspaceId { get; set; }
         public string? ImageUrl { get; set; }

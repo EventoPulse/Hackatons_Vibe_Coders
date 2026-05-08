@@ -32,6 +32,44 @@
         fields.classList.toggle('is-visible', needsLayout);
     }
 
+    function bindGenrePicker() {
+        document.querySelectorAll('[data-event-genre-picker]').forEach(function (picker) {
+            var max = parseInt(picker.getAttribute('data-max-genres') || '3', 10);
+            var hidden = document.querySelector('input[name="Genre"]');
+            var status = picker.parentElement ? picker.parentElement.querySelector('[data-genre-picker-status]') : null;
+
+            function sync(changed) {
+                var checked = Array.prototype.slice.call(picker.querySelectorAll('input[type="checkbox"]:checked'));
+                if (checked.length > max && changed) {
+                    changed.checked = false;
+                    checked = Array.prototype.slice.call(picker.querySelectorAll('input[type="checkbox"]:checked'));
+                    if (status) {
+                        status.textContent = 'Можеш да избереш до ' + max + ' жанра.';
+                    }
+                } else if (status) {
+                    status.textContent = '';
+                }
+
+                picker.querySelectorAll('.event-genre-option').forEach(function (option) {
+                    var input = option.querySelector('input[type="checkbox"]');
+                    option.classList.toggle('is-selected', !!input && input.checked);
+                });
+
+                if (hidden && checked.length > 0) {
+                    hidden.value = checked[0].value;
+                }
+            }
+
+            picker.addEventListener('change', function (event) {
+                var input = event.target.closest('input[type="checkbox"]');
+                if (!input) return;
+                sync(input);
+            });
+
+            sync();
+        });
+    }
+
     document.querySelectorAll('input[name="RecurrenceType"]').forEach(function (input) {
         input.addEventListener('change', updateRecurrence);
     });
@@ -42,4 +80,5 @@
 
     updateRecurrence();
     updateTicketing();
+    bindGenrePicker();
 })();

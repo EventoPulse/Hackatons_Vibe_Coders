@@ -70,7 +70,14 @@
             <div class="groove-form-grid">
                 <div class="mb-3">
                     <label asp-for="City" class="form-label"></label>
-                    <input asp-for="City" id="City" class="form-control" autocomplete="off" />
+                    <select asp-for="City" id="City" class="form-select" autocomplete="off">
+                        <option value="">-- Ð˜Ð·Ð±ÐµÑ€Ð¸ Ð³Ñ€Ð°Ð´ --</option>
+                        @foreach (var item in Model.Cities)
+                        {
+                            var latlng = Model.CityCoordinatesMap != null && Model.CityCoordinatesMap.ContainsKey(item.Value) ? Model.CityCoordinatesMap[item.Value] : string.Empty;
+                            <option value="@item.Value" data-latlng="@latlng">@item.Text</option>
+                        }
+                    </select>
                     <span asp-validation-for="City" class="text-danger small"></span>
                 </div>
                 <div class="mb-3">
@@ -118,8 +125,23 @@
 
             <div class="mb-3">
                 <label asp-for="Genre" class="form-label"></label>
-                <select asp-for="Genre" asp-items="Html.GetEnumSelectList<EventGenre>()" class="form-select"></select>
-                <span asp-validation-for="Genre" class="text-danger small"></span>
+                <input asp-for="Genre" type="hidden" />
+                @{
+                    var selectedGenres = new HashSet<EventGenre>(Model.SelectedGenres ?? new List<EventGenre>());
+                }
+                <div class="event-genre-picker" data-event-genre-picker data-max-genres="@EventGenreTags.MaxGenresPerEvent">
+                    @foreach (var genre in Enum.GetValues<EventGenre>())
+                    {
+                        var selected = selectedGenres.Contains(genre);
+                        <label class="event-genre-option @(selected ? "is-selected" : "")">
+                            <input type="checkbox" name="SelectedGenres" value="@genre" @(selected ? "checked" : "") />
+                            <span data-i18n="@($"genre.{genre}")">@genre.GetDisplayName()</span>
+                        </label>
+                    }
+                </div>
+                <div class="form-text" data-i18n="event.genres.help">Choose up to 3 genres. The first one is used as the primary category.</div>
+                <div class="form-text event-genre-picker__status" data-genre-picker-status></div>
+                <span asp-validation-for="SelectedGenres" class="text-danger small"></span>
             </div>
 
             @if (!string.IsNullOrWhiteSpace(Model.ImageUrl))

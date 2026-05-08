@@ -67,7 +67,8 @@ namespace EventsApp.Controllers
 
             if (genre.HasValue)
             {
-                query = query.Where(e => e.Genre == genre.Value);
+                var genreToken = EventGenreTags.Token(genre.Value);
+                query = query.Where(e => e.Genre == genre.Value || (e.GenreTags != null && e.GenreTags.Contains(genreToken)));
             }
 
             if (dateFrom.HasValue)
@@ -251,6 +252,7 @@ namespace EventsApp.Controllers
                 City = e.City,
                 StartTime = e.StartTime,
                 Genre = e.Genre,
+                GenreTags = e.GenreTags,
                 IsApproved = e.IsApproved,
                 OrganizerId = e.OrganizerId,
                 OrganizerProfileId = e.OrganizerProfileId,

@@ -1,4 +1,4 @@
-using EventsApp.Common;
+﻿using EventsApp.Common;
 using EventsApp.Data;
 using EventsApp.Models;
 using EventsApp.ViewModels.Events;
@@ -31,6 +31,7 @@ namespace EventsApp.Controllers
         private readonly IBusinessContextService _businessContext;
         private readonly IActingIdentityService _actingIdentity;
         private readonly IMentionService _mentions;
+        private readonly IEventDeletionService _eventDeletion;
 
         public EventsController(
             ApplicationDbContext db,
@@ -44,7 +45,8 @@ namespace EventsApp.Controllers
             IPlatformPermissionService permissions,
             IBusinessContextService businessContext,
             IActingIdentityService actingIdentity,
-            IMentionService mentions)
+            IMentionService mentions,
+            IEventDeletionService eventDeletion)
         {
             _db = db;
             _userManager = userManager;
@@ -58,6 +60,7 @@ namespace EventsApp.Controllers
             _businessContext = businessContext;
             _actingIdentity = actingIdentity;
             _mentions = mentions;
+            _eventDeletion = eventDeletion;
         }
 
         public class GenerateDescriptionRequest
@@ -202,11 +205,12 @@ namespace EventsApp.Controllers
                 StartTime = selectedOccurrence?.StartDateTime ?? ev.StartTime,
                 EndTime = selectedOccurrence?.EndDateTime ?? ev.EndTime,
                 Genre = ev.Genre,
+                GenreTags = ev.GenreTags,
                 ImageUrl = ev.ImageUrl,
                 IsApproved = ev.IsApproved,
                 HasPendingChanges = ev.ChangeRequests.Any(r => r.Status == EventChangeRequestStatus.Pending),
                 Address = ev.Address,
-                City = ev.City,
+                City = CityCoordinates.GetCanonicalName(ev.City) ?? ev.City,
                 Latitude = ev.Latitude,
                 Longitude = ev.Longitude,
                 OrganizerId = ev.OrganizerId,
@@ -325,6 +329,7 @@ namespace EventsApp.Controllers
                     City = e.City,
                     StartTime = e.StartTime,
                     Genre = e.Genre,
+                    GenreTags = e.GenreTags,
                     IsApproved = e.IsApproved,
                     OrganizerId = e.OrganizerId,
                     OrganizerProfileId = e.OrganizerProfileId,
@@ -394,12 +399,14 @@ namespace EventsApp.Controllers
                 : await ResolveOrganizerProfileAsync(input.OrganizerProfileId);
             if (!isAdmin && profile == null)
             {
-                ModelState.AddModelError(nameof(input.OrganizerProfileId), "Избери активна публична организаторска страница.");
+                ModelState.AddModelError(nameof(input.OrganizerProfileId), "Ð˜Ð·Ð±ÐµÑ€Ð¸ Ð°ÐºÑ‚Ð¸Ð²Ð½Ð° Ð¿ÑƒÐ±Ð»Ð¸Ñ‡Ð½Ð° Ð¾Ñ€Ð³Ð°Ð½Ð¸Ð·Ð°Ñ‚Ð¾Ñ€ÑÐºÐ° ÑÑ‚Ñ€Ð°Ð½Ð¸Ñ†Ð°.");
             }
+
+            NormalizeCityAndGenres(input);
 
             if (input.EndTime <= input.StartTime)
             {
-                ModelState.AddModelError(nameof(input.EndTime), "Крайният час трябва да е след началния.");
+                ModelState.AddModelError(nameof(input.EndTime), "ÐšÑ€Ð°Ð¹Ð½Ð¸ÑÑ‚ Ñ‡Ð°Ñ Ñ‚Ñ€ÑÐ±Ð²Ð° Ð´Ð° Ðµ ÑÐ»ÐµÐ´ Ð½Ð°Ñ‡Ð°Ð»Ð½Ð¸Ñ.");
             }
 
             ValidateRecurringInput(input);
@@ -408,12 +415,7 @@ namespace EventsApp.Controllers
 
             if (!ModelState.IsValid)
             {
-                input.CanEditApproval = isAdmin;
-                input.Cities = GetAllBgCities();
-                input.CityCoordinatesMap = GetAllBgCitiesMap();
-                input.OrganizerProfiles = await GetOrganizerProfileOptionsAsync();
-                input.VenueLayouts = await GetVenueLayoutOptionsAsync();
-                await PopulateBusinessContextAsync(input);
+                await PrepareEventFormAsync(input, isAdmin);
                 return View(input);
             }
 
@@ -444,6 +446,7 @@ namespace EventsApp.Controllers
                 StartTime = eventStart,
                 EndTime = eventEnd,
                 Genre = input.Genre,
+                GenreTags = EventGenreTags.Serialize(input.SelectedGenres),
                 Latitude = input.Latitude,
                 Longitude = input.Longitude,
                 IsApproved = isAdmin && input.IsApproved,
@@ -512,46 +515,64 @@ namespace EventsApp.Controllers
 
             await EnsureSeatInventoriesForEventAsync(ev.Id);
 
-            TempData["StatusMessage"] = "Събитието е създадено.";
+            TempData["StatusMessage"] = "Ð¡ÑŠÐ±Ð¸Ñ‚Ð¸ÐµÑ‚Ð¾ Ðµ ÑÑŠÐ·Ð´Ð°Ð´ÐµÐ½Ð¾.";
             return RedirectToAction(nameof(Details), new { id = ev.Id });
         }
 
-        // Връща всички градове от CityCoordinates
+        // Ð’Ñ€ÑŠÑ‰Ð° Ð²ÑÐ¸Ñ‡ÐºÐ¸ Ð³Ñ€Ð°Ð´Ð¾Ð²Ðµ Ð¾Ñ‚ CityCoordinates
         private List<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> GetAllBgCities()
         {
-            var cities = typeof(EventsApp.Common.CityCoordinates)
-                .GetField("Coords", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)
-                ?.GetValue(null) as Dictionary<string, (double Lat, double Lng)>;
-
-            if (cities == null) return new List<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>();
-
-            return cities
-                .Where(kv => !string.IsNullOrWhiteSpace(kv.Key) && kv.Key.All(ch => ch < 128))
-                .Select(kv => kv.Key)
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .OrderBy(c => c)
+            return CityCoordinates
+                .GetCanonicalCities()
                 .Select(c => new Microsoft.AspNetCore.Mvc.Rendering.SelectListItem { Value = c, Text = c })
                 .ToList();
         }
 
         private Dictionary<string, string> GetAllBgCitiesMap()
         {
-            var cities = typeof(EventsApp.Common.CityCoordinates)
-                .GetField("Coords", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)
-                ?.GetValue(null) as Dictionary<string, (double Lat, double Lng)>;
-
             var dict = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            if (cities == null) return dict;
-
-            foreach (var kv in cities)
+            foreach (var kv in CityCoordinates.GetCanonicalCoordinates())
             {
-                var name = kv.Key;
-                // only keep latin keys (the map contains both latin and cyrillic entries)
-                if (string.IsNullOrWhiteSpace(name) || !name.All(ch => ch < 128)) continue;
-                dict[name] = kv.Value.Lat.ToString(System.Globalization.CultureInfo.InvariantCulture) + "," + kv.Value.Lng.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                dict[kv.Key] = kv.Value.Lat.ToString(System.Globalization.CultureInfo.InvariantCulture) + "," + kv.Value.Lng.ToString(System.Globalization.CultureInfo.InvariantCulture);
             }
 
             return dict;
+        }
+
+        private async Task PrepareEventFormAsync(EventCreateEditViewModel input, bool isAdmin)
+        {
+            input.CanEditApproval = isAdmin;
+            input.Cities = GetAllBgCities();
+            input.CityCoordinatesMap = GetAllBgCitiesMap();
+            input.OrganizerProfiles = await GetOrganizerProfileOptionsAsync();
+            input.VenueLayouts = await GetVenueLayoutOptionsAsync();
+            await PopulateBusinessContextAsync(input);
+        }
+
+        private void NormalizeCityAndGenres(EventCreateEditViewModel input)
+        {
+            input.City = CityCoordinates.GetCanonicalName(input.City) ?? string.Empty;
+
+            var selected = (input.SelectedGenres ?? new List<EventGenre>())
+                .Where(Enum.IsDefined)
+                .Distinct()
+                .ToList();
+
+            if (selected.Count == 0)
+            {
+                ModelState.AddModelError(nameof(input.SelectedGenres), "Select at least one genre.");
+            }
+
+            if (selected.Count > EventGenreTags.MaxGenresPerEvent)
+            {
+                ModelState.AddModelError(nameof(input.SelectedGenres), $"Select up to {EventGenreTags.MaxGenresPerEvent} genres.");
+            }
+
+            input.SelectedGenres = EventGenreTags.Normalize(selected, input.Genre).ToList();
+            if (input.SelectedGenres.Count > 0)
+            {
+                input.Genre = input.SelectedGenres[0];
+            }
         }
         [Authorize(Roles = GlobalConstants.Roles.Admin + "," + GlobalConstants.Roles.Organizer)]
         public async Task<IActionResult> Edit(int id)
@@ -577,11 +598,12 @@ namespace EventsApp.Controllers
                 Id = ev.Id,
                 Title = ev.Title,
                 Description = ev.Description,
-                City = ev.City,
+                City = CityCoordinates.GetCanonicalName(ev.City) ?? ev.City,
                 Address = ev.Address,
                 StartTime = ev.StartTime,
                 EndTime = ev.EndTime,
                 Genre = ev.Genre,
+                SelectedGenres = EventGenreTags.Parse(ev.GenreTags, ev.Genre).ToList(),
                 ImageUrl = ev.ImageUrl,
                 OrganizerProfileId = ev.OrganizerProfileId,
                 Latitude = ev.Latitude,
@@ -599,6 +621,8 @@ namespace EventsApp.Controllers
                 VenueLayoutId = ev.VenueLayoutId,
                 IsApproved = ev.IsApproved,
                 CanEditApproval = isAdmin,
+                Cities = GetAllBgCities(),
+                CityCoordinatesMap = GetAllBgCitiesMap(),
                 OrganizerProfiles = await GetOrganizerProfileOptionsAsync(),
                 VenueLayouts = await GetVenueLayoutOptionsAsync(),
             };
@@ -633,12 +657,12 @@ namespace EventsApp.Controllers
                 : await ResolveOrganizerProfileAsync(input.OrganizerProfileId);
             if (!isAdmin && profile == null)
             {
-                ModelState.AddModelError(nameof(input.OrganizerProfileId), "Избери активна публична организаторска страница.");
+                ModelState.AddModelError(nameof(input.OrganizerProfileId), "Ð˜Ð·Ð±ÐµÑ€Ð¸ Ð°ÐºÑ‚Ð¸Ð²Ð½Ð° Ð¿ÑƒÐ±Ð»Ð¸Ñ‡Ð½Ð° Ð¾Ñ€Ð³Ð°Ð½Ð¸Ð·Ð°Ñ‚Ð¾Ñ€ÑÐºÐ° ÑÑ‚Ñ€Ð°Ð½Ð¸Ñ†Ð°.");
             }
 
             if (input.EndTime <= input.StartTime)
             {
-                ModelState.AddModelError(nameof(input.EndTime), "Крайният час трябва да е след началния.");
+                ModelState.AddModelError(nameof(input.EndTime), "ÐšÑ€Ð°Ð¹Ð½Ð¸ÑÑ‚ Ñ‡Ð°Ñ Ñ‚Ñ€ÑÐ±Ð²Ð° Ð´Ð° Ðµ ÑÐ»ÐµÐ´ Ð½Ð°Ñ‡Ð°Ð»Ð½Ð¸Ñ.");
             }
 
             ValidateRecurringInput(input);
@@ -646,10 +670,7 @@ namespace EventsApp.Controllers
 
             if (!ModelState.IsValid)
             {
-                input.CanEditApproval = isAdmin;
-                input.OrganizerProfiles = await GetOrganizerProfileOptionsAsync();
-                input.VenueLayouts = await GetVenueLayoutOptionsAsync();
-                await PopulateBusinessContextAsync(input);
+                await PrepareEventFormAsync(input, isAdmin);
                 return View(input);
             }
 
@@ -667,6 +688,8 @@ namespace EventsApp.Controllers
                     eventEnd = eventEnd.AddDays(1);
                 }
             }
+
+            NormalizeCityAndGenres(input);
 
             if (!isAdmin && ev.IsApproved)
             {
@@ -726,7 +749,7 @@ namespace EventsApp.Controllers
                 request.Status = EventChangeRequestStatus.Pending;
                 await _db.SaveChangesAsync();
 
-                TempData["StatusMessage"] = "Промените са изпратени за админ одобрение. Публикуваната версия остава активна до одобрение.";
+                TempData["StatusMessage"] = "ÐŸÑ€Ð¾Ð¼ÐµÐ½Ð¸Ñ‚Ðµ ÑÐ° Ð¸Ð·Ð¿Ñ€Ð°Ñ‚ÐµÐ½Ð¸ Ð·Ð° Ð°Ð´Ð¼Ð¸Ð½ Ð¾Ð´Ð¾Ð±Ñ€ÐµÐ½Ð¸Ðµ. ÐŸÑƒÐ±Ð»Ð¸ÐºÑƒÐ²Ð°Ð½Ð°Ñ‚Ð° Ð²ÐµÑ€ÑÐ¸Ñ Ð¾ÑÑ‚Ð°Ð²Ð° Ð°ÐºÑ‚Ð¸Ð²Ð½Ð° Ð´Ð¾ Ð¾Ð´Ð¾Ð±Ñ€ÐµÐ½Ð¸Ðµ.";
                 return RedirectToAction(nameof(Details), new { id = ev.Id });
             }
 
@@ -742,6 +765,7 @@ namespace EventsApp.Controllers
             ev.StartTime = eventStart;
             ev.EndTime = eventEnd;
             ev.Genre = input.Genre;
+            ev.GenreTags = EventGenreTags.Serialize(input.SelectedGenres);
             ev.Latitude = input.Latitude;
             ev.Longitude = input.Longitude;
             ev.TicketingMode = input.TicketingMode;
@@ -801,7 +825,7 @@ namespace EventsApp.Controllers
 
             await EnsureSeatInventoriesForEventAsync(ev.Id);
 
-            TempData["StatusMessage"] = "Събитието е обновено.";
+            TempData["StatusMessage"] = "Ð¡ÑŠÐ±Ð¸Ñ‚Ð¸ÐµÑ‚Ð¾ Ðµ Ð¾Ð±Ð½Ð¾Ð²ÐµÐ½Ð¾.";
             return RedirectToAction(nameof(Details), new { id = ev.Id });
         }
 
@@ -828,9 +852,11 @@ namespace EventsApp.Controllers
                 .Where(t => t.EventId == ev.Id)
                 .SelectMany(t => t.UserTickets)
                 .AnyAsync(ut => ut.Transaction.Status == GlobalConstants.TransactionStatuses.Paid);
+            const string paidTicketsBlockText = "\u0421\u044a\u0431\u0438\u0442\u0438\u0435\u0442\u043e \u043d\u0435 \u043c\u043e\u0436\u0435 \u0434\u0430 \u0431\u044a\u0434\u0435 \u0438\u0437\u0442\u0440\u0438\u0442\u043e, \u0437\u0430\u0449\u043e\u0442\u043e \u0432\u0435\u0447\u0435 \u0438\u043c\u0430 \u043a\u0443\u043f\u0435\u043d\u0438 \u0431\u0438\u043b\u0435\u0442\u0438.";
             if (hasSoldTickets)
             {
-                TempData["StatusMessage"] = "Събитието не може да бъде изтрито, защото вече има купени билети.";
+                TempData["StatusMessage"] = paidTicketsBlockText;
+                TempData["StatusMessage"] = "Ð¡ÑŠÐ±Ð¸Ñ‚Ð¸ÐµÑ‚Ð¾ Ð½Ðµ Ð¼Ð¾Ð¶Ðµ Ð´Ð° Ð±ÑŠÐ´Ðµ Ð¸Ð·Ñ‚Ñ€Ð¸Ñ‚Ð¾, Ð·Ð°Ñ‰Ð¾Ñ‚Ð¾ Ð²ÐµÑ‡Ðµ Ð¸Ð¼Ð° ÐºÑƒÐ¿ÐµÐ½Ð¸ Ð±Ð¸Ð»ÐµÑ‚Ð¸.";
                 return RedirectToAction(nameof(Details), new { id = ev.Id });
             }
 
@@ -849,8 +875,8 @@ namespace EventsApp.Controllers
                 User.IsInRole(GlobalConstants.Roles.Admin));
 
             TempData["StatusMessage"] = cancelled
-                ? "Тази дата беше отменена."
-                : "Датата не можа да бъде отменена.";
+                ? "Ð¢Ð°Ð·Ð¸ Ð´Ð°Ñ‚Ð° Ð±ÐµÑˆÐµ Ð¾Ñ‚Ð¼ÐµÐ½ÐµÐ½Ð°."
+                : "Ð”Ð°Ñ‚Ð°Ñ‚Ð° Ð½Ðµ Ð¼Ð¾Ð¶Ð° Ð´Ð° Ð±ÑŠÐ´Ðµ Ð¾Ñ‚Ð¼ÐµÐ½ÐµÐ½Ð°.";
 
             return RedirectToAction(nameof(Details), new { id, occurrenceId });
         }
@@ -883,35 +909,30 @@ namespace EventsApp.Controllers
                 .AnyAsync(ut => ut.Transaction.Status == GlobalConstants.TransactionStatuses.Paid);
             if (hasSoldTickets)
             {
-                TempData["StatusMessage"] = "Събитието не може да бъде изтрито, защото вече има купени билети.";
+                TempData["StatusMessage"] = "Ð¡ÑŠÐ±Ð¸Ñ‚Ð¸ÐµÑ‚Ð¾ Ð½Ðµ Ð¼Ð¾Ð¶Ðµ Ð´Ð° Ð±ÑŠÐ´Ðµ Ð¸Ð·Ñ‚Ñ€Ð¸Ñ‚Ð¾, Ð·Ð°Ñ‰Ð¾Ñ‚Ð¾ Ð²ÐµÑ‡Ðµ Ð¸Ð¼Ð° ÐºÑƒÐ¿ÐµÐ½Ð¸ Ð±Ð¸Ð»ÐµÑ‚Ð¸.";
                 return RedirectToAction(nameof(Details), new { id = ev.Id });
             }
 
-            await using var transaction = await _db.Database.BeginTransactionAsync();
-            var occurrenceIds = ev.EventSeries?.Occurrences.Select(o => o.Id).ToList() ?? new List<int>();
-            var ticketIds = await _db.Tickets
-                .Where(t => t.EventId == ev.Id)
-                .Select(t => t.Id)
-                .ToListAsync();
-            var inventories = await _db.EventSeatInventories
-                .Where(i => i.EventId == ev.Id || (i.EventOccurrenceId.HasValue && occurrenceIds.Contains(i.EventOccurrenceId.Value)))
-                .ToListAsync();
-            _db.EventSeatInventories.RemoveRange(inventories);
-            var userTickets = await _db.UserTickets
-                .Where(ut => ticketIds.Contains(ut.TicketId)
-                    || (ut.EventOccurrenceId.HasValue && occurrenceIds.Contains(ut.EventOccurrenceId.Value)))
-                .ToListAsync();
-            _db.UserTickets.RemoveRange(userTickets);
-            await _db.Messages
-                .Where(m => m.SharedEventId == ev.Id)
-                .ExecuteUpdateAsync(setters => setters.SetProperty(m => m.SharedEventId, (int?)null));
-            await _db.Posts
-                .Where(p => p.EventId == ev.Id)
-                .ExecuteUpdateAsync(setters => setters.SetProperty(p => p.EventId, (int?)null));
-            _db.Events.Remove(ev);
-            await _db.SaveChangesAsync();
-            await transaction.CommitAsync();
-            TempData["StatusMessage"] = "Събитието е изтрито.";
+            const string paidTicketsBlockMessage = "Ð¡ÑŠÐ±Ð¸Ñ‚Ð¸ÐµÑ‚Ð¾ Ð½Ðµ Ð¼Ð¾Ð¶Ðµ Ð´Ð° Ð±ÑŠÐ´Ðµ Ð¸Ð·Ñ‚Ñ€Ð¸Ñ‚Ð¾, Ð·Ð°Ñ‰Ð¾Ñ‚Ð¾ Ð²ÐµÑ‡Ðµ Ð¸Ð¼Ð° ÐºÑƒÐ¿ÐµÐ½Ð¸ Ð±Ð¸Ð»ÐµÑ‚Ð¸.";
+            const string paidTicketsBlockText = "\u0421\u044a\u0431\u0438\u0442\u0438\u0435\u0442\u043e \u043d\u0435 \u043c\u043e\u0436\u0435 \u0434\u0430 \u0431\u044a\u0434\u0435 \u0438\u0437\u0442\u0440\u0438\u0442\u043e, \u0437\u0430\u0449\u043e\u0442\u043e \u0432\u0435\u0447\u0435 \u0438\u043c\u0430 \u043a\u0443\u043f\u0435\u043d\u0438 \u0431\u0438\u043b\u0435\u0442\u0438.";
+            var deletionResult = await _eventDeletion.DeleteEventAsync(ev.Id, preservePaidTickets: !isAdmin);
+            if (!deletionResult.Deleted)
+            {
+                TempData["StatusMessage"] = deletionResult.SkippedReason == "paid_tickets"
+                    ? paidTicketsBlockMessage
+                    : "Ð¡ÑŠÐ±Ð¸Ñ‚Ð¸ÐµÑ‚Ð¾ Ð½Ðµ Ð¼Ð¾Ð¶Ð° Ð´Ð° Ð±ÑŠÐ´Ðµ Ð¸Ð·Ñ‚Ñ€Ð¸Ñ‚Ð¾.";
+                TempData["StatusMessage"] = paidTicketsBlockText;
+                return RedirectToAction(nameof(Details), new { id = ev.Id });
+            }
+            if (!deletionResult.Deleted)
+            {
+                TempData["StatusMessage"] = deletionResult.SkippedReason == "paid_tickets"
+                    ? "ÃÂ¡Ã‘Å ÃÂ±ÃÂ¸Ã‘â€šÃÂ¸ÃÂµÃ‘â€šÃÂ¾ ÃÂ½ÃÂµ ÃÂ¼ÃÂ¾ÃÂ¶ÃÂµ ÃÂ´ÃÂ° ÃÂ±Ã‘Å ÃÂ´ÃÂµ ÃÂ¸ÃÂ·Ã‘â€šÃ‘â‚¬ÃÂ¸Ã‘â€šÃÂ¾, ÃÂ·ÃÂ°Ã‘â€°ÃÂ¾Ã‘â€šÃÂ¾ ÃÂ²ÃÂµÃ‘â€¡ÃÂµ ÃÂ¸ÃÂ¼ÃÂ° ÃÂºÃ‘Æ’ÃÂ¿ÃÂµÃÂ½ÃÂ¸ ÃÂ±ÃÂ¸ÃÂ»ÃÂµÃ‘â€šÃÂ¸."
+                    : "ÃÂ¡Ã‘Å ÃÂ±ÃÂ¸Ã‘â€šÃÂ¸ÃÂµÃ‘â€šÃÂ¾ ÃÂ½ÃÂµ ÃÂ¼ÃÂ¾ÃÂ¶ÃÂ° ÃÂ´ÃÂ° ÃÂ±Ã‘Å ÃÂ´ÃÂµ ÃÂ¸ÃÂ·Ã‘â€šÃ‘â‚¬ÃÂ¸Ã‘â€šÃÂ¾.";
+                return RedirectToAction(nameof(Details), new { id = ev.Id });
+            }
+            TempData["StatusMessage"] = "Ð¡ÑŠÐ±Ð¸Ñ‚Ð¸ÐµÑ‚Ð¾ Ðµ Ð¸Ð·Ñ‚Ñ€Ð¸Ñ‚Ð¾.";
+            TempData["StatusMessage"] = "Ð¡ÑŠÐ±Ð¸Ñ‚Ð¸ÐµÑ‚Ð¾ Ðµ Ð¸Ð·Ñ‚Ñ€Ð¸Ñ‚Ð¾.";
             return isAdmin
                 ? RedirectToAction("Events", "Admin")
                 : RedirectToAction("Events", "Organizer");
@@ -1102,7 +1123,7 @@ namespace EventsApp.Controllers
 
             if (string.IsNullOrWhiteSpace(content))
             {
-                TempData["StatusMessage"] = "Коментарът не може да е празен.";
+                TempData["StatusMessage"] = "ÐšÐ¾Ð¼ÐµÐ½Ñ‚Ð°Ñ€ÑŠÑ‚ Ð½Ðµ Ð¼Ð¾Ð¶Ðµ Ð´Ð° Ðµ Ð¿Ñ€Ð°Ð·ÐµÐ½.";
                 return RedirectToAction(nameof(Details), new { id });
             }
 
@@ -1151,7 +1172,7 @@ namespace EventsApp.Controllers
 
             var senderName = (await _userManager.FindByIdAsync(userId))?.UserName ?? "Evento";
             var url = Url.Action(nameof(Details), "Events", new { id }) ?? "/";
-            await _mentions.NotifyMentionsAsync(content, userId, senderName, "Коментар", url);
+            await _mentions.NotifyMentionsAsync(content, userId, senderName, "ÐšÐ¾Ð¼ÐµÐ½Ñ‚Ð°Ñ€", url);
 
             return RedirectToAction(nameof(Details), new { id });
         }
@@ -1373,6 +1394,7 @@ namespace EventsApp.Controllers
                     City = e.City,
                     StartTime = e.StartTime,
                     Genre = e.Genre,
+                    GenreTags = e.GenreTags,
                     IsApproved = e.IsApproved,
                     OrganizerId = e.OrganizerId,
                     OrganizerProfileId = e.OrganizerProfileId,
@@ -1402,7 +1424,7 @@ namespace EventsApp.Controllers
             int Score(EventCardViewModel ev)
             {
                 var score = 0;
-                if (preferredGenres.Contains(ev.Genre)) score += 70;
+                if (ev.Genres.Any(preferredGenres.Contains)) score += 70;
                 if (!string.IsNullOrWhiteSpace(prefs?.PreferredCity)
                     && string.Equals(prefs.PreferredCity, ev.City, StringComparison.OrdinalIgnoreCase)) score += 45;
                 if (genreScores.TryGetValue(ev.Genre, out var genreScore)) score += genreScore;
@@ -1516,27 +1538,27 @@ namespace EventsApp.Controllers
 
             if (!input.RecurrenceStartDate.HasValue)
             {
-                ModelState.AddModelError(nameof(input.RecurrenceStartDate), "Избери начална дата на серията.");
+                ModelState.AddModelError(nameof(input.RecurrenceStartDate), "Ð˜Ð·Ð±ÐµÑ€Ð¸ Ð½Ð°Ñ‡Ð°Ð»Ð½Ð° Ð´Ð°Ñ‚Ð° Ð½Ð° ÑÐµÑ€Ð¸ÑÑ‚Ð°.");
             }
 
             if (!input.RecurrenceEndDate.HasValue)
             {
-                ModelState.AddModelError(nameof(input.RecurrenceEndDate), "Избери крайна дата на серията.");
+                ModelState.AddModelError(nameof(input.RecurrenceEndDate), "Ð˜Ð·Ð±ÐµÑ€Ð¸ ÐºÑ€Ð°Ð¹Ð½Ð° Ð´Ð°Ñ‚Ð° Ð½Ð° ÑÐµÑ€Ð¸ÑÑ‚Ð°.");
             }
 
             if (!input.RecurrenceStartTime.HasValue)
             {
-                ModelState.AddModelError(nameof(input.RecurrenceStartTime), "Избери начален час.");
+                ModelState.AddModelError(nameof(input.RecurrenceStartTime), "Ð˜Ð·Ð±ÐµÑ€Ð¸ Ð½Ð°Ñ‡Ð°Ð»ÐµÐ½ Ñ‡Ð°Ñ.");
             }
 
             if (!input.RecurrenceEndTime.HasValue)
             {
-                ModelState.AddModelError(nameof(input.RecurrenceEndTime), "Избери краен час.");
+                ModelState.AddModelError(nameof(input.RecurrenceEndTime), "Ð˜Ð·Ð±ÐµÑ€Ð¸ ÐºÑ€Ð°ÐµÐ½ Ñ‡Ð°Ñ.");
             }
 
             if (input.RecurrenceInterval < 1)
             {
-                ModelState.AddModelError(nameof(input.RecurrenceInterval), "Интервалът трябва да е поне 1.");
+                ModelState.AddModelError(nameof(input.RecurrenceInterval), "Ð˜Ð½Ñ‚ÐµÑ€Ð²Ð°Ð»ÑŠÑ‚ Ñ‚Ñ€ÑÐ±Ð²Ð° Ð´Ð° Ðµ Ð¿Ð¾Ð½Ðµ 1.");
             }
 
             if (input.RecurrenceStartDate.HasValue && input.RecurrenceEndDate.HasValue)
@@ -1544,11 +1566,11 @@ namespace EventsApp.Controllers
                 var rangeDays = (input.RecurrenceEndDate.Value.Date - input.RecurrenceStartDate.Value.Date).Days;
                 if (rangeDays < 0)
                 {
-                    ModelState.AddModelError(nameof(input.RecurrenceEndDate), "Крайната дата трябва да е след началната.");
+                    ModelState.AddModelError(nameof(input.RecurrenceEndDate), "ÐšÑ€Ð°Ð¹Ð½Ð°Ñ‚Ð° Ð´Ð°Ñ‚Ð° Ñ‚Ñ€ÑÐ±Ð²Ð° Ð´Ð° Ðµ ÑÐ»ÐµÐ´ Ð½Ð°Ñ‡Ð°Ð»Ð½Ð°Ñ‚Ð°.");
                 }
                 else if (rangeDays > 370)
                 {
-                    ModelState.AddModelError(nameof(input.RecurrenceEndDate), "Засега използвай период до 370 дни.");
+                    ModelState.AddModelError(nameof(input.RecurrenceEndDate), "Ð—Ð°ÑÐµÐ³Ð° Ð¸Ð·Ð¿Ð¾Ð»Ð·Ð²Ð°Ð¹ Ð¿ÐµÑ€Ð¸Ð¾Ð´ Ð´Ð¾ 370 Ð´Ð½Ð¸.");
                 }
             }
         }
@@ -1562,7 +1584,7 @@ namespace EventsApp.Controllers
 
             if (!input.VenueLayoutId.HasValue)
             {
-                ModelState.AddModelError(nameof(input.VenueLayoutId), "Избери преизползваем layout или остави без места.");
+                ModelState.AddModelError(nameof(input.VenueLayoutId), "Ð˜Ð·Ð±ÐµÑ€Ð¸ Ð¿Ñ€ÐµÐ¸Ð·Ð¿Ð¾Ð»Ð·Ð²Ð°ÐµÐ¼ layout Ð¸Ð»Ð¸ Ð¾ÑÑ‚Ð°Ð²Ð¸ Ð±ÐµÐ· Ð¼ÐµÑÑ‚Ð°.");
                 return;
             }
 
@@ -1572,7 +1594,7 @@ namespace EventsApp.Controllers
 
             if (layout == null || (!isAdmin && layout.OrganizerId != userId))
             {
-                ModelState.AddModelError(nameof(input.VenueLayoutId), "Този layout не е наличен.");
+                ModelState.AddModelError(nameof(input.VenueLayoutId), "Ð¢Ð¾Ð·Ð¸ layout Ð½Ðµ Ðµ Ð½Ð°Ð»Ð¸Ñ‡ÐµÐ½.");
             }
         }
 
@@ -1595,6 +1617,7 @@ namespace EventsApp.Controllers
                 StartTime = eventStart,
                 EndTime = eventEnd,
                 Genre = input.Genre,
+                GenreTags = EventGenreTags.Serialize(input.SelectedGenres),
                 OrganizerProfileId = organizerProfileId,
                 BusinessWorkspaceId = businessWorkspaceId,
                 ImageUrl = imageUrl,
@@ -1632,6 +1655,7 @@ namespace EventsApp.Controllers
             series.Title = ev.Title;
             series.Description = ev.Description;
             series.Category = ev.Genre;
+            series.GenreTags = ev.GenreTags;
             series.Location = ev.Address;
             series.City = ev.City;
             series.ImageUrl = ev.ImageUrl;
@@ -1738,7 +1762,7 @@ namespace EventsApp.Controllers
                 return null;
             }
 
-            TempData["StatusMessage"] = "Създай публична организаторска страница преди да публикуваш събития.";
+            TempData["StatusMessage"] = "Ð¡ÑŠÐ·Ð´Ð°Ð¹ Ð¿ÑƒÐ±Ð»Ð¸Ñ‡Ð½Ð° Ð¾Ñ€Ð³Ð°Ð½Ð¸Ð·Ð°Ñ‚Ð¾Ñ€ÑÐºÐ° ÑÑ‚Ñ€Ð°Ð½Ð¸Ñ†Ð° Ð¿Ñ€ÐµÐ´Ð¸ Ð´Ð° Ð¿ÑƒÐ±Ð»Ð¸ÐºÑƒÐ²Ð°Ñˆ ÑÑŠÐ±Ð¸Ñ‚Ð¸Ñ.";
             return RedirectToAction("Profile", "Organizer");
         }
 

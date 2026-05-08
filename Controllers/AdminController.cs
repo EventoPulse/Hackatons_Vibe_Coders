@@ -269,6 +269,7 @@ namespace EventsApp.Controllers
             ev.StartTime = payload.StartTime;
             ev.EndTime = payload.EndTime;
             ev.Genre = payload.Genre;
+            ev.GenreTags = payload.GenreTags;
             ev.OrganizerProfileId = payload.OrganizerProfileId;
             ev.BusinessWorkspaceId = payload.BusinessWorkspaceId;
             ev.ImageUrl = payload.ImageUrl;
@@ -322,6 +323,7 @@ namespace EventsApp.Controllers
             series.Title = ev.Title;
             series.Description = ev.Description;
             series.Category = ev.Genre;
+            series.GenreTags = ev.GenreTags;
             series.Location = ev.Address;
             series.City = ev.City;
             series.ImageUrl = ev.ImageUrl;
