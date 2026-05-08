@@ -119,6 +119,39 @@
             </div>
         </div>
 
+        <section class="organizer-command-grid my-4" aria-label="Основни действия">
+            <a asp-controller="Tickets" asp-action="Validate" class="organizer-command-card organizer-command-card--primary">
+                <i class="bi bi-qr-code-scan"></i>
+                <span>Валидиране</span>
+                <strong>Сканирай QR на входа</strong>
+            </a>
+            <a href="#org-revenue" class="organizer-command-card">
+                <i class="bi bi-cash-coin"></i>
+                <span>Приходи</span>
+                <strong>@bgnFmt(Model.TotalRevenue)</strong>
+            </a>
+            <a href="#org-tickets" class="organizer-command-card">
+                <i class="bi bi-ticket-perforated"></i>
+                <span>Билети</span>
+                <strong>@Model.TicketsSoldCount продадени</strong>
+            </a>
+            <a href="#org-engagement" class="organizer-command-card">
+                <i class="bi bi-bell"></i>
+                <span>Ангажираност</span>
+                <strong>@(Model.TotalLikes + Model.TotalComments) реакции</strong>
+            </a>
+            <a asp-action="Events" class="organizer-command-card">
+                <i class="bi bi-calendar-event"></i>
+                <span>Събития</span>
+                <strong>@Model.EventsCount общо</strong>
+            </a>
+            <a asp-controller="Organizer" asp-action="Validators" class="organizer-command-card">
+                <i class="bi bi-person-check"></i>
+                <span>Валидатори</span>
+                <strong>Достъп за екипа</strong>
+            </a>
+        </section>
+
         @if (Model.ShowFirstBoostNotice)
         {
             <section class="organizer-boost-celebration my-4">
@@ -228,21 +261,21 @@
         </section>
 
         <div class="groove-stat-grid">
-            <article class="groove-stat-card">
+            <a href="#org-revenue" class="groove-stat-card text-decoration-none text-reset">
                 <span data-i18n="org.stat.revenue">Приходи (общо)</span>
                 <strong>@bgnFmt(Model.TotalRevenue)</strong>
                 <small class="text-muted"><span data-i18n="org.stat.avgticket">Среден билет:</span> @bgnFmt(Model.AverageTicketPrice)</small>
-            </article>
-            <article class="groove-stat-card">
+            </a>
+            <a href="#org-tickets" class="groove-stat-card text-decoration-none text-reset">
                 <span data-i18n="org.stat.sold">Продадени билети</span>
                 <strong>@Model.TicketsSoldCount</strong>
                 <small class="text-muted"><span data-i18n="org.stat.scanned">Сканирани:</span> @Model.TicketsUsedCount</small>
-            </article>
-            <article class="groove-stat-card">
+            </a>
+            <a href="#org-revenue" class="groove-stat-card text-decoration-none text-reset">
                 <span data-i18n="org.stat.last30">Последни 30 дни</span>
                 <strong>@Model.Last30DaysSold <span data-i18n="org.stat.pcs">бр.</span></strong>
                 <small class="text-muted">@bgnFmt(Model.Last30DaysRevenue)</small>
-            </article>
+            </a>
             <a asp-action="Events" class="groove-stat-card text-decoration-none text-reset">
                 <span data-i18n="org.stat.events">Събития</span>
                 <strong>@Model.EventsCount</strong>
@@ -251,19 +284,19 @@
                     · <span data-i18n="org.stat.past">минали:</span> @Model.PastEventsCount
                 </small>
             </a>
-            <article class="groove-stat-card">
+            <a href="#org-tickets" class="groove-stat-card text-decoration-none text-reset">
                 <span data-i18n="org.stat.tickettypes">Видове билети</span>
                 <strong>@Model.TicketTypesCount</strong>
                 <small class="text-muted"><span data-i18n="org.stat.activeevents">Активни събития:</span> @Model.EventsWithTicketsCount</small>
-            </article>
-            <article class="groove-stat-card">
+            </a>
+            <a href="#org-engagement" class="groove-stat-card text-decoration-none text-reset">
                 <span data-i18n="org.stat.engagement">Ангажираност</span>
                 <strong>@Model.TotalLikes <i class="bi bi-heart-fill text-danger"></i></strong>
                 <small class="text-muted">
                     @Model.TotalComments <span data-i18n="org.stat.comments">коментара</span>
                     · @Model.PostsCount <span data-i18n="org.stat.posts">публикации</span>
                 </small>
-            </article>
+            </a>
         </div>
 
         <section class="groove-table-card my-4" style="padding:1rem;">
@@ -281,7 +314,65 @@
             </div>
         </section>
 
-        <section class="groove-page-section">
+        <section class="groove-page-section" id="org-engagement">
+            <div class="groove-section-bar">
+                <div>
+                    <span class="groove-kicker">Ангажираност</span>
+                    <h2>Последни реакции и коментари.</h2>
+                </div>
+                <a asp-controller="Posts" asp-action="Index" class="groove-link">Към потока</a>
+            </div>
+
+            <div class="organizer-dashboard-split">
+                <div class="groove-table-card organizer-activity-card">
+                    @if (Model.RecentEngagement.Count == 0)
+                    {
+                        <div class="social-empty-inline">Още няма реакции към твоите събития.</div>
+                    }
+                    else
+                    {
+                        @foreach (var activity in Model.RecentEngagement)
+                        {
+                            var icon = activity.Type == "Коментар" ? "bi-chat-dots" : "bi-heart";
+                            <a asp-controller="Events" asp-action="Details" asp-route-id="@activity.EventId" class="organizer-activity-item">
+                                <i class="bi @icon"></i>
+                                <span>
+                                    <strong>@activity.ActorName</strong>
+                                    @(activity.Type == "Коментар" ? "коментира" : "хареса")
+                                    <em>@activity.EventTitle</em>
+                                    @if (!string.IsNullOrWhiteSpace(activity.Text))
+                                    {
+                                        <small>@activity.Text</small>
+                                    }
+                                </span>
+                                <time>@activity.CreatedAt.ToLocalTime().ToString("dd.MM HH:mm")</time>
+                            </a>
+                        }
+                    }
+                </div>
+
+                <div class="groove-table-card organizer-activity-card">
+                    <div class="organizer-mini-metric">
+                        <span>Харесвания</span>
+                        <strong>@Model.TotalLikes</strong>
+                    </div>
+                    <div class="organizer-mini-metric">
+                        <span>Коментари</span>
+                        <strong>@Model.TotalComments</strong>
+                    </div>
+                    <div class="organizer-mini-metric">
+                        <span>Гледания</span>
+                        <strong>@Model.TotalViews</strong>
+                    </div>
+                    <div class="organizer-mini-metric">
+                        <span>Публикации</span>
+                        <strong>@Model.PostsCount</strong>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="groove-page-section" id="org-revenue">
             <div class="groove-section-bar">
                 <div>
                     <span class="groove-kicker" data-i18n="org.kicker.stats">Статистики</span>
@@ -418,28 +509,23 @@
             </div>
         </section>
 
-        <div class="groove-page-actions mb-4">
-            <a asp-controller="Tickets" asp-action="Validate" class="groove-button groove-button-dark">
-                <i class="bi bi-qr-code-scan"></i> <span data-i18n="nav.validate">Валидиране</span>
-            </a>
-            <a asp-controller="Organizer" asp-action="Validators" class="groove-button groove-button-paper">
-                <i class="bi bi-person-check"></i> Validators
-            </a>
-            <a asp-controller="Account" asp-action="Index" class="groove-button groove-button-paper">
-                <i class="bi bi-person-circle"></i> <span data-i18n="org.myprofile">Моят профил</span>
-            </a>
-        </div>
-
-        @if (Model.EventTicketRows.Count > 0)
-        {
-            <section class="groove-page-section">
-                <div class="groove-section-bar">
-                    <div>
-                        <span class="groove-kicker" data-i18n="org.kicker.sales">Продажби</span>
-                        <h2 data-i18n-html="org.tickets.h2">Билети по <span>събития</span>.</h2>
-                    </div>
+        <section class="groove-page-section" id="org-tickets">
+            <div class="groove-section-bar">
+                <div>
+                    <span class="groove-kicker" data-i18n="org.kicker.sales">Продажби</span>
+                    <h2 data-i18n-html="org.tickets.h2">Билети по <span>събития</span>.</h2>
                 </div>
+                <a asp-action="Events" class="groove-link">Всички събития</a>
+            </div>
 
+            @if (Model.EventTicketRows.Count == 0)
+            {
+                <div class="groove-table-card p-3">
+                    <div class="social-empty-inline">Още няма събития с билети.</div>
+                </div>
+            }
+            else
+            {
                 <div class="groove-table-card">
                     <div class="groove-table-wrap">
                         <table class="table">
@@ -449,6 +535,7 @@
                                     <th data-i18n="org.th.start">Начало</th>
                                     <th data-i18n="org.th.status">Статус</th>
                                     <th data-i18n="org.th.sold">Продадени</th>
+                                    <th>Приходи</th>
                                     <th>Гледания</th>
                                     <th>VIP</th>
                                     <th></th>
@@ -473,6 +560,7 @@
                                             }
                                         </td>
                                         <td>@row.Sold</td>
+                                        <td>@bgnFmt(row.Revenue)</td>
                                         <td>
                                             <strong>@row.Views</strong>
                                             <span class="text-muted small d-block">@row.UniqueViewers уникални</span>
@@ -480,7 +568,7 @@
                                         <td>
                                             @if (row.VipBoostScore > 0)
                                             {
-                                                <span class="evt-card__chip evt-card__chip--vip" style="position:static;">VIP x@row.VipBoostScore</span>
+                                                <span class="evt-card__chip evt-card__chip--vip organizer-vip-badge" style="position:static;">VIP x@row.VipBoostScore</span>
                                             }
                                             else
                                             {
@@ -503,8 +591,64 @@
                         </table>
                     </div>
                 </div>
-            </section>
-        }
+            }
+
+            <div class="groove-table-card mt-3">
+                <div class="groove-table-wrap">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Билет</th>
+                                <th>Купувач</th>
+                                <th>Дата</th>
+                                <th>Цена</th>
+                                <th>Състояние</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model.SoldTickets.Count == 0)
+                            {
+                                <tr>
+                                    <td colspan="6" class="text-muted">Още няма продадени билети.</td>
+                                </tr>
+                            }
+                            else
+                            {
+                                @foreach (var ticket in Model.SoldTickets)
+                                {
+                                    <tr>
+                                        <td>
+                                            <strong>@ticket.EventTitle</strong>
+                                            <span class="text-muted small d-block">@ticket.TicketName · @ticket.StartTime.ToString("dd.MM HH:mm")</span>
+                                        </td>
+                                        <td>
+                                            @ticket.BuyerEmail
+                                            @if (!string.IsNullOrWhiteSpace(ticket.AttendeeName))
+                                            {
+                                                <span class="text-muted small d-block">@ticket.AttendeeName</span>
+                                            }
+                                        </td>
+                                        <td>@ticket.PurchasedAt.ToLocalTime().ToString("dd.MM HH:mm")</td>
+                                        <td>@bgnFmt(ticket.PricePaid)</td>
+                                        <td>
+                                            <span class="groove-status-badge @(ticket.IsUsed ? "groove-status-badge-success" : "groove-status-badge-muted")">
+                                                @(ticket.IsUsed ? "Валидиран" : "Неизползван")
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <a asp-controller="Tickets" asp-action="Details" asp-route-id="@ticket.Id" class="groove-button groove-button-paper">
+                                                <i class="bi bi-eye"></i> Детайли
+                                            </a>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
 
         @if (Model.RecentEvents.Count > 0)
         {

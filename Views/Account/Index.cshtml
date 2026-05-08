@@ -6,9 +6,6 @@
     var isOrganizer = Model.Role == GlobalConstants.Roles.Organizer;
     var displayName = !string.IsNullOrWhiteSpace(Model.UserName) ? Model.UserName : Model.Email;
     var initial = string.IsNullOrWhiteSpace(displayName) ? "?" : displayName[..1].ToUpperInvariant();
-    var roleClass = isAdmin ? "groove-status-badge-danger"
-        : isOrganizer ? "groove-status-badge-success"
-        : "groove-status-badge-muted";
     var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 }
 
@@ -30,7 +27,6 @@
                 <h1>@displayName</h1>
                 <p>@Model.Email</p>
                 <div class="groove-inline-actions">
-                    <span class="groove-status-badge @roleClass">@Model.Role.ToRoleDisplay()</span>
                     <span class="groove-badge"><i class="bi bi-calendar-check"></i> <span data-i18n="account.since">От</span> @Model.CreatedAt.ToString("MMMM yyyy")</span>
                 </div>
             </div>

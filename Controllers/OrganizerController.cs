@@ -261,8 +261,69 @@ namespace EventsApp.Controllers
                         .Count(),
                     VipBoostScore = e.Boosts.Sum(b => (int?)b.CreditsSpent) ?? 0,
                     CanBoost = e.IsApproved,
+                    Revenue = e.Tickets.SelectMany(t => t.UserTickets)
+                        .Where(ut => ut.Transaction.Status == paid)
+                        .Sum(ut => (decimal?)ut.PricePaid) ?? 0m,
                 })
                 .ToListAsync();
+
+            var soldTickets = await _db.UserTickets
+                .AsNoTracking()
+                .Where(ut => ut.Ticket.Event.OrganizerId == userId
+                             && ut.Transaction.Status == paid)
+                .OrderByDescending(ut => ut.CreatedAt)
+                .Take(50)
+                .Select(ut => new OrganizerSoldTicketRowViewModel
+                {
+                    Id = ut.Id,
+                    EventId = ut.Ticket.EventId,
+                    EventTitle = ut.Ticket.Event.Title,
+                    TicketName = ut.Ticket.Name,
+                    BuyerEmail = ut.Transaction.User.Email ?? ut.Transaction.User.UserName ?? string.Empty,
+                    AttendeeName = ut.AttendeeName,
+                    StartTime = ut.EventOccurrence != null ? ut.EventOccurrence.StartDateTime : ut.Ticket.Event.StartTime,
+                    PurchasedAt = ut.CreatedAt,
+                    PricePaid = ut.PricePaid,
+                    IsUsed = ut.IsUsed,
+                })
+                .ToListAsync();
+
+            var recentLikes = await _db.EventLikes
+                .AsNoTracking()
+                .Where(l => l.Event.OrganizerId == userId)
+                .OrderByDescending(l => l.CreatedAt)
+                .Take(12)
+                .Select(l => new OrganizerEngagementActivityViewModel
+                {
+                    Type = "Харесване",
+                    ActorName = l.User.UserName ?? l.User.Email ?? "Потребител",
+                    EventId = l.EventId,
+                    EventTitle = l.Event.Title,
+                    CreatedAt = l.CreatedAt,
+                })
+                .ToListAsync();
+
+            var recentComments = await _db.EventComments
+                .AsNoTracking()
+                .Where(c => c.Event.OrganizerId == userId)
+                .OrderByDescending(c => c.CreatedAt)
+                .Take(12)
+                .Select(c => new OrganizerEngagementActivityViewModel
+                {
+                    Type = "Коментар",
+                    ActorName = c.User.UserName ?? c.User.Email ?? "Потребител",
+                    EventId = c.EventId,
+                    EventTitle = c.Event.Title,
+                    Text = c.Content,
+                    CreatedAt = c.CreatedAt,
+                })
+                .ToListAsync();
+
+            var recentEngagement = recentLikes
+                .Concat(recentComments)
+                .OrderByDescending(a => a.CreatedAt)
+                .Take(12)
+                .ToList();
 
             var vm = new OrganizerDashboardViewModel
             {
@@ -332,6 +393,8 @@ namespace EventsApp.Controllers
                 RecentEvents = recentEvents,
                 RecentPosts = recentPosts,
                 EventTicketRows = eventTicketRows,
+                SoldTickets = soldTickets,
+                RecentEngagement = recentEngagement,
             };
 
             return View(vm);

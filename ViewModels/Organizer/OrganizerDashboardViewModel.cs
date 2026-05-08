@@ -53,6 +53,8 @@ namespace EventsApp.ViewModels.Organizer
         public IReadOnlyList<EventCardViewModel> RecentEvents { get; set; } = Array.Empty<EventCardViewModel>();
         public IReadOnlyList<PostCardViewModel> RecentPosts { get; set; } = Array.Empty<PostCardViewModel>();
         public IReadOnlyList<OrganizerEventTicketRowViewModel> EventTicketRows { get; set; } = Array.Empty<OrganizerEventTicketRowViewModel>();
+        public IReadOnlyList<OrganizerSoldTicketRowViewModel> SoldTickets { get; set; } = Array.Empty<OrganizerSoldTicketRowViewModel>();
+        public IReadOnlyList<OrganizerEngagementActivityViewModel> RecentEngagement { get; set; } = Array.Empty<OrganizerEngagementActivityViewModel>();
     }
 
     public class OrganizerWorkspaceRowViewModel
@@ -89,6 +91,31 @@ namespace EventsApp.ViewModels.Organizer
         public int UniqueViewers { get; set; }
         public int VipBoostScore { get; set; }
         public bool CanBoost { get; set; }
+        public decimal Revenue { get; set; }
+    }
+
+    public class OrganizerSoldTicketRowViewModel
+    {
+        public Guid Id { get; set; }
+        public int EventId { get; set; }
+        public string EventTitle { get; set; } = null!;
+        public string TicketName { get; set; } = null!;
+        public string BuyerEmail { get; set; } = null!;
+        public string? AttendeeName { get; set; }
+        public DateTime StartTime { get; set; }
+        public DateTime PurchasedAt { get; set; }
+        public decimal PricePaid { get; set; }
+        public bool IsUsed { get; set; }
+    }
+
+    public class OrganizerEngagementActivityViewModel
+    {
+        public string Type { get; set; } = null!;
+        public string ActorName { get; set; } = null!;
+        public int EventId { get; set; }
+        public string EventTitle { get; set; } = null!;
+        public string? Text { get; set; }
+        public DateTime CreatedAt { get; set; }
     }
 
     public class OrganizerEventsViewModel

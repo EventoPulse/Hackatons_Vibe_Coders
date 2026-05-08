@@ -302,7 +302,7 @@
             <aside class="evt-trending">
                 <div class="evt-trending__head">
                     <span class="evt-card__chip evt-card__chip--hot" style="position:static;display:inline-block;">
-                        <i class="bi bi-fire"></i> <span data-i18n="home.trending.stamp">Тренд</span>
+                        <i class="bi bi-graph-up-arrow"></i> <span data-i18n="home.trending.stamp">Тренд</span>
                     </span>
                     <h3 data-i18n="home.trending.title">Хора следят сега</h3>
                     <p data-i18n="home.trending.sub">Най-нашумелите събития според реакциите.</p>
@@ -310,7 +310,6 @@
                 <div class="evt-trending__list">
                     @foreach (var ev in trendingEvents)
                     {
-                        var heat = ev.GoingCount * 2 + ev.InterestedCount + ev.LikesCount + ev.CommentsCount + ev.SavesCount;
                         var rank = trendingEvents.IndexOf(ev) + 1;
                         <a asp-controller="Events" asp-action="Details" asp-route-id="@ev.Id" class="evt-trending__row">
                             @if (!string.IsNullOrWhiteSpace(ev.ImageUrl))
