@@ -264,11 +264,11 @@
             })
             .catch(function () {})
             .finally(function () {
-                if (polling) window.setTimeout(poll, 5000);
+                if (polling) window.setTimeout(poll, 2000);
             });
         }
 
-        window.setTimeout(poll, 5000);
+        window.setTimeout(poll, 2000);
 
         document.addEventListener('visibilitychange', function () {
             if (document.hidden) {
@@ -283,7 +283,7 @@
         if (form) {
             form.addEventListener('submit', function () {
                 polling = false;
-                window.setTimeout(function () { polling = false; }, 100);
+                window.setTimeout(function () { polling = true; poll(); }, 1500);
             });
         }
     })();

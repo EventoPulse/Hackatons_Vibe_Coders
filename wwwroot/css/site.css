@@ -7332,7 +7332,7 @@ html[data-theme="dark"] .social-feed-section,
 html[data-theme="dark"] .social-side-panel,
 html[data-theme="dark"] .evt-onboarding,
 html[data-theme="dark"] .evt-genre-tile {
-    background: #1b2030;
+    background: #1b2030 !important;
     border-color: #2a3142;
     color: #d8dce8;
 }
@@ -7340,7 +7340,7 @@ html[data-theme="dark"] .evt-card__media,
 html[data-theme="dark"] .evt-card__organizer-avatar,
 html[data-theme="dark"] .evt-search-field,
 html[data-theme="dark"] .bg-light {
-    background: #232940;
+    background: #232940 !important;
     color: #d8dce8;
 }
 
@@ -7367,18 +7367,22 @@ html[data-theme="dark"] .evt-card__chip--free { background: rgba(6, 78, 59, 0.85
 html[data-theme="dark"] .evt-card__chip--pending { background: rgba(120, 90, 0, 0.85); color: #fde68a; }
 
 html[data-theme="dark"] .event-card.evt-card,
-html[data-theme="dark"] .event-card { border-color: #2a3142; }
+html[data-theme="dark"] .event-card { border-color: #2a3142 !important; }
 html[data-theme="dark"] .text-muted,
 html[data-theme="dark"] .evt-card__meta,
 html[data-theme="dark"] .evt-card__organizer { color: #9ca3b8; }
-html[data-theme="dark"] .evt-chip:hover { background: #232940; color: #d8dce8; }
+html[data-theme="dark"] .evt-chip:hover { background: #232940 !important; color: #d8dce8 !important; }
 html[data-theme="dark"] .evt-chip.is-active,
 html[data-theme="dark"] .evt-card__cta { background: #4a6fff; color: #fff; }
 
+html[data-theme="dark"] .site-header {
+    background: rgba(13, 18, 30, 0.92) !important;
+    border-bottom-color: #2a3142 !important;
+    backdrop-filter: blur(18px);
+}
 html[data-theme="dark"] .site-navbar {
-    background: rgba(19, 24, 38, 0.88);
-    border-bottom-color: #2a3142;
-    backdrop-filter: blur(10px);
+    background: transparent !important;
+    border-bottom-color: transparent !important;
 }
 html[data-theme="dark"] .site-navbar .nav-link,
 html[data-theme="dark"] .site-navbar .navbar-brand,

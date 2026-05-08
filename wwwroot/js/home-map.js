@@ -212,7 +212,7 @@
                 return;
             }
             mapPollCount++;
-            if (mapPollCount > 80) {
+            if (mapPollCount > 250) {
                 window.clearInterval(mapPoll);
             }
         }, 100);
@@ -235,8 +235,10 @@
 
         window.setTimeout(function () {
             if (mapStarted || (window.google && window.google.maps)) return;
-            setMapLoadMessage('Map is still loading. Check network, API restrictions, or the browser console.');
-        }, 2500);
+            var loadingEl = mapEl.querySelector('.map-loading-state');
+            if (!loadingEl) return;
+            loadingEl.innerHTML = '<i class="bi bi-map" style="font-size:1.6rem;"></i><span>Картата не се зареди.</span><button onclick="location.reload()" style="margin-top:8px;padding:6px 16px;border:none;border-radius:8px;background:#4a6fff;color:#fff;font-weight:600;cursor:pointer;">Опитай пак</button>';
+        }, 8000);
 
         function localFallback(query) {
             var q = normalize(query);

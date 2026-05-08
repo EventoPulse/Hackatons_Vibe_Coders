@@ -257,13 +257,19 @@
                 includedLanguages: 'en',
                 autoDisplay: false
             }, 'google_translate_element');
-            window.setTimeout(function () {
+            function tryMap(attempts) {
                 if (window.GrooveHomeMapRefresh) {
                     window.GrooveHomeMapRefresh();
-                } else if (window.GrooveHomeStartMap) {
+                    return;
+                }
+                if (window.GrooveHomeStartMap) {
                     window.GrooveHomeStartMap();
                 }
-            }, 1500);
+                if (attempts > 0 && !window.GrooveHomeMapRefresh) {
+                    window.setTimeout(function () { tryMap(attempts - 1); }, 1000);
+                }
+            }
+            window.setTimeout(function () { tryMap(10); }, 1500);
         }
         window.googleTranslateElementInit = googleTranslateElementInit;
     </script>
