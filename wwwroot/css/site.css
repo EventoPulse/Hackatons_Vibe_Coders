@@ -12286,3 +12286,300 @@ html[data-theme="dark"] .ticket-qr-frame {
     background-color: #ffffff !important;
     color: #0f172a !important;
 }
+
+/* =====================================================
+   DARK MODE POLISH PASS
+   Locks the newer modern/social/account/event layers to
+   the dark palette so late white cards and dark copy do
+   not leak back in.
+   ===================================================== */
+html[data-theme="dark"] {
+    color-scheme: dark;
+    --modern-bg: #0b1020;
+    --modern-bg-2: #101827;
+    --modern-surface: #151b2b;
+    --modern-surface-soft: #1d2436;
+    --modern-ink: #ffffff;
+    --modern-muted: #dbe3f4;
+    --modern-line: rgba(255, 255, 255, 0.15);
+    --modern-primary: #8b7dff;
+    --modern-primary-dark: #a99fff;
+    --modern-primary-soft: rgba(139, 125, 255, 0.18);
+    --modern-success: #34d399;
+    --modern-shadow: 0 22px 54px rgba(0, 0, 0, 0.36);
+    --color-surface: #151b2b;
+    --color-border: rgba(255, 255, 255, 0.15);
+    --color-text: #ffffff;
+    --color-text-muted: #dbe3f4;
+    --social-surface: #151b2b;
+    --social-soft: #1d2436;
+    --social-line: rgba(255, 255, 255, 0.15);
+    --social-ink: #ffffff;
+    --social-muted: #dbe3f4;
+    --social-teal: #8b7dff;
+    --groove-paper: #0b1020;
+    --groove-card: #151b2b;
+    --groove-ink: #ffffff;
+    --groove-muted: #dbe3f4;
+}
+
+html[data-theme="dark"] :where(
+    .groove-smart-search__field,
+    .groove-filter,
+    .groove-map-copy,
+    .groove-map-frame,
+    .groove-map-badge,
+    .groove-stats span,
+    .modern-search-chips a,
+    .profile-live-card,
+    .profile-empty-state,
+    .profile-tabs a,
+    .profile-status-form input,
+    .profile-status-form select,
+    .account-overview-hero,
+    .account-stat-strip a,
+    .account-stat-strip span,
+    .account-link-list a,
+    .account-ticket-list a,
+    .account-shell,
+    .social-share-chat-target,
+    .social-message-share-preview,
+    .event-schedule-panel,
+    .event-ticketing-panel,
+    .event-choice-card,
+    .event-layout-fields,
+    .event-occurrence-card,
+    .event-occurrence-card__selected,
+    .event-occurrence-pill,
+    .event-seat-map-panel,
+    .ticket-camera-box,
+    .ticket-validation-card,
+    .layout-ai-card,
+    .layout-ai-card__controls textarea,
+    .layout-ai-upload,
+    .layout-pro-toolbar,
+    .layout-pro-toolbar button,
+    .layout-pro-panel,
+    .layout-pro-panel input,
+    .layout-pro-panel select,
+    .layout-pro-floor-tabs button,
+    .layout-pro-floor-name input,
+    .layout-pro-workspace,
+    .layout-pro-stage-scroll,
+    .layout-pro-stage,
+    .layout-pro-section__head,
+    .layout-pro-check,
+    .organizer-boost-celebration,
+    .organizer-help-card,
+    .org-tour__dialog,
+    .evt-onboarding,
+    .evt-bottom-nav,
+    .evt-notification-prompt,
+    .evt-pwa-banner
+) {
+    background: #151b2b !important;
+    background-color: #151b2b !important;
+    border-color: rgba(255, 255, 255, 0.15) !important;
+    color: #ffffff !important;
+    box-shadow: 0 22px 54px rgba(0, 0, 0, 0.32) !important;
+}
+
+html[data-theme="dark"] :where(
+    .groove-smart-search__field *,
+    .groove-filter *,
+    .groove-map-copy *,
+    .groove-map-frame *,
+    .profile-live-card *,
+    .profile-empty-state *,
+    .profile-tabs a *,
+    .account-overview-hero *,
+    .account-stat-strip *,
+    .account-link-list *,
+    .account-ticket-list *,
+    .social-share-chat-target *,
+    .social-message-share-preview *,
+    .event-schedule-panel *,
+    .event-ticketing-panel *,
+    .event-choice-card *,
+    .event-layout-fields *,
+    .event-occurrence-card *,
+    .event-seat-map-panel *,
+    .ticket-camera-box *,
+    .ticket-validation-card *:not(img),
+    .layout-ai-card *,
+    .layout-pro-toolbar *,
+    .layout-pro-panel *,
+    .layout-pro-workspace *,
+    .layout-pro-section__head *,
+    .layout-pro-check *,
+    .organizer-boost-celebration *,
+    .organizer-help-card *,
+    .org-tour__dialog *,
+    .evt-onboarding *,
+    .evt-bottom-nav *,
+    .evt-notification-prompt *,
+    .evt-pwa-banner *
+) {
+    color: #ffffff !important;
+}
+
+html[data-theme="dark"] :where(
+    .profile-empty-copy,
+    .profile-vibe-tags span,
+    .account-overview-hero__identity p,
+    .account-stat-strip span span,
+    .account-stat-strip a span,
+    .account-ticket-list small,
+    .account-promo-panel p,
+    .event-occurrence-card__selected span,
+    .event-occurrence-card__selected small,
+    .event-occurrence-pill span,
+    .event-occurrence-pill small,
+    .ticket-attendee-panel__hint,
+    .layout-pro-meta label > span:not(.text-danger),
+    .layout-pro-panel label > span,
+    .layout-pro-floor-name span,
+    .layout-ai-status,
+    .org-tour__dialog p,
+    .evt-onboarding__count,
+    .evt-pwa-banner__text span
+) {
+    color: #dbe3f4 !important;
+}
+
+html[data-theme="dark"] :where(
+    .groove-smart-search__field input,
+    .groove-filter input,
+    .groove-filter select,
+    .groove-form-panel .form-control,
+    .groove-form-panel .form-select,
+    .groove-form-panel textarea,
+    .social-chat-compose input,
+    .profile-status-form input,
+    .profile-status-form select,
+    .layout-ai-card__controls textarea,
+    .layout-pro-panel input,
+    .layout-pro-panel select,
+    .layout-pro-floor-name input,
+    .ticket-attendee-row input,
+    .groove-ticket-quantity
+) {
+    background: #1d2436 !important;
+    border-color: rgba(255, 255, 255, 0.16) !important;
+    color: #ffffff !important;
+}
+
+html[data-theme="dark"] :where(
+    .groove-button-paper,
+    .groove-smart-search__clear,
+    .groove-filter a,
+    .modern-search-chips a,
+    .profile-tabs a,
+    .event-occurrence-more summary,
+    .event-seat-floor-tabs button,
+    .layout-pro-floor-tabs button,
+    .layout-pro-toolbar button,
+    .evt-pwa-banner__platform-btn
+) {
+    background: #1d2436 !important;
+    border-color: rgba(255, 255, 255, 0.16) !important;
+    color: #ffffff !important;
+}
+
+html[data-theme="dark"] :where(
+    .modern-search-chips a:first-child,
+    .modern-search-chips a:hover,
+    .event-occurrence-pill.is-selected,
+    .event-seat-floor-tabs button.is-active,
+    .layout-pro-floor-tabs button.is-active,
+    .groove-button-dark,
+    .groove-smart-search__submit,
+    .groove-filter button
+) {
+    background: #5b67ff !important;
+    border-color: #5b67ff !important;
+    color: #ffffff !important;
+}
+
+html[data-theme="dark"] .groove-button-red {
+    background: #ef4444 !important;
+    border-color: #ef4444 !important;
+    color: #ffffff !important;
+}
+
+html[data-theme="dark"] :where(
+    .layout-pro-stage-scroll,
+    .event-seat-stage
+) {
+    background:
+        linear-gradient(rgba(139, 125, 255, 0.09) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(139, 125, 255, 0.09) 1px, transparent 1px),
+        #101827 !important;
+}
+
+html[data-theme="dark"] :where(
+    .layout-pro-section,
+    .event-seat-section
+) {
+    background: rgba(139, 125, 255, 0.12) !important;
+    border-color: rgba(139, 125, 255, 0.46) !important;
+}
+
+html[data-theme="dark"] :where(
+    .layout-pro-section.shape-stage,
+    .layout-pro-stage__label
+) {
+    background: #050816 !important;
+    color: #ffffff !important;
+}
+
+html[data-theme="dark"] :where(
+    .event-safe-edit-note,
+    .alert-success
+) {
+    background: rgba(52, 211, 153, 0.12) !important;
+    border-color: rgba(52, 211, 153, 0.28) !important;
+    color: #dcfce7 !important;
+}
+
+html[data-theme="dark"] .alert-info {
+    background: rgba(91, 103, 255, 0.14) !important;
+    border-color: rgba(139, 125, 255, 0.3) !important;
+    color: #e3e9ff !important;
+}
+
+html[data-theme="dark"] .alert-warning {
+    background: rgba(245, 158, 11, 0.14) !important;
+    border-color: rgba(245, 158, 11, 0.32) !important;
+    color: #fde68a !important;
+}
+
+html[data-theme="dark"] .alert-danger {
+    background: rgba(239, 68, 68, 0.14) !important;
+    border-color: rgba(239, 68, 68, 0.34) !important;
+    color: #fecaca !important;
+}
+
+html[data-theme="dark"] :where(
+    .card-img-top-fixed,
+    .evt-card__media,
+    .social-message-share-preview img,
+    .social-message-share-preview > span,
+    .ticket-validation-card__qr,
+    .qr-code-frame,
+    .ticket-qr-frame
+) {
+    background: #ffffff !important;
+}
+
+html[data-theme="dark"] .evt-pwa-banner__install,
+html[data-theme="dark"] .evt-notification-prompt [data-push-allow] {
+    background: #ffffff !important;
+    border-color: #ffffff !important;
+    color: #0f172a !important;
+}
+
+html[data-theme="dark"] .evt-pwa-banner__install *,
+html[data-theme="dark"] .evt-notification-prompt [data-push-allow] * {
+    color: #0f172a !important;
+}
