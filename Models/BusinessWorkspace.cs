@@ -38,7 +38,6 @@ namespace EventsApp.Models
             this.OrganizerProfiles = new HashSet<OrganizerProfile>();
             this.Events = new HashSet<Event>();
             this.Posts = new HashSet<Post>();
-            this.Stories = new HashSet<Story>();
             this.Transactions = new HashSet<Transaction>();
         }
 
@@ -103,8 +102,6 @@ namespace EventsApp.Models
         public ICollection<Event> Events { get; set; }
 
         public ICollection<Post> Posts { get; set; }
-
-        public ICollection<Story> Stories { get; set; }
 
         public ICollection<Transaction> Transactions { get; set; }
     }

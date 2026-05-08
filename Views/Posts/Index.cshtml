@@ -5,11 +5,7 @@
     var returnUrl = $"{Context.Request.Path}{Context.Request.QueryString}";
     var isSignedIn = User.Identity?.IsAuthenticated == true;
     var canCreatePublicContent = await Permissions.CanCreatePostAsync(User);
-    var canCreateStory = await Permissions.CanCreateStoryAsync(User);
     var currentUserId = User.FindFirstValue(System.Security.Claims.ClaimTypes.NameIdentifier);
-    var currentStoryInitial = string.IsNullOrWhiteSpace(Model.CurrentUserDisplayName)
-        ? "?"
-        : Model.CurrentUserDisplayName[..1].ToUpperInvariant();
 }
 
 <section class="groove-feed-page social-feed-page social-feed-page--stream">
@@ -18,7 +14,7 @@
             <span class="groove-stamp groove-stamp-teal" data-i18n="feed.kicker">Discover</span>
             <h1 data-i18n="feed.title">Събития, организатори и новини от сцената.</h1>
         </div>
-        @if (isSignedIn && canCreateStory)
+        @if (isSignedIn && canCreatePublicContent)
         {
             <a asp-controller="Account" asp-action="Index" class="groove-button groove-button-paper">
                 <i class="bi bi-columns-gap"></i> <span data-i18n="account.overview">Преглед</span>
@@ -29,11 +25,13 @@
     <section class="social-feed-search">
         <form asp-controller="Posts" asp-action="Index" method="get" class="social-feed-search__form">
             <i class="bi bi-search"></i>
-            <input type="search"
+            <input type="text"
+                   inputmode="search"
                    name="q"
                    value="@Model.SearchQuery"
                    placeholder="Търси хора, @@username или публична страница..."
-                   data-i18n-placeholder="feed.search.placeholder" />
+                   data-i18n-placeholder="feed.search.placeholder"
+                   autocomplete="off" />
             <button type="submit" class="groove-button groove-button-primary" data-i18n="feed.search.action">Търси</button>
             @if (!string.IsNullOrWhiteSpace(Model.SearchQuery))
             {
@@ -131,89 +129,6 @@
             </div>
         }
     </section>
-
-    <section class="social-stories-strip" aria-label="Активни сторита" data-i18n-aria-label="story.active">
-        @if (isSignedIn && canCreatePublicContent)
-        {
-            <article class="social-story-card social-story-card--create">
-                <form asp-controller="Stories" asp-action="Create" asp-route-returnUrl="@returnUrl" method="post" enctype="multipart/form-data" class="story-create-form">
-                    @Html.AntiForgeryToken()
-                    <label class="story-create-trigger" for="story-media-input" title="Създай стори" data-i18n-title="story.create">
-                        <span class="story-create-avatar">
-                            @if (!string.IsNullOrWhiteSpace(Model.CurrentUserProfileImageUrl))
-                            {
-                                <img src="@Model.CurrentUserProfileImageUrl" alt="@Model.CurrentUserDisplayName" />
-                            }
-                            else
-                            {
-                                <span>@currentStoryInitial</span>
-                            }
-                        </span>
-                        <span class="social-story-card__plus"><i class="bi bi-plus-lg"></i></span>
-                    </label>
-                    <input id="story-media-input" class="story-create-input" type="file" name="MediaFile" accept="image/jpeg,image/png,image/gif,image/webp,video/mp4,video/webm,video/quicktime" />
-                    <div class="story-create-fields">
-                        <span class="story-create-file" data-i18n="story.empty">Добави стори</span>
-                        <input type="text" name="Caption" placeholder="Кратък текст" maxlength="280" data-i18n-placeholder="story.caption" />
-                        <button type="submit" data-i18n="story.post">Публикувай</button>
-                    </div>
-                </form>
-            </article>
-        }
-
-        @foreach (var story in Model.Stories)
-        {
-            <article class="social-story-card">
-                <button type="button"
-                        class="social-story-card__media social-story-open"
-                        data-story-media="@story.MediaUrl"
-                        data-story-type="@(story.MediaType == PostMediaType.Video ? "video" : "image")"
-                        data-story-author="@story.AuthorName"
-                        data-story-caption="@story.Caption"
-                        data-story-profile="@Url.Action("Details", "Profiles", new { id = story.AuthorId })">
-                    @if (story.MediaType == PostMediaType.Video)
-                    {
-                        <video muted loop playsinline preload="metadata">
-                            <source src="@story.MediaUrl" />
-                        </video>
-                    }
-                    else
-                    {
-                        <img src="@story.MediaUrl" alt="@story.AuthorName story" />
-                    }
-                </button>
-                <div class="social-story-card__meta">
-                    <strong data-story-author-label>@story.AuthorName</strong>
-                    @if (!string.IsNullOrWhiteSpace(story.Caption))
-                    {
-                        <span data-story-caption-label>@story.Caption</span>
-                    }
-                </div>
-            </article>
-        }
-
-        @if (!Model.Stories.Any() && !isSignedIn)
-        {
-            <div class="social-empty-inline" data-i18n="feed.signin.stories">Влез, за да следваш хора и да виждаш активни сторита.</div>
-        }
-    </section>
-
-    <div id="story-viewer" class="story-viewer" hidden aria-hidden="true">
-        <button type="button" class="story-viewer__backdrop" data-story-close aria-label="Затвори стори" data-i18n-aria-label="story.close"></button>
-        <article class="story-viewer__dialog" role="dialog" aria-modal="true" aria-label="Преглед на стори" data-i18n-aria-label="story.viewer">
-            <button type="button" class="story-viewer__close" data-story-close aria-label="Затвори стори" data-i18n-aria-label="story.close">
-                <i class="bi bi-x-lg"></i>
-            </button>
-            <div class="story-viewer__media">
-                <img id="story-viewer-image" alt="" />
-                <video id="story-viewer-video" controls playsinline></video>
-            </div>
-            <footer class="story-viewer__meta">
-                <a id="story-viewer-profile" href="#"></a>
-                <p id="story-viewer-caption"></p>
-            </footer>
-        </article>
-    </div>
 
     <div class="social-feed-shell social-feed-shell--stream">
         <main class="social-feed-main">
@@ -381,112 +296,3 @@
     </div>
 </section>
 
-@section Scripts {
-    <script>
-        (function () {
-            function currentLang() {
-                var meta = document.querySelector('meta[name="x-app-lang"]');
-                return meta && meta.getAttribute('content') === 'en' ? 'en' : 'bg';
-            }
-
-            function storyEmptyText() {
-                return currentLang() === 'en' ? 'Add story' : 'Добави стори';
-            }
-
-            var input = document.getElementById('story-media-input');
-            if (input) {
-                var form = input.closest('.story-create-form');
-                var label = form ? form.querySelector('.story-create-file') : null;
-                input.addEventListener('change', function () {
-                    var file = input.files && input.files[0];
-                    if (!form) return;
-                    form.classList.toggle('has-file', !!file);
-                    if (label) {
-                        label.textContent = file ? file.name : storyEmptyText();
-                    }
-                });
-            }
-
-            var viewer = document.getElementById('story-viewer');
-            if (!viewer) return;
-
-            var mediaWrap = viewer.querySelector('.story-viewer__media');
-            var image = document.getElementById('story-viewer-image');
-            var video = document.getElementById('story-viewer-video');
-            var profile = document.getElementById('story-viewer-profile');
-            var caption = document.getElementById('story-viewer-caption');
-            var closeButtons = viewer.querySelectorAll('[data-story-close]');
-
-            function closeStory() {
-                viewer.hidden = true;
-                viewer.setAttribute('aria-hidden', 'true');
-                document.body.classList.remove('story-viewer-open');
-
-                if (video) {
-                    video.pause();
-                    video.removeAttribute('src');
-                    video.load();
-                }
-
-                if (image) {
-                    image.removeAttribute('src');
-                    image.removeAttribute('alt');
-                }
-
-                if (mediaWrap) {
-                    mediaWrap.classList.remove('is-image', 'is-video');
-                }
-            }
-
-            function openStory(trigger) {
-                var storyUrl = trigger.getAttribute('data-story-media');
-                if (!storyUrl || !mediaWrap || !image || !video || !profile || !caption) return;
-
-                var card = trigger.closest('.social-story-card');
-                var authorLabel = card ? card.querySelector('[data-story-author-label]') : null;
-                var captionLabel = card ? card.querySelector('[data-story-caption-label]') : null;
-                var author = authorLabel ? authorLabel.textContent.trim() : (trigger.getAttribute('data-story-author') || '');
-                var text = captionLabel ? captionLabel.textContent.trim() : (trigger.getAttribute('data-story-caption') || '');
-                var profileUrl = trigger.getAttribute('data-story-profile') || '#';
-                var storyType = trigger.getAttribute('data-story-type') === 'video' ? 'video' : 'image';
-
-                closeStory();
-
-                profile.textContent = author;
-                profile.href = profileUrl;
-                caption.textContent = text;
-                caption.hidden = !text;
-
-                if (storyType === 'video') {
-                    video.src = storyUrl;
-                    mediaWrap.classList.add('is-video');
-                    video.play().catch(function () { });
-                } else {
-                    image.src = storyUrl;
-                    image.alt = author ? author + ' story' : 'Story';
-                    mediaWrap.classList.add('is-image');
-                }
-
-                viewer.hidden = false;
-                viewer.setAttribute('aria-hidden', 'false');
-                document.body.classList.add('story-viewer-open');
-            }
-
-            document.querySelectorAll('.social-story-open').forEach(function (trigger) {
-                trigger.addEventListener('click', function () {
-                    openStory(trigger);
-                });
-            });
-
-            closeButtons.forEach(function (button) {
-                button.addEventListener('click', closeStory);
-            });
-
-            document.addEventListener('keydown', function (event) {
-                if (event.key === 'Escape' && !viewer.hidden) {
-                    closeStory();
-                }
-            });
-        })();
-    </script>
-}

@@ -161,36 +161,6 @@ namespace EventsApp.Services
                 userId,
                 cancellationToken);
 
-            var stories = await _db.Stories
-                .AsNoTracking()
-                .Where(s => s.ExpiresAt > now)
-                .Where(s => (s.OrganizerProfile != null && s.OrganizerProfile.IsActive && s.OrganizerProfile.IsApproved)
-                    || (s.Author.OrganizerData != null && s.Author.OrganizerData.Approved))
-                .OrderByDescending(s => followedIds.Contains(s.AuthorId))
-                .ThenByDescending(s => s.CreatedAt)
-                .Take(18)
-                .Select(s => new StoryCardViewModel
-                {
-                    Id = s.Id,
-                    AuthorId = s.AuthorId,
-                    AuthorName = s.OrganizerProfile != null
-                        ? s.OrganizerProfile.DisplayName
-                        : s.Author.OrganizerData != null && s.Author.OrganizerData.Approved
-                        ? "Public page"
-                        : s.Author.UserName ?? string.Empty,
-                    AuthorImageUrl = s.OrganizerProfile != null && !string.IsNullOrWhiteSpace(s.OrganizerProfile.AvatarImageUrl)
-                        ? s.OrganizerProfile.AvatarImageUrl
-                        : s.Author.OrganizerData != null && s.Author.OrganizerData.Approved
-                        ? null
-                        : s.Author.ProfileImageUrl,
-                    MediaUrl = s.MediaUrl,
-                    MediaType = s.MediaType,
-                    Caption = s.Caption,
-                    CreatedAt = s.CreatedAt,
-                    ExpiresAt = s.ExpiresAt,
-                })
-                .ToListAsync(cancellationToken);
-
             var suggestedProfiles = await _db.Users
                 .AsNoTracking()
                 .Where(u => userId == null || u.Id != userId)
@@ -221,7 +191,6 @@ namespace EventsApp.Services
 
             return new FeedViewModel
             {
-                Stories = stories,
                 RecommendedEvents = recommended,
                 TrendingEvents = trending,
                 FriendsActivity = friendsActivity,

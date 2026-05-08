@@ -11,8 +11,6 @@ namespace EventsApp.Services
     {
         Task<bool> CanCreatePostAsync(ClaimsPrincipal user, CancellationToken cancellationToken = default);
 
-        Task<bool> CanCreateStoryAsync(ClaimsPrincipal user, CancellationToken cancellationToken = default);
-
         Task<bool> CanManageWorkspaceAsync(ClaimsPrincipal user, int workspaceId, CancellationToken cancellationToken = default);
 
         Task<bool> CanManageOrganizerPageAsync(ClaimsPrincipal user, int organizerProfileId, CancellationToken cancellationToken = default);
@@ -26,8 +24,6 @@ namespace EventsApp.Services
         Task<bool> CanMessageAsIdentityAsync(ClaimsPrincipal currentUser, int conversationId, AuthorIdentityType authorType, int? organizerProfileId, CancellationToken cancellationToken = default);
 
         Task<bool> CanPublishAsIdentityAsync(ClaimsPrincipal currentUser, AuthorIdentityType authorType, int? organizerProfileId, CancellationToken cancellationToken = default);
-
-        Task<bool> CanViewStoryAsync(ClaimsPrincipal viewer, Story story, CancellationToken cancellationToken = default);
 
         Task<bool> CanEditProfileStatusAsync(ClaimsPrincipal user, string profileOwnerId, CancellationToken cancellationToken = default);
 
@@ -78,11 +74,6 @@ namespace EventsApp.Services
             return await _db.OrganizerData
                 .AsNoTracking()
                 .AnyAsync(o => o.OrganizerId == userId && o.Approved, cancellationToken);
-        }
-
-        public Task<bool> CanCreateStoryAsync(ClaimsPrincipal user, CancellationToken cancellationToken = default)
-        {
-            return CanCreatePostAsync(user, cancellationToken);
         }
 
         public async Task<bool> CanManageWorkspaceAsync(ClaimsPrincipal user, int workspaceId, CancellationToken cancellationToken = default)
@@ -209,11 +200,6 @@ namespace EventsApp.Services
                 && organizerProfileId.HasValue
                 && await CanCreatePostAsync(currentUser, cancellationToken)
                 && await CanActAsOrganizerPageAsync(currentUser, organizerProfileId.Value, cancellationToken);
-        }
-
-        public Task<bool> CanViewStoryAsync(ClaimsPrincipal viewer, Story story, CancellationToken cancellationToken = default)
-        {
-            return Task.FromResult(story.Author?.OrganizerData?.Approved == true || viewer.IsInRole(GlobalConstants.Roles.Admin));
         }
 
         public Task<bool> CanEditProfileStatusAsync(ClaimsPrincipal user, string profileOwnerId, CancellationToken cancellationToken = default)

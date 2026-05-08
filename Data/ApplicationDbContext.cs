@@ -50,8 +50,6 @@ namespace EventsApp.Data
 
         public DbSet<Follow> Follows { get; set; } = null!;
 
-        public DbSet<Story> Stories { get; set; } = null!;
-
         public DbSet<Conversation> Conversations { get; set; } = null!;
 
         public DbSet<Message> Messages { get; set; } = null!;
@@ -481,25 +479,6 @@ namespace EventsApp.Data
                       .OnDelete(DeleteBehavior.Restrict);
 
                 entity.HasIndex(f => new { f.FollowerId, f.FollowingId }).IsUnique();
-            });
-
-            builder.Entity<Story>(entity =>
-            {
-                entity.HasOne(s => s.Author)
-                      .WithMany(u => u.Stories)
-                      .HasForeignKey(s => s.AuthorId)
-                      .OnDelete(DeleteBehavior.Restrict);
-
-                entity.HasOne(s => s.OrganizerProfile)
-                      .WithMany(p => p.Stories)
-                      .HasForeignKey(s => s.OrganizerProfileId)
-                      .OnDelete(DeleteBehavior.NoAction);
-
-                entity.HasOne(s => s.BusinessWorkspace)
-                      .WithMany(w => w.Stories)
-                      .HasForeignKey(s => s.BusinessWorkspaceId)
-                      .OnDelete(DeleteBehavior.NoAction);
-
             });
 
             builder.Entity<Conversation>(entity =>

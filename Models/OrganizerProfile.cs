@@ -13,7 +13,6 @@ namespace EventsApp.Models
             IsApproved = true;
             Events = new HashSet<Event>();
             Posts = new HashSet<Post>();
-            Stories = new HashSet<Story>();
         }
 
         [Key]
@@ -91,7 +90,5 @@ namespace EventsApp.Models
         public ICollection<Event> Events { get; set; }
 
         public ICollection<Post> Posts { get; set; }
-
-        public ICollection<Story> Stories { get; set; }
     }
 }

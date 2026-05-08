@@ -18,7 +18,6 @@
                 : (!string.IsNullOrWhiteSpace(currentUser?.Email) ? currentUser!.Email : "Профил"));
         var currentUserId = currentUser?.Id;
         var canCreatePublicContent = await Permissions.CanCreatePostAsync(User);
-        var canCreateStory = await Permissions.CanCreateStoryAsync(User);
         var initials = !string.IsNullOrWhiteSpace(fullName)
             ? string.Concat(fullName.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(w => w[0].ToString().ToUpper()))
             : (displayName?.Length > 0 ? displayName[0].ToString().ToUpper() : "У");
@@ -48,14 +47,6 @@
                             <i class="bi bi-plus-square"></i> <span data-i18n="post.create">Create post</span>
                         </a>
                     </li>
-                    @if (canCreateStory)
-                    {
-                        <li>
-                            <a class="dropdown-item" asp-controller="Stories" asp-action="Create">
-                                <i class="bi bi-camera"></i> <span data-i18n="story.create">Story</span>
-                            </a>
-                        </li>
-                    }
                 }
                 <li>
                     <a class="dropdown-item" asp-controller="Events" asp-action="Recommended">

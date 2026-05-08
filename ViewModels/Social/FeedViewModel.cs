@@ -5,7 +5,6 @@ namespace EventsApp.ViewModels.Social
 {
     public class FeedViewModel
     {
-        public IReadOnlyList<StoryCardViewModel> Stories { get; set; } = Array.Empty<StoryCardViewModel>();
         public IReadOnlyList<EventCardViewModel> RecommendedEvents { get; set; } = Array.Empty<EventCardViewModel>();
         public IReadOnlyList<EventCardViewModel> TrendingEvents { get; set; } = Array.Empty<EventCardViewModel>();
         public IReadOnlyList<PostCardViewModel> FriendsActivity { get; set; } = Array.Empty<PostCardViewModel>();

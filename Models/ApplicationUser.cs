@@ -24,7 +24,6 @@ namespace EventsApp.Models
             this.EventAttendances = new HashSet<EventAttendance>();
             this.Followers = new HashSet<Follow>();
             this.Following = new HashSet<Follow>();
-            this.Stories = new HashSet<Story>();
             this.SentMessages = new HashSet<Message>();
             this.UserActivities = new HashSet<UserActivity>();
             this.OrganizerProfiles = new HashSet<OrganizerProfile>();
@@ -94,8 +93,6 @@ namespace EventsApp.Models
         public ICollection<Follow> Followers { get; set; }
 
         public ICollection<Follow> Following { get; set; }
-
-        public ICollection<Story> Stories { get; set; }
 
         public ICollection<Message> SentMessages { get; set; }
 

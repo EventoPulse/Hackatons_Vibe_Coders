@@ -1,4 +1,3 @@
-using Amazon;
 using Amazon.Runtime;
 using Amazon.S3;
 using Amazon.S3.Model;
@@ -61,7 +60,6 @@ namespace EventsApp.Services
                 ServiceURL = endpoint,
                 ForcePathStyle = forcePathStyle,
                 AuthenticationRegion = region,
-                RegionEndpoint = RegionEndpoint.GetBySystemName(region),
             };
 
             _client = new AmazonS3Client(new BasicAWSCredentials(accessKey, secretKey), s3Config);

@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(awk 'NR>7300 && /h1,|h2,|h3,|h4,|h5,|h6/ && !/dark/' wwwroot/css/site.css)",
+      "Bash(awk 'NR>10800 && NR<11141' wwwroot/css/site.css)",
+      "Bash(grep -v \"dark\\\\|#[0-9a-f]{3,6}.*!important\")",
+      "Bash(node -e ' *)",
+      "Bash(awk 'NR>=6540 && NR<=6560' wwwroot/css/site.css)",
+      "Bash(Remove-Item \"c:\\\\Users\\\\velis\\\\Desktop\\\\Hackatons_Vibe_Coders\\\\ViewModels\\\\Social\\\\StoryCreateViewModel.cs\" -Force)"
+    ]
+  }
+}
