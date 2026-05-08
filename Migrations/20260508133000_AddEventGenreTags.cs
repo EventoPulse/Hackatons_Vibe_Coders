@@ -1,3 +1,5 @@
+using EventsApp.Data;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -5,36 +7,36 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace EventsApp.Migrations
 {
     /// <inheritdoc />
+    [DbContext(typeof(ApplicationDbContext))]
+    [Migration("20260508133000_AddEventGenreTags")]
     public partial class AddEventGenreTags : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.AddColumn<string>(
-                name: "GenreTags",
-                table: "Events",
-                type: "character varying(512)",
-                maxLength: 512,
-                nullable: true);
+            migrationBuilder.Sql("""
+                ALTER TABLE "Events"
+                ADD COLUMN IF NOT EXISTS "GenreTags" character varying(512);
+                """);
 
-            migrationBuilder.AddColumn<string>(
-                name: "GenreTags",
-                table: "EventSeries",
-                type: "character varying(512)",
-                maxLength: 512,
-                nullable: true);
+            migrationBuilder.Sql("""
+                ALTER TABLE "EventSeries"
+                ADD COLUMN IF NOT EXISTS "GenreTags" character varying(512);
+                """);
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropColumn(
-                name: "GenreTags",
-                table: "Events");
+            migrationBuilder.Sql("""
+                ALTER TABLE "Events"
+                DROP COLUMN IF EXISTS "GenreTags";
+                """);
 
-            migrationBuilder.DropColumn(
-                name: "GenreTags",
-                table: "EventSeries");
+            migrationBuilder.Sql("""
+                ALTER TABLE "EventSeries"
+                DROP COLUMN IF EXISTS "GenreTags";
+                """);
         }
     }
 }
