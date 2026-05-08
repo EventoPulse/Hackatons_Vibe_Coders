@@ -6,6 +6,8 @@ using EventsApp.ViewModels.Social;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
+using EventsApp.Hubs;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 
@@ -19,17 +21,20 @@ namespace EventsApp.Controllers
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly IPlatformPermissionService _permissions;
         private readonly IActingIdentityService _actingIdentity;
+        private readonly IHubContext<ChatHub> _hubContext;
 
         public MessagesController(
             ApplicationDbContext db,
             UserManager<ApplicationUser> userManager,
             IPlatformPermissionService permissions,
-            IActingIdentityService actingIdentity)
+            IActingIdentityService actingIdentity,
+            IHubContext<ChatHub> hubContext)
         {
             _db = db;
             _userManager = userManager;
             _permissions = permissions;
             _actingIdentity = actingIdentity;
+            _hubContext = hubContext;
         }
 
         public async Task<IActionResult> Index()
@@ -718,7 +723,7 @@ namespace EventsApp.Controllers
                 return Forbid();
             }
 
-            _db.Messages.Add(new Message
+            var message = new Message
             {
                 ConversationId = conversation.Id,
                 SenderId = userId,
@@ -727,10 +732,40 @@ namespace EventsApp.Controllers
                 BusinessWorkspaceId = identity.BusinessWorkspaceId,
                 Content = content,
                 CreatedAt = now,
-            });
+            };
+
+            _db.Messages.Add(message);
 
             conversation.UpdatedAt = now;
             await _db.SaveChangesAsync();
+
+            // Load saved message with related sender/profile for broadcasting
+            var saved = await _db.Messages
+                .Include(m => m.Sender)
+                .Include(m => m.AuthorOrganizerProfile)
+                .FirstOrDefaultAsync(m => m.Id == message.Id);
+
+            if (saved != null)
+            {
+                var payload = new
+                {
+                    id = saved.Id,
+                    senderId = saved.SenderId,
+                    isMine = saved.SenderId == userId,
+                    senderName = saved.AuthorType == AuthorIdentityType.OrganizerPage && saved.AuthorOrganizerProfile != null
+                        ? saved.AuthorOrganizerProfile.DisplayName
+                        : (saved.Sender != null ? GetDisplayName(saved.Sender) : string.Empty),
+                    senderImageUrl = saved.AuthorType == AuthorIdentityType.OrganizerPage && saved.AuthorOrganizerProfile != null
+                        ? saved.AuthorOrganizerProfile.AvatarImageUrl
+                        : saved.Sender?.ProfileImageUrl,
+                    senderBadgeText = GetAuthorBadgeText(saved.AuthorType, saved.SenderId == userId),
+                    content = saved.Content,
+                    createdAt = saved.CreatedAt.ToString("dd.MM.yyyy HH:mm"),
+                };
+
+                await _hubContext.Clients.Group(conversation.Token.ToString())
+                    .SendAsync("NewMessage", payload);
+            }
 
             if (isInitialRequestMessage)
             {
@@ -861,7 +896,7 @@ namespace EventsApp.Controllers
             }
 
             var now = DateTime.UtcNow;
-            _db.Messages.Add(new Message
+            var message = new Message
             {
                 ConversationId = conversationId,
                 SenderId = userId,
@@ -872,10 +907,40 @@ namespace EventsApp.Controllers
                 SharedEventId = sharedEventId,
                 SharedPostId = sharedPostId,
                 CreatedAt = now,
-            });
+            };
+
+            _db.Messages.Add(message);
 
             conversation.UpdatedAt = now;
             await _db.SaveChangesAsync();
+
+            // Broadcast saved message
+            var saved = await _db.Messages
+                .Include(m => m.Sender)
+                .Include(m => m.AuthorOrganizerProfile)
+                .FirstOrDefaultAsync(m => m.Id == message.Id);
+
+            if (saved != null)
+            {
+                var payload = new
+                {
+                    id = saved.Id,
+                    senderId = saved.SenderId,
+                    isMine = saved.SenderId == userId,
+                    senderName = saved.AuthorType == AuthorIdentityType.OrganizerPage && saved.AuthorOrganizerProfile != null
+                        ? saved.AuthorOrganizerProfile.DisplayName
+                        : (saved.Sender != null ? GetDisplayName(saved.Sender) : string.Empty),
+                    senderImageUrl = saved.AuthorType == AuthorIdentityType.OrganizerPage && saved.AuthorOrganizerProfile != null
+                        ? saved.AuthorOrganizerProfile.AvatarImageUrl
+                        : saved.Sender?.ProfileImageUrl,
+                    senderBadgeText = GetAuthorBadgeText(saved.AuthorType, saved.SenderId == userId),
+                    content = saved.Content,
+                    createdAt = saved.CreatedAt.ToString("dd.MM.yyyy HH:mm"),
+                };
+
+                await _hubContext.Clients.Group(conversation.Token.ToString())
+                    .SendAsync("NewMessage", payload);
+            }
 
             TempData["StatusMessage"] = isInitialRequestMessage
                 ? "Message request sent. The conversation will unlock after approval."

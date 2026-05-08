@@ -1,10 +1,42 @@
 @model ConversationDetailsViewModel
 @{
-    ViewData["Title"] = Model.OtherUserName;
-    var initial = string.IsNullOrWhiteSpace(Model.OtherUserName) ? "?" : Model.OtherUserName[..1].ToUpperInvariant();
-}
 
-<section class="groove-app-page social-messages-page">
+<script src="https://cdn.jsdelivr.net/npm/@microsoft/signalr@7.0.5/dist/browser/signalr.min.js"></script>
+<script>
+}
+        // SignalR realtime updates
+        try {
+            var conversationToken = '@Model.Token';
+            var currentUserId = '@(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "")';
+            if (window.signalR && typeof buildBubble === 'function') {
+                var connection = new signalR.HubConnectionBuilder()
+                    .withUrl('/hubs/chat')
+                    .withAutomaticReconnect()
+                    .build();
+
+                connection.on('NewMessage', function (m) {
+                    if (!m || !m.id) return;
+                    if (m.id <= lastId) return;
+                    var wasAtBottom = thread.scrollHeight - thread.scrollTop - thread.clientHeight < 80;
+                    m.isMine = (m.senderId === currentUserId);
+                    thread.appendChild(buildBubble(m));
+                    lastId = m.id;
+                    if (wasAtBottom) scrollBottom();
+                });
+
+                connection.start().then(function () {
+                    connection.invoke('JoinConversation', conversationToken).catch(function () { });
+                }).catch(function (err) { console && console.error && console.error(err); });
+
+                window.addEventListener('beforeunload', function () {
+                    try { connection.invoke('LeaveConversation', conversationToken); } catch (e) { }
+                });
+            }
+        } catch (e) { console && console.error && console.error(e); }
+    })();
+
+    (function () {
+        function closeAllMenus() {
     <div class="social-chat-shell">
         <header class="social-chat-header">
             <a asp-action="Index" class="btn btn-sm btn-outline-secondary" title="Back" data-i18n-title="common.back">
@@ -247,10 +279,10 @@
         var conversationToken = '@Model.Token';
         var thread = document.querySelector('.social-chat-thread');
         var lastId = @(Model.Messages.Count > 0 ? Model.Messages[^1].Id : 0);
-        var polling = true;
         var pollTimer = null;
         var currentDelay = 1500;
         var DEFAULT_DELAY = 1500;
+        var HIDDEN_DELAY = 10000;
         var MAX_DELAY = 15000;
 
         function scrollBottom() {
@@ -302,15 +334,14 @@
 
         function schedule(delay) {
             if (pollTimer) clearTimeout(pollTimer);
-            if (!polling) return;
             pollTimer = window.setTimeout(poll, delay);
         }
 
         function poll() {
-            if (!polling) return;
             fetch('/Messages/Poll/' + conversationToken + '?afterId=' + lastId, {
                 headers: { 'X-Requested-With': 'XMLHttpRequest' },
-                credentials: 'same-origin'
+                credentials: 'same-origin',
+                cache: 'no-store'
             })
             .then(function (r) {
                 if (r.status === 429) {
@@ -337,19 +368,21 @@
                 currentDelay = Math.min(MAX_DELAY, currentDelay * 2);
             })
             .finally(function () {
-                schedule(currentDelay);
+                // If the page is hidden, increase the delay but keep polling.
+                var nextDelay = document.hidden ? Math.max(currentDelay, HIDDEN_DELAY) : currentDelay;
+                schedule(nextDelay);
             });
         }
 
+        // Start polling immediately
         schedule(currentDelay);
 
+        // When page becomes visible, fetch immediately and reset delay
         document.addEventListener('visibilitychange', function () {
-            if (document.hidden) {
-                polling = false;
-                if (pollTimer) clearTimeout(pollTimer);
-            } else {
-                polling = true;
+            if (!document.hidden) {
                 currentDelay = DEFAULT_DELAY;
+                // do an immediate poll to catch up
+                if (pollTimer) clearTimeout(pollTimer);
                 poll();
             }
         });

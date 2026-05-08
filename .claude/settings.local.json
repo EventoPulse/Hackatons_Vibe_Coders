@@ -70,7 +70,27 @@
       "Bash(git commit -m 'Fix feed page grid + TikTok-style preferences picker *)",
       "Bash(grep -n \"</section>$\\\\|</section>\\\\s*$\" Views/Events/Details.cshtml)",
       "Bash(git commit -m 'Sprint 1: dark mode, share dropdown, calendar, profile stats, similar events *)",
-      "Bash(git commit -m 'Sprint 2: PWA, Memories, Year in Review \\(Wrapped\\), AI Day Plan via Sirma *)"
+      "Bash(git commit -m 'Sprint 2: PWA, Memories, Year in Review \\(Wrapped\\), AI Day Plan via Sirma *)",
+      "Bash(git -c core.editor=true rebase --continue)",
+      "Bash(GIT_EDITOR=true git rebase --continue)",
+      "Bash(git -c core.editor=\":\" rebase --continue)",
+      "Bash(grep -rln *)",
+      "Bash(grep -n \"^=======$\" \"c:\\\\Users\\\\javicilie\\\\Desktop\\\\Hackatons_Vibe_Coders-main\\\\wwwroot\\\\css\\\\site.css\")",
+      "Bash(GIT_EDITOR=\"cat\" GIT_SEQUENCE_EDITOR=\":\" git rebase --continue)",
+      "Bash(git commit *)",
+      "Bash(git rebase *)",
+      "Bash(git update-ref *)",
+      "Bash(rm -rf .git/rebase-merge)",
+      "Bash(awk '{print $5}')",
+      "Bash(\"C:\\\\Program Files\\\\Docker\\\\Docker\\\\Docker Desktop.exe\")",
+      "Bash(docker compose *)",
+      "Bash(docker exec *)",
+      "Bash(ASPNETCORE_ENVIRONMENT=Development DOTNET_ENVIRONMENT=Development dotnet run --no-launch-profile --urls \"http://localhost:5180;https://localhost:7180\")",
+      "Bash(curl -s -c /tmp/cookies.txt -o /tmp/login.html http://localhost:5180/Identity/Account/Login)",
+      "Bash(bash /tmp/stuff_demo.sh)",
+      "Bash(bash \"c:/tmp/stuff_demo.sh\")",
+      "Bash(taskkill //F //PID 23600)",
+      "Bash(git pull *)"
     ],
     "additionalDirectories": [
       "\\tmp"

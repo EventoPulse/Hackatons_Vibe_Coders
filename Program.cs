@@ -112,6 +112,7 @@ builder.Services.Configure<FormOptions>(options =>
 
 builder.Services.AddLocalization();
 builder.Services.AddControllersWithViews();
+builder.Services.AddSignalR();
 builder.Services.AddAntiforgery(opts =>
 {
     opts.HeaderName = "RequestVerificationToken";
@@ -331,6 +332,9 @@ app.MapRazorPages()
             builder.Metadata.Add(new EnableRateLimitingAttribute("auth"));
         }
     });
+
+// SignalR hubs
+app.MapHub<EventsApp.Hubs.ChatHub>("/hubs/chat");
 
 app.Run();
 
