@@ -7558,6 +7558,30 @@ html[data-theme="dark"] .evt-card__chip--hot { background: #ff5a3c; color: #fff;
 html[data-theme="dark"] .evt-card__chip--free { background: rgba(6, 78, 59, 0.85); color: #6ee7b7; }
 html[data-theme="dark"] .evt-card__chip--pending { background: rgba(120, 90, 0, 0.85); color: #fde68a; }
 
+/* Map badges + locate button — were white/white in dark mode */
+html[data-theme="dark"] .evt-hero__map-badge {
+    background: rgba(27, 32, 48, 0.92);
+    color: #f1f3fa;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+html[data-theme="dark"] .evt-hero__map-locate {
+    background: #4a6fff;
+    color: #fff;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+}
+html[data-theme="dark"] .evt-hero__map-locate:hover {
+    background: #6b85ff;
+}
+
+/* AI search "Smart търсене" pill — white bg with purple text was washed out on dark */
+html[data-theme="dark"] .evt-ai-search-btn {
+    background: #fff;
+    color: #4a3fc7;
+}
+html[data-theme="dark"] .evt-ai-search-btn:hover {
+    background: #f5f5ff;
+}
+
 /* Free / price pill on event cards — must not be a bright bar in dark mode */
 .evt-card__price,
 .evt-card__price--free {
