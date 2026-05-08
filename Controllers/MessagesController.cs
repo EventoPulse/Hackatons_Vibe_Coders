@@ -741,6 +741,7 @@ namespace EventsApp.Controllers
         }
 
         [HttpGet]
+        [DisableRateLimiting]
         public async Task<IActionResult> Poll(Guid token, int afterId)
         {
             var userId = _userManager.GetUserId(User)!;

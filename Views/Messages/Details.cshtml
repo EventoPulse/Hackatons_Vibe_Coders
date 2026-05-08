@@ -248,6 +248,10 @@
         var thread = document.querySelector('.social-chat-thread');
         var lastId = @(Model.Messages.Count > 0 ? Model.Messages[^1].Id : 0);
         var polling = true;
+        var pollTimer = null;
+        var currentDelay = 1500;
+        var DEFAULT_DELAY = 1500;
+        var MAX_DELAY = 15000;
 
         function scrollBottom() {
             if (thread) thread.scrollTop = thread.scrollHeight;
@@ -296,45 +300,59 @@
             return article;
         }
 
+        function schedule(delay) {
+            if (pollTimer) clearTimeout(pollTimer);
+            if (!polling) return;
+            pollTimer = window.setTimeout(poll, delay);
+        }
+
         function poll() {
             if (!polling) return;
             fetch('/Messages/Poll/' + conversationToken + '?afterId=' + lastId, {
-                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                credentials: 'same-origin'
             })
-            .then(function (r) { return r.ok ? r.json() : null; })
+            .then(function (r) {
+                if (r.status === 429) {
+                    currentDelay = Math.min(MAX_DELAY, Math.max(currentDelay * 2, 5000));
+                    return null;
+                }
+                if (!r.ok) {
+                    currentDelay = Math.min(MAX_DELAY, currentDelay * 2);
+                    return null;
+                }
+                currentDelay = DEFAULT_DELAY;
+                return r.json();
+            })
             .then(function (data) {
                 if (!data || !data.messages || data.messages.length === 0) return;
-                var wasAtBottom = thread.scrollHeight - thread.scrollTop - thread.clientHeight < 60;
+                var wasAtBottom = thread.scrollHeight - thread.scrollTop - thread.clientHeight < 80;
                 data.messages.forEach(function (m) {
                     thread.appendChild(buildBubble(m));
                     lastId = m.id;
                 });
                 if (wasAtBottom) scrollBottom();
             })
-            .catch(function () {})
+            .catch(function () {
+                currentDelay = Math.min(MAX_DELAY, currentDelay * 2);
+            })
             .finally(function () {
-                if (polling) window.setTimeout(poll, 2000);
+                schedule(currentDelay);
             });
         }
 
-        window.setTimeout(poll, 2000);
+        schedule(currentDelay);
 
         document.addEventListener('visibilitychange', function () {
             if (document.hidden) {
                 polling = false;
+                if (pollTimer) clearTimeout(pollTimer);
             } else {
                 polling = true;
+                currentDelay = DEFAULT_DELAY;
                 poll();
             }
         });
-
-        var form = document.querySelector('.social-chat-compose');
-        if (form) {
-            form.addEventListener('submit', function () {
-                polling = false;
-                window.setTimeout(function () { polling = true; poll(); }, 1500);
-            });
-        }
     })();
     </script>
 }
