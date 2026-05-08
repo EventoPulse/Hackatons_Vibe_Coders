@@ -72,7 +72,7 @@
 
     function buildConversationRow(update) {
         var row = document.createElement('a');
-        row.href = update.url || '/Messages';
+        row.href = update.url || '/inbox';
         row.className = 'social-conversation-row' + (update.listKey === 'requests' ? ' is-request' : '');
         row.setAttribute('data-conversation-row', '');
         row.setAttribute('data-token', update.token);

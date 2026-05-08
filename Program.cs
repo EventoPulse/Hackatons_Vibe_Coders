@@ -322,6 +322,172 @@ app.UseAuthentication();
 app.UseRateLimiter();
 app.UseAuthorization();
 
+// Public aliases keep MVC controller names out of visible URLs while old routes still work.
+app.MapControllerRoute(
+    name: "flow-create",
+    pattern: "flow/new",
+    defaults: new { controller = "Posts", action = "Create" });
+
+app.MapControllerRoute(
+    name: "flow-details",
+    pattern: "flow/p/{id:int}",
+    defaults: new { controller = "Posts", action = "Details" });
+
+app.MapControllerRoute(
+    name: "flow-edit",
+    pattern: "flow/p/{id:int}/edit",
+    defaults: new { controller = "Posts", action = "Edit" });
+
+app.MapControllerRoute(
+    name: "flow-delete",
+    pattern: "flow/p/{id:int}/delete",
+    defaults: new { controller = "Posts", action = "Delete" });
+
+app.MapControllerRoute(
+    name: "flow-delete-confirmed",
+    pattern: "flow/p/{id:int}/delete-confirmed",
+    defaults: new { controller = "Posts", action = "DeleteConfirmed" });
+
+app.MapControllerRoute(
+    name: "flow-like",
+    pattern: "flow/p/{id:int}/like",
+    defaults: new { controller = "Posts", action = "Like" });
+
+app.MapControllerRoute(
+    name: "flow-unlike",
+    pattern: "flow/p/{id:int}/unlike",
+    defaults: new { controller = "Posts", action = "Unlike" });
+
+app.MapControllerRoute(
+    name: "flow-save",
+    pattern: "flow/p/{id:int}/save",
+    defaults: new { controller = "Posts", action = "Save" });
+
+app.MapControllerRoute(
+    name: "flow-unsave",
+    pattern: "flow/p/{id:int}/unsave",
+    defaults: new { controller = "Posts", action = "Unsave" });
+
+app.MapControllerRoute(
+    name: "flow-comments",
+    pattern: "flow/p/{id:int}/comments",
+    defaults: new { controller = "Posts", action = "AddComment" });
+
+app.MapControllerRoute(
+    name: "flow",
+    pattern: "flow/{action=Index}/{id?}",
+    defaults: new { controller = "Posts" });
+
+app.MapControllerRoute(
+    name: "inbox-details",
+    pattern: "inbox/{token:guid}",
+    defaults: new { controller = "Messages", action = "Details" });
+
+app.MapControllerRoute(
+    name: "inbox-poll",
+    pattern: "inbox/poll/{token:guid}",
+    defaults: new { controller = "Messages", action = "Poll" });
+
+app.MapControllerRoute(
+    name: "inbox-send",
+    pattern: "inbox/send/{token:guid}",
+    defaults: new { controller = "Messages", action = "Send" });
+
+app.MapControllerRoute(
+    name: "inbox-approve",
+    pattern: "inbox/{token:guid}/approve",
+    defaults: new { controller = "Messages", action = "Approve" });
+
+app.MapControllerRoute(
+    name: "inbox-decline",
+    pattern: "inbox/{token:guid}/decline",
+    defaults: new { controller = "Messages", action = "Decline" });
+
+app.MapControllerRoute(
+    name: "inbox-share-event",
+    pattern: "inbox/share/event/{id:int}",
+    defaults: new { controller = "Messages", action = "ShareEvent" });
+
+app.MapControllerRoute(
+    name: "inbox-share-post",
+    pattern: "inbox/share/post/{id:int}",
+    defaults: new { controller = "Messages", action = "SharePost" });
+
+app.MapControllerRoute(
+    name: "inbox",
+    pattern: "inbox/{action=Index}/{id?}",
+    defaults: new { controller = "Messages" });
+
+app.MapControllerRoute(
+    name: "event-details",
+    pattern: "e/{id:int}",
+    defaults: new { controller = "Events", action = "Details" });
+
+app.MapControllerRoute(
+    name: "event-create",
+    pattern: "events/new",
+    defaults: new { controller = "Events", action = "Create" });
+
+app.MapControllerRoute(
+    name: "event-edit",
+    pattern: "events/{id:int}/edit",
+    defaults: new { controller = "Events", action = "Edit" });
+
+app.MapControllerRoute(
+    name: "event-delete",
+    pattern: "events/{id:int}/delete",
+    defaults: new { controller = "Events", action = "Delete" });
+
+app.MapControllerRoute(
+    name: "events",
+    pattern: "events/{action=Index}/{id?}",
+    defaults: new { controller = "Events" });
+
+app.MapControllerRoute(
+    name: "ticket-details",
+    pattern: "ticket/{id:guid}",
+    defaults: new { controller = "Tickets", action = "Details" });
+
+app.MapControllerRoute(
+    name: "ticket-pdf",
+    pattern: "ticket/{id:guid}/pdf",
+    defaults: new { controller = "Tickets", action = "DownloadPdf" });
+
+app.MapControllerRoute(
+    name: "ticket-qr",
+    pattern: "ticket/{id:guid}/qr",
+    defaults: new { controller = "Tickets", action = "Qr" });
+
+app.MapControllerRoute(
+    name: "tickets-mine",
+    pattern: "tickets/mine",
+    defaults: new { controller = "Tickets", action = "MyTickets" });
+
+app.MapControllerRoute(
+    name: "tickets-scan",
+    pattern: "tickets/scan",
+    defaults: new { controller = "Tickets", action = "Validate" });
+
+app.MapControllerRoute(
+    name: "tickets",
+    pattern: "tickets/{action=Manage}/{id?}",
+    defaults: new { controller = "Tickets" });
+
+app.MapControllerRoute(
+    name: "profile-page",
+    pattern: "profile/page/{id:int}",
+    defaults: new { controller = "Profiles", action = "Page" });
+
+app.MapControllerRoute(
+    name: "profile-details",
+    pattern: "profile/{id}",
+    defaults: new { controller = "Profiles", action = "Details" });
+
+app.MapControllerRoute(
+    name: "profiles",
+    pattern: "profile/{action}/{id?}",
+    defaults: new { controller = "Profiles" });
+
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");

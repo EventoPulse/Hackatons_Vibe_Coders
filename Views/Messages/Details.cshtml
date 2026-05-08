@@ -336,7 +336,7 @@
         }
 
         function poll() {
-            fetch('/Messages/Poll/' + conversationToken + '?afterId=' + lastId, {
+            fetch('/inbox/poll/' + conversationToken + '?afterId=' + lastId, {
                 headers: { 'X-Requested-With': 'XMLHttpRequest' },
                 credentials: 'same-origin',
                 cache: 'no-store'

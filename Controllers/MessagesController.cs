@@ -970,7 +970,7 @@ namespace EventsApp.Controllers
                         ? message.AuthorOrganizerProfile.DisplayName
                         : message.Sender != null ? GetDisplayName(message.Sender) : "Evento";
                     var body = message.Content.Length > 120 ? message.Content[..120] + "..." : message.Content;
-                    var url = Url.Action(nameof(Details), "Messages", new { token = conversation.Token }) ?? "/Messages";
+                    var url = Url.Action(nameof(Details), "Messages", new { token = conversation.Token }) ?? "/inbox";
                     var badgeCount = await CountUnreadMessagesForUserAsync(viewerUserId);
                     await _pushNotifications.SendMessageNotificationAsync(
                         viewerUserId,
@@ -1001,7 +1001,7 @@ namespace EventsApp.Controllers
                 .AsNoTracking()
                 .CountAsync(m => m.ConversationId == conversation.Id && m.SenderId != viewerUserId && m.SeenAt == null);
             var totalUnreadCount = await CountUnreadMessagesForUserAsync(viewerUserId);
-            var url = Url.Action(nameof(Details), "Messages", new { token = conversation.Token }) ?? "/Messages";
+            var url = Url.Action(nameof(Details), "Messages", new { token = conversation.Token }) ?? "/inbox";
             var initial = string.IsNullOrWhiteSpace(displayName) ? "?" : displayName[..1].ToUpperInvariant();
 
             return new

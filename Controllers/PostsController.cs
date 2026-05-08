@@ -533,7 +533,7 @@ namespace EventsApp.Controllers
                 });
             }
 
-            return Redirect((Url.Action(nameof(Details), new { id = comment.PostId }) ?? $"/Posts/Details/{comment.PostId}") + "#comment-" + commentId);
+            return Redirect((Url.Action(nameof(Details), new { id = comment.PostId }) ?? $"/flow/p/{comment.PostId}") + "#comment-" + commentId);
         }
 
         [HttpPost]
@@ -568,7 +568,7 @@ namespace EventsApp.Controllers
                 }
 
                 return postId.HasValue
-                    ? Redirect((Url.Action(nameof(Details), new { id = postId.Value }) ?? $"/Posts/Details/{postId.Value}") + "#comment-" + commentId)
+                    ? Redirect((Url.Action(nameof(Details), new { id = postId.Value }) ?? $"/flow/p/{postId.Value}") + "#comment-" + commentId)
                     : NotFound();
             }
 
@@ -589,7 +589,7 @@ namespace EventsApp.Controllers
                 });
             }
 
-            return Redirect((Url.Action(nameof(Details), new { id = targetPostId }) ?? $"/Posts/Details/{targetPostId}") + "#comment-" + commentId);
+            return Redirect((Url.Action(nameof(Details), new { id = targetPostId }) ?? $"/flow/p/{targetPostId}") + "#comment-" + commentId);
         }
 
         private async Task<MediaUploadResult?> ResolveMediaAsync(PostCreateEditViewModel input)
