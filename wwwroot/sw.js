@@ -108,8 +108,9 @@ self.addEventListener('push', (event) => {
     };
 
     const tasks = [self.registration.showNotification(title, options)];
+    const hasBadgeCount = Object.prototype.hasOwnProperty.call(data, 'badgeCount') && data.badgeCount !== null;
     const badgeCount = Number(data.badgeCount || 0);
-    if (Number.isFinite(badgeCount) && typeof navigator !== 'undefined') {
+    if (hasBadgeCount && Number.isFinite(badgeCount) && typeof navigator !== 'undefined') {
         try {
             if (badgeCount > 0 && 'setAppBadge' in navigator) {
                 tasks.push(navigator.setAppBadge(badgeCount));

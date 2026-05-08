@@ -19,17 +19,20 @@ namespace EventsApp.Controllers
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly ISocialFeedService _socialFeed;
         private readonly IPlatformPermissionService _permissions;
+        private readonly IPushNotificationService _pushNotifications;
 
         public ProfilesController(
             ApplicationDbContext db,
             UserManager<ApplicationUser> userManager,
             ISocialFeedService socialFeed,
-            IPlatformPermissionService permissions)
+            IPlatformPermissionService permissions,
+            IPushNotificationService pushNotifications)
         {
             _db = db;
             _userManager = userManager;
             _socialFeed = socialFeed;
             _permissions = permissions;
+            _pushNotifications = pushNotifications;
         }
 
         public async Task<IActionResult> Details(string id)
@@ -541,6 +544,7 @@ namespace EventsApp.Controllers
                 _db.Follows.Add(new Follow { FollowerId = currentUserId, FollowingId = id });
                 await _db.SaveChangesAsync();
                 await _socialFeed.TrackActivityAsync(currentUserId, UserActivityType.UserFollowed, targetUserId: id);
+                await SendFollowNotificationAsync(currentUserId, id);
             }
 
             return SafeRedirect(returnUrl) ?? RedirectToAction(nameof(Details), new { id });
@@ -683,6 +687,34 @@ namespace EventsApp.Controllers
         {
             var name = string.Join(" ", new[] { user.FirstName, user.LastName }.Where(v => !string.IsNullOrWhiteSpace(v)));
             return string.IsNullOrWhiteSpace(name) ? user.UserName ?? string.Empty : name;
+        }
+
+        private async Task SendFollowNotificationAsync(string followerId, string followingId)
+        {
+            var follower = await _db.Users
+                .AsNoTracking()
+                .Include(u => u.OrganizerData)
+                .FirstOrDefaultAsync(u => u.Id == followerId);
+
+            if (follower == null)
+            {
+                return;
+            }
+
+            var followerName = GetDisplayName(follower);
+            if (string.IsNullOrWhiteSpace(followerName))
+            {
+                followerName = "Някой";
+            }
+
+            var profileUrl = Url.Action(nameof(Details), "Profiles", new { id = followerId }) ?? $"/Profiles/Details/{followerId}";
+
+            await _pushNotifications.SendNotificationAsync(
+                followingId,
+                $"{followerName} те последва",
+                "Отвори профила, за да видиш кой е.",
+                profileUrl,
+                $"evento-follow-{followerId}");
         }
 
         private IActionResult? SafeRedirect(string? returnUrl)

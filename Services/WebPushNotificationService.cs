@@ -30,6 +30,18 @@ namespace EventsApp.Services
 
         public bool IsConfigured => !string.IsNullOrWhiteSpace(PublicKey) && !string.IsNullOrWhiteSpace(PrivateKey);
 
+        public Task SendNotificationAsync(
+            string recipientUserId,
+            string title,
+            string body,
+            string url,
+            string tag = "evento",
+            int? badgeCount = null,
+            CancellationToken cancellationToken = default)
+        {
+            return SendPushAsync(recipientUserId, title, body, url, tag, badgeCount, cancellationToken);
+        }
+
         public async Task SendMessageNotificationAsync(
             string recipientUserId,
             string title,
@@ -37,6 +49,18 @@ namespace EventsApp.Services
             string url,
             int? badgeCount = null,
             CancellationToken cancellationToken = default)
+        {
+            await SendPushAsync(recipientUserId, title, body, url, "evento-message", badgeCount, cancellationToken);
+        }
+
+        private async Task SendPushAsync(
+            string recipientUserId,
+            string title,
+            string body,
+            string url,
+            string tag,
+            int? badgeCount,
+            CancellationToken cancellationToken)
         {
             if (!IsConfigured)
             {
@@ -57,7 +81,7 @@ namespace EventsApp.Services
                 title,
                 body,
                 url,
-                tag = "evento-message",
+                tag,
                 icon = "/img/logo.svg",
                 badge = "/img/logo.svg",
                 badgeCount,
