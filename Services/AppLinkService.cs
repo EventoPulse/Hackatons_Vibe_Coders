@@ -46,15 +46,57 @@ namespace EventsApp.Services
             return null;
         }
 
-        private static string BuildBaseUrl(string? configuredUrl, HttpRequest request)
+        private string BuildBaseUrl(string? configuredUrl, HttpRequest request)
         {
-            if (!string.IsNullOrWhiteSpace(configuredUrl)
-                && Uri.TryCreate(configuredUrl.Trim(), UriKind.Absolute, out var configuredUri))
+            var normalizedConfiguredUrl = NormalizePublicUrl(configuredUrl);
+            if (!string.IsNullOrWhiteSpace(normalizedConfiguredUrl))
             {
-                return configuredUri.ToString();
+                return normalizedConfiguredUrl;
             }
 
-            return $"{request.Scheme}://{request.Host}";
+            var railwayDomain = NormalizePublicUrl(GetSetting("RAILWAY_PUBLIC_DOMAIN", "RAILWAY_STATIC_URL"));
+            if (!string.IsNullOrWhiteSpace(railwayDomain))
+            {
+                return railwayDomain;
+            }
+
+            var scheme = request.Scheme;
+            if (!string.Equals(scheme, Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase))
+            {
+                scheme = Uri.UriSchemeHttps;
+            }
+
+            if (request.Host.HasValue)
+            {
+                return $"{scheme}://{request.Host.Value}";
+            }
+
+            return "https://evento.business";
+        }
+
+        private static string? NormalizePublicUrl(string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return null;
+            }
+
+            var trimmed = value.Trim().TrimEnd('/');
+            if (!trimmed.Contains("://", StringComparison.Ordinal))
+            {
+                trimmed = "https://" + trimmed;
+            }
+
+            if (Uri.TryCreate(trimmed, UriKind.Absolute, out var uri) &&
+                !string.IsNullOrWhiteSpace(uri.Host) &&
+                (string.Equals(uri.Scheme, Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase) ||
+                 string.Equals(uri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase)))
+            {
+                return uri.ToString().TrimEnd('/');
+            }
+
+            return null;
         }
     }
 }

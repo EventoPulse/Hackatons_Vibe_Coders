@@ -288,7 +288,7 @@ app.Use(async (context, next) =>
     headers.TryAdd("X-Frame-Options", "SAMEORIGIN");
     headers.TryAdd("Referrer-Policy", "strict-origin-when-cross-origin");
     headers.TryAdd("X-Permitted-Cross-Domain-Policies", "none");
-    headers.TryAdd("Permissions-Policy", "camera=(), microphone=(), geolocation=(self), payment=(self), usb=()");
+    headers.TryAdd("Permissions-Policy", "camera=(self), microphone=(), geolocation=(self), payment=(self), usb=()");
     var csp = app.Configuration["Security:ContentSecurityPolicy"];
     if (!string.IsNullOrWhiteSpace(csp))
     {

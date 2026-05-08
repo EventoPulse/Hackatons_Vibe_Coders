@@ -530,7 +530,7 @@ namespace EventsApp.Controllers
             }
 
             var buyer = await _userManager.GetUserAsync(User);
-            await SendPurchaseEmailAsync(
+            await SendPurchaseEmailWithQrAsync(
                 buyer,
                 ticket,
                 occurrence,
@@ -643,7 +643,7 @@ namespace EventsApp.Controllers
             if (!ModelState.IsValid)
             {
                 result.NotFound = true;
-                result.Message = "Please paste a QR code value.";
+                result.Message = "Въведи или сканирай QR кода на билета.";
                 ViewBag.Result = result;
                 return View(input);
             }
@@ -664,7 +664,7 @@ namespace EventsApp.Controllers
             if (ut == null)
             {
                 result.NotFound = true;
-                result.Message = "Invalid ticket — no such QR code.";
+                result.Message = "Не е намерен билет с този QR код.";
                 ViewBag.Result = result;
                 return View(input);
             }
@@ -672,7 +672,7 @@ namespace EventsApp.Controllers
             if (!isAdmin && !await CanValidateEventAsync(userId, ut.Ticket.Event))
             {
                 result.NotAllowed = true;
-                result.Message = "You do not have validator access for this event.";
+                result.Message = "Нямаш достъп да валидираш билет за тази публична страница.";
                 result.Ticket = ToDetails(ut);
                 ViewBag.Result = result;
                 return View(input);
@@ -681,7 +681,7 @@ namespace EventsApp.Controllers
             if (ut.IsUsed)
             {
                 result.AlreadyUsed = true;
-                result.Message = $"Ticket already used at {ut.UsedAt:yyyy-MM-dd HH:mm}.";
+                result.Message = $"Билетът вече е използван на {ut.UsedAt:dd.MM.yyyy HH:mm}.";
                 result.Ticket = ToDetails(ut);
                 ViewBag.Result = result;
                 return View(input);
@@ -696,19 +696,147 @@ namespace EventsApp.Controllers
                 return View(input);
             }
 
+            if (!input.Confirm)
+            {
+                result.RequiresConfirmation = true;
+                result.Message = "Билетът е намерен. Провери данните и потвърди валидирането.";
+                result.Ticket = ToDetails(ut);
+                ViewBag.Result = result;
+                input.QrCode = code;
+                return View(input);
+            }
+
             ut.IsUsed = true;
             ut.UsedAt = DateTime.UtcNow;
             ut.UsedByOrganizerId = userId;
             await _db.SaveChangesAsync();
 
             result.Valid = true;
-            result.Message = "Ticket valid — checked in successfully.";
+            result.Message = "Билетът е валидиран успешно.";
             result.Ticket = ToDetails(ut);
             ViewBag.Result = result;
-            return View(new TicketValidationViewModel());
+            return View(new TicketValidationViewModel { QrCode = code });
         }
 
         // ---------- HELPERS ----------
+
+        private async Task SendPurchaseEmailWithQrAsync(
+            ApplicationUser? buyer,
+            Ticket ticket,
+            EventOccurrence? occurrence,
+            Seat? seat,
+            IReadOnlyCollection<UserTicket> userTickets,
+            decimal unitPrice)
+        {
+            if (buyer == null || string.IsNullOrWhiteSpace(buyer.Email) || userTickets.Count == 0)
+            {
+                return;
+            }
+
+            static string E(string? value) => WebUtility.HtmlEncode(value ?? string.Empty);
+
+            try
+            {
+                var startsAt = occurrence?.StartDateTime ?? ticket.Event.StartTime;
+                var endsAt = occurrence?.EndDateTime ?? ticket.Event.EndTime;
+                var place = $"{ticket.Event.City}, {ticket.Event.Address}";
+                var buyerName = string.IsNullOrWhiteSpace(buyer.UserName) ? buyer.Email : buyer.UserName;
+                var seatLabel = seat == null ? null : GetSeatLabel(seat);
+                var seatLine = string.IsNullOrWhiteSpace(seatLabel)
+                    ? string.Empty
+                    : $"""<p style="margin:0 0 6px;color:#374151"><strong>Седалка:</strong> {E(seatLabel)}</p>""";
+                var total = unitPrice * userTickets.Count;
+                var eventUrl = _appLinks.ToAbsoluteUrl(
+                    Request,
+                    Url.Action("Details", "Events", new { id = ticket.EventId, occurrenceId = occurrence?.Id })
+                    ?? $"/Events/Details/{ticket.EventId}");
+                var ticketCards = new StringBuilder();
+
+                foreach (var userTicket in userTickets)
+                {
+                    var detailsUrl = _appLinks.ToAbsoluteUrl(
+                        Request,
+                        Url.Action(nameof(Details), "Tickets", new { id = userTicket.Id })
+                        ?? $"/Tickets/Details/{userTicket.Id}");
+                    var pdfUrl = _appLinks.ToAbsoluteUrl(
+                        Request,
+                        Url.Action(nameof(DownloadPdf), "Tickets", new { id = userTicket.Id })
+                        ?? $"/Tickets/DownloadPdf/{userTicket.Id}");
+                    var attendee = string.IsNullOrWhiteSpace(userTicket.AttendeeName)
+                        ? buyerName
+                        : userTicket.AttendeeName;
+                    var qrImageUrl = "https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=12&data="
+                        + Uri.EscapeDataString(userTicket.QrCode);
+                    var paid = userTicket.PricePaid > 0 ? userTicket.PricePaid : unitPrice;
+
+                    ticketCards.Append($"""
+                        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:18px 0;border:1px solid #dfe3f5;border-radius:20px;overflow:hidden;background:#ffffff">
+                            <tr>
+                                <td style="padding:20px;vertical-align:top">
+                                    <div style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#5b4bff;font-weight:800">Билет</div>
+                                    <h3 style="margin:6px 0 12px;color:#111827;font-size:20px">{E(ticket.Name)}</h3>
+                                    <p style="margin:0 0 6px;color:#374151"><strong>Притежател:</strong> {E(attendee)}</p>
+                                    <p style="margin:0 0 6px;color:#374151"><strong>Имейл:</strong> {E(buyer.Email)}</p>
+                                    <p style="margin:0 0 6px;color:#374151"><strong>Дата:</strong> {startsAt:dd.MM.yyyy HH:mm} - {endsAt:HH:mm}</p>
+                                    <p style="margin:0 0 6px;color:#374151"><strong>Място:</strong> {E(place)}</p>
+                                    {seatLine}
+                                    <p style="margin:0 0 12px;color:#374151"><strong>Цена:</strong> {FormatMoney(paid)}</p>
+                                    <p style="margin:0">
+                                        <a href="{E(detailsUrl)}" style="display:inline-block;background:#5b4bff;color:#ffffff;padding:11px 15px;border-radius:12px;text-decoration:none;font-weight:800">Отвори билета</a>
+                                        <a href="{E(pdfUrl)}" style="display:inline-block;margin-left:8px;color:#5b4bff;font-weight:800">PDF</a>
+                                    </p>
+                                </td>
+                                <td style="width:180px;padding:20px;text-align:center;vertical-align:top;background:#f6f7ff">
+                                    <img src="{E(qrImageUrl)}" width="148" height="148" alt="QR код за билет" style="display:block;margin:0 auto 10px;border-radius:14px;background:#fff" />
+                                    <div style="font-size:10px;line-height:1.4;color:#6b7280;word-break:break-all">{E(userTicket.QrCode)}</div>
+                                </td>
+                            </tr>
+                        </table>
+                        """);
+                }
+
+                await _emailSender.SendEmailAsync(
+                    buyer.Email,
+                    $"Билет за {ticket.Event.Title} - Evento",
+                    $"""
+                    <div style="margin:0;padding:0;background:#f1f3fb;font-family:Arial,Helvetica,sans-serif;color:#111827">
+                        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f1f3fb;padding:28px 12px">
+                            <tr>
+                                <td align="center">
+                                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:720px;background:#ffffff;border-radius:24px;overflow:hidden;box-shadow:0 24px 70px rgba(31,41,55,.12)">
+                                        <tr>
+                                            <td style="padding:30px;background:linear-gradient(135deg,#161b2b,#5b4bff);color:#ffffff">
+                                                <div style="font-size:13px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;opacity:.8">Evento</div>
+                                                <h1 style="margin:10px 0 8px;font-size:30px;line-height:1.15">Билетите ти са готови.</h1>
+                                                <p style="margin:0;color:#e7e9ff">Пази този имейл. QR кодът е валиден на входа, а PDF билетът е резервен вариант.</p>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td style="padding:26px 30px 8px">
+                                                <h2 style="margin:0 0 10px;font-size:24px;color:#111827">{E(ticket.Event.Title)}</h2>
+                                                <p style="margin:0 0 6px;color:#374151"><strong>Дата:</strong> {startsAt:dd.MM.yyyy HH:mm} - {endsAt:HH:mm}</p>
+                                                <p style="margin:0 0 6px;color:#374151"><strong>Място:</strong> {E(place)}</p>
+                                                {seatLine}
+                                                <p style="margin:0 0 18px;color:#374151"><strong>Общо:</strong> {FormatMoney(total)}</p>
+                                                <p style="margin:0 0 18px">
+                                                    <a href="{E(eventUrl)}" style="display:inline-block;background:#111827;color:#ffffff;padding:12px 18px;border-radius:999px;text-decoration:none;font-weight:800">Виж събитието</a>
+                                                </p>
+                                                {ticketCards}
+                                                <p style="margin:20px 0 0;color:#6b7280;font-size:13px;line-height:1.5">Ако не си купувал билет, пиши на поддръжката. Не споделяй QR кода публично.</p>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                    """);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send purchase email for ticket {TicketId} to user {UserId}.", ticket.Id, buyer.Id);
+            }
+        }
 
         private async Task SendPurchaseEmailAsync(
             ApplicationUser? buyer,

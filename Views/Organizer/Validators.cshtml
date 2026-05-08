@@ -29,14 +29,10 @@
             <h2 class="groove-panel-title">Служебен акаунт.</h2>
             <p class="groove-panel-intro">
                 Първо създай обикновен потребителски акаунт на служебния телефон, после го добави тук по имейл, username или телефон.
-                Активни валидатори: @Model.ActiveValidatorsCount / @Model.MaxValidators.
+                Активни валидатори общо: @Model.ActiveValidatorsCount. Лимитът е @Model.MaxValidators за всяка публична страница.
             </p>
 
-            @if (Model.ActiveValidatorsCount >= Model.MaxValidators)
-            {
-                <div class="alert alert-warning">Вече имаш 3 активни валидатора. Премахни един, преди да добавиш нов.</div>
-            }
-            else if (Model.Pages.Count == 0)
+            @if (Model.Pages.Count == 0)
             {
                 <div class="alert alert-info">Създай публична страница, за да можеш да добавиш валидатор.</div>
             }

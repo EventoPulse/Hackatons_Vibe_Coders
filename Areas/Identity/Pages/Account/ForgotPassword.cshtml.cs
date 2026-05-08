@@ -67,7 +67,8 @@ namespace EventsApp.Areas.Identity.Pages.Account
                 "/Account/ResetPassword",
                 pageHandler: null,
                 values: new { area = "Identity", code, email },
-                protocol: null);
+                protocol: null)
+                ?? $"/Identity/Account/ResetPassword?code={Uri.EscapeDataString(code)}&email={Uri.EscapeDataString(email)}";
             var resetUrl = _appLinks.ToAbsoluteUrl(Request, resetPath);
             var encodedUrl = HtmlEncoder.Default.Encode(resetUrl);
 

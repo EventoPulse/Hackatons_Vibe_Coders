@@ -9,11 +9,14 @@ namespace EventsApp.ViewModels.Tickets
         [StringLength(GlobalConstants.Ticket.QrCodeMaxLength)]
         [Display(Name = "QR code")]
         public string QrCode { get; set; } = null!;
+
+        public bool Confirm { get; set; }
     }
 
     public class TicketValidationResultViewModel
     {
         public bool Valid { get; set; }
+        public bool RequiresConfirmation { get; set; }
         public bool AlreadyUsed { get; set; }
         public bool NotFound { get; set; }
         public bool NotAllowed { get; set; }

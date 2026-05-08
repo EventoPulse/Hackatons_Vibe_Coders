@@ -11821,3 +11821,129 @@ html[data-theme="dark"] .admin-action-card__cta {
     color: #ffffff !important;
     text-decoration-color: rgba(255, 255, 255, 0.86) !important;
 }
+
+/* Ticket validation scanner */
+.ticket-validator-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(320px, 0.9fr);
+    gap: 1.35rem;
+    align-items: start;
+}
+
+.ticket-scan-panel {
+    min-width: 0;
+}
+
+.ticket-camera-box {
+    position: relative;
+    overflow: hidden;
+    min-height: 280px;
+    border-radius: 18px;
+    border: 1px solid rgba(17, 24, 39, 0.14);
+    background: #111827;
+}
+
+.ticket-camera-box video {
+    display: block;
+    width: 100%;
+    min-height: 280px;
+    max-height: 420px;
+    object-fit: cover;
+}
+
+.ticket-camera-placeholder {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    padding: 1.5rem;
+    text-align: center;
+    color: rgba(255, 255, 255, 0.86);
+    pointer-events: none;
+    background:
+        linear-gradient(180deg, rgba(17, 24, 39, 0.15), rgba(17, 24, 39, 0.45)),
+        repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.08) 0 1px, transparent 1px 32px);
+}
+
+.ticket-camera-box video[srcobject],
+.ticket-camera-box video:not(:empty) {
+    background: #111827;
+}
+
+.ticket-camera-placeholder i {
+    font-size: 2.3rem;
+    color: #ffffff;
+}
+
+.ticket-camera-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 1rem;
+}
+
+.ticket-validation-card {
+    padding: 1.4rem;
+    border-radius: 18px;
+    border: 1px solid rgba(17, 24, 39, 0.12);
+    background: rgba(255, 255, 255, 0.88);
+    box-shadow: 0 22px 60px -46px rgba(15, 23, 42, 0.55);
+}
+
+.ticket-validation-card__body {
+    display: grid;
+    gap: 1rem;
+    margin-top: 1.1rem;
+}
+
+.ticket-validation-card__qr {
+    width: 150px;
+    height: 150px;
+    padding: 0.5rem;
+    border-radius: 18px;
+    border: 1px solid rgba(17, 24, 39, 0.12);
+    background: #ffffff;
+}
+
+.ticket-validation-data {
+    margin: 0;
+}
+
+.ticket-validation-code {
+    word-break: break-all;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.82rem;
+}
+
+.ticket-confirm-form {
+    margin-top: 0.35rem;
+}
+
+html[data-theme="dark"] .ticket-camera-box {
+    border-color: rgba(255, 255, 255, 0.12);
+    background: #070b14;
+}
+
+html[data-theme="dark"] .ticket-validation-card {
+    background: linear-gradient(180deg, rgba(32, 39, 57, 0.96), rgba(20, 26, 40, 0.98));
+    border-color: rgba(255, 255, 255, 0.12);
+    box-shadow: var(--evt-shadow-card);
+}
+
+html[data-theme="dark"] .ticket-validation-card__qr {
+    border-color: rgba(255, 255, 255, 0.12);
+}
+
+@media (max-width: 900px) {
+    .ticket-validator-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .ticket-camera-box,
+    .ticket-camera-box video {
+        min-height: 240px;
+    }
+}

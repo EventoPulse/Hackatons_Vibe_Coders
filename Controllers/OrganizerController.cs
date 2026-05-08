@@ -532,7 +532,7 @@ namespace EventsApp.Controllers
                 .FirstOrDefaultAsync(a => a.OrganizerId == organizerId && a.ValidatorUserId == validator.Id);
 
             var isNewOrInactive = assignment == null || !assignment.IsActive;
-            if (isNewOrInactive && await CountActiveValidatorsAsync(organizerId) >= 3)
+            if (isNewOrInactive && await CountActiveValidatorsAsync(organizerId, organizerProfileId.Value) >= 3)
             {
                 TempData["StatusMessage"] = "Можеш да имаш до 3 активни валидатора.";
                 return RedirectToAction(nameof(Validators));
@@ -546,6 +546,14 @@ namespace EventsApp.Controllers
                     ValidatorUserId = validator.Id,
                 };
                 _db.OrganizerValidatorAssignments.Add(assignment);
+            }
+
+            if (assignment.IsActive &&
+                assignment.OrganizerProfileId != organizerProfileId.Value &&
+                await CountActiveValidatorsAsync(organizerId, organizerProfileId.Value) >= 3)
+            {
+                TempData["StatusMessage"] = "Тази публична страница вече има 3 активни валидатора.";
+                return RedirectToAction(nameof(Validators));
             }
 
             assignment.IsActive = true;
@@ -579,6 +587,14 @@ namespace EventsApp.Controllers
             if (!ownedProfileId.HasValue)
             {
                 TempData["StatusMessage"] = "Избери публична страница. Ако акаунтът вече не трябва да валидира, премахни достъпа.";
+                return RedirectToAction(nameof(Validators));
+            }
+
+            if (assignment.IsActive &&
+                assignment.OrganizerProfileId != ownedProfileId.Value &&
+                await CountActiveValidatorsAsync(organizerId, ownedProfileId.Value) >= 3)
+            {
+                TempData["StatusMessage"] = "Тази публична страница вече има 3 активни валидатора.";
                 return RedirectToAction(nameof(Validators));
             }
 
@@ -1083,10 +1099,13 @@ namespace EventsApp.Controllers
                 .FirstOrDefaultAsync();
         }
 
-        private async Task<int> CountActiveValidatorsAsync(string organizerId)
+        private async Task<int> CountActiveValidatorsAsync(string organizerId, int organizerProfileId)
         {
             return await _db.OrganizerValidatorAssignments
-                .CountAsync(a => a.OrganizerId == organizerId && a.IsActive);
+                .CountAsync(a =>
+                    a.OrganizerId == organizerId &&
+                    a.OrganizerProfileId == organizerProfileId &&
+                    a.IsActive);
         }
 
         private static OrganizerProfileViewModel ToProfileInput(OrganizerProfile profile, bool approved)
