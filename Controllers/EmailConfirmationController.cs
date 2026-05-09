@@ -1,9 +1,11 @@
 using System.Text;
 using System.Text.Encodings.Web;
+using EventsApp.Data;
 using EventsApp.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.WebUtilities;
 
 namespace EventsApp.Controllers
@@ -13,16 +15,58 @@ namespace EventsApp.Controllers
     {
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
+        private readonly ApplicationDbContext _db;
         private readonly ILogger<EmailConfirmationController> _logger;
 
         public EmailConfirmationController(
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
+            ApplicationDbContext db,
             ILogger<EmailConfirmationController> logger)
         {
             _userManager = userManager;
             _signInManager = signInManager;
+            _db = db;
             _logger = logger;
+        }
+
+        [HttpGet]
+        [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+        public async Task<IActionResult> FromRequest(string requestId, string? returnUrl = null)
+        {
+            Response.ContentType = "text/html; charset=utf-8";
+            Response.Headers.Remove("Content-Disposition");
+            Response.Headers.CacheControl = "no-store, no-cache, must-revalidate";
+            Response.Headers.Pragma = "no-cache";
+            Response.Headers.Expires = "0";
+
+            var now = DateTime.UtcNow;
+            var request = await _db.PasswordResetRequests
+                .AsTracking()
+                .FirstOrDefaultAsync(r => r.Id == requestId.Trim()
+                    && r.UsedAt == null
+                    && r.ExpiresAt > now);
+
+            if (request == null)
+            {
+                return ConfirmationPage(
+                    "Невалиден линк",
+                    "Линкът за потвърждение е невалиден или е изтекъл. Поискай нов линк от страницата за вход.",
+                    "/Identity/Account/Login",
+                    "Към вход");
+            }
+
+            var user = await _userManager.FindByIdAsync(request.UserId);
+            if (user == null)
+            {
+                return ConfirmationPage(
+                    "Невалиден линк",
+                    "Не намерихме акаунт за този линк.",
+                    "/Identity/Account/Login",
+                    "Към вход");
+            }
+
+            return await ConfirmWithEncodedCodeAsync(user, request.Code, returnUrl, request);
         }
 
         [HttpGet]
@@ -79,6 +123,56 @@ namespace EventsApp.Controllers
                         "/Identity/Account/Login",
                         "Към вход");
                 }
+            }
+
+            return await CompleteConfirmationAsync(user, returnUrl, null);
+        }
+
+        private async Task<IActionResult> ConfirmWithEncodedCodeAsync(
+            ApplicationUser user,
+            string encodedCode,
+            string? returnUrl,
+            PasswordResetRequest? confirmationRequest)
+        {
+            string decodedCode;
+            try
+            {
+                decodedCode = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(encodedCode));
+            }
+            catch (FormatException)
+            {
+                return ConfirmationPage(
+                    "Невалиден линк",
+                    "Линкът за потвърждение не е валиден. Поискай нов линк за имейл потвърждение.",
+                    "/Identity/Account/Login",
+                    "Към вход");
+            }
+
+            if (!await _userManager.IsEmailConfirmedAsync(user))
+            {
+                var result = await _userManager.ConfirmEmailAsync(user, decodedCode);
+                if (!result.Succeeded)
+                {
+                    return ConfirmationPage(
+                        "Не успяхме да потвърдим имейла",
+                        "Линкът може да е изтекъл или вече да е използван. Влез и поискай нов линк.",
+                        "/Identity/Account/Login",
+                        "Към вход");
+                }
+            }
+
+            return await CompleteConfirmationAsync(user, returnUrl, confirmationRequest);
+        }
+
+        private async Task<IActionResult> CompleteConfirmationAsync(
+            ApplicationUser user,
+            string? returnUrl,
+            PasswordResetRequest? confirmationRequest)
+        {
+            if (confirmationRequest != null)
+            {
+                confirmationRequest.UsedAt = DateTime.UtcNow;
+                await _db.SaveChangesAsync();
             }
 
             await _signInManager.SignInAsync(user, isPersistent: false);

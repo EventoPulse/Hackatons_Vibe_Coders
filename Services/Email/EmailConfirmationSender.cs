@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Encodings.Web;
+using EventsApp.Data;
 using EventsApp.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
@@ -15,17 +16,20 @@ namespace EventsApp.Services.Email
     public class EmailConfirmationSender : IEmailConfirmationSender
     {
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly ApplicationDbContext _db;
         private readonly IEmailSender _emailSender;
         private readonly IAppLinkService _appLinks;
         private readonly ILogger<EmailConfirmationSender> _logger;
 
         public EmailConfirmationSender(
             UserManager<ApplicationUser> userManager,
+            ApplicationDbContext db,
             IEmailSender emailSender,
             IAppLinkService appLinks,
             ILogger<EmailConfirmationSender> logger)
         {
             _userManager = userManager;
+            _db = db;
             _emailSender = emailSender;
             _appLinks = appLinks;
             _logger = logger;
@@ -40,18 +44,28 @@ namespace EventsApp.Services.Email
 
             var code = await _userManager.GenerateEmailConfirmationTokenAsync(user);
             code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
+            var confirmationRequest = new PasswordResetRequest
+            {
+                Id = Guid.NewGuid().ToString("N"),
+                UserId = user.Id,
+                Email = user.Email,
+                Code = code,
+                CreatedAt = DateTime.UtcNow,
+                ExpiresAt = DateTime.UtcNow.AddHours(24),
+            };
+
+            _db.PasswordResetRequests.Add(confirmationRequest);
+            await _db.SaveChangesAsync();
 
             var confirmQuery = new Dictionary<string, string?>
             {
-                ["userId"] = user.Id,
-                ["code"] = code,
                 ["returnUrl"] = returnUrl,
             };
-            var confirmPath = QueryHelpers.AddQueryString("/email/confirm", confirmQuery);
+            var confirmPath = QueryHelpers.AddQueryString($"/email/confirm/{confirmationRequest.Id}", confirmQuery);
             var confirmUrl = _appLinks.ToAbsoluteUrl(request, confirmPath);
             if (!IsUsableWebUrl(confirmUrl))
             {
-                confirmUrl = QueryHelpers.AddQueryString("https://evento.business/email/confirm", confirmQuery);
+                confirmUrl = QueryHelpers.AddQueryString($"https://evento.business/email/confirm/{confirmationRequest.Id}", confirmQuery);
             }
 
             LogConfirmationLinkTarget(confirmUrl, user.Email);
