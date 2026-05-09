@@ -519,9 +519,9 @@
             var liveMarkers = {};
             var clusterMarkers = [];
             var currentFilter = null;
-            var lastClusterMode = null;
             var rerenderTimer = null;
-            var CITY_CLUSTER_ZOOM = 12;
+            var MAX_CLUSTER_ZOOM = 10;
+            var CLUSTER_DISTANCE_PX = 48;
             window.GrooveHomeMapRefresh = function () {
                 if (!map || !(window.google && window.google.maps)) return;
                 var center = map.getCenter();
@@ -612,14 +612,8 @@
                 clusterMarkers = [];
             }
 
-            function markerCityKey(m) {
-                return normalize(m.city) || ('coords:' + m.lat + ',' + m.lng);
-            }
-
-            function cityGroupCenter(items) {
+            function groupCenter(items) {
                 if (!items.length) return null;
-                var cityCoords = lookupCityCoords(items[0].city);
-                if (cityCoords) return { lat: cityCoords[0], lng: cityCoords[1] };
                 var lat = 0;
                 var lng = 0;
                 items.forEach(function (m) {
@@ -629,8 +623,46 @@
                 return { lat: lat / items.length, lng: lng / items.length };
             }
 
+            function markerPixelPosition(m, zoom) {
+                var scale = 256 * Math.pow(2, zoom);
+                var sinLat = Math.sin((m.lat * Math.PI) / 180);
+                sinLat = Math.min(Math.max(sinLat, -0.9999), 0.9999);
+                return {
+                    x: ((m.lng + 180) / 360) * scale,
+                    y: (0.5 - Math.log((1 + sinLat) / (1 - sinLat)) / (4 * Math.PI)) * scale
+                };
+            }
+
+            function buildProximityClusters(items, zoom) {
+                var groups = [];
+                items.forEach(function (m) {
+                    var p = markerPixelPosition(m, zoom);
+                    var match = null;
+
+                    for (var i = 0; i < groups.length; i += 1) {
+                        var dx = groups[i].x - p.x;
+                        var dy = groups[i].y - p.y;
+                        if (Math.sqrt(dx * dx + dy * dy) <= CLUSTER_DISTANCE_PX) {
+                            match = groups[i];
+                            break;
+                        }
+                    }
+
+                    if (!match) {
+                        groups.push({ x: p.x, y: p.y, items: [m] });
+                        return;
+                    }
+
+                    match.items.push(m);
+                    match.x = ((match.x * (match.items.length - 1)) + p.x) / match.items.length;
+                    match.y = ((match.y * (match.items.length - 1)) + p.y) / match.items.length;
+                });
+
+                return groups.filter(function (group) { return group.items.length > 1; });
+            }
+
             function renderCityCluster(group) {
-                var center = cityGroupCenter(group.items);
+                var center = groupCenter(group.items);
                 if (!center) return null;
                 var city = group.items[0].city || 'Events';
                 var marker = new google.maps.Marker({
@@ -655,7 +687,7 @@
                 marker.addListener('click', function () {
                     closePreview();
                     map.panTo(center);
-                    map.setZoom(Math.max(map.getZoom() || BG_ZOOM, 14));
+                    map.setZoom(Math.max(map.getZoom() || BG_ZOOM, 12));
                     window.setTimeout(function () { renderMarkers(currentFilter); }, 180);
                 });
 
@@ -667,28 +699,19 @@
                 clearMarkers();
                 var bounds = new google.maps.LatLngBounds();
                 var any = false;
-                var clusterMode = (map.getZoom() || BG_ZOOM) <= CITY_CLUSTER_ZOOM;
-                var groupedCities = {};
+                var zoom = map.getZoom() || BG_ZOOM;
+                var clusterMode = zoom <= MAX_CLUSTER_ZOOM;
                 var hiddenInCluster = {};
                 var filteredMarkers = [];
-                lastClusterMode = clusterMode;
 
                 markersData.forEach(function (m) {
                     if (typeof m.lat !== 'number' || typeof m.lng !== 'number') return;
                     if (!eventMatchesFilter(m, filter)) return;
                     filteredMarkers.push(m);
-
-                    if (clusterMode) {
-                        var key = markerCityKey(m);
-                        groupedCities[key] = groupedCities[key] || { items: [] };
-                        groupedCities[key].items.push(m);
-                    }
                 });
 
                 if (clusterMode) {
-                    Object.keys(groupedCities).forEach(function (key) {
-                        var group = groupedCities[key];
-                        if (!group || group.items.length < 2) return;
+                    buildProximityClusters(filteredMarkers, zoom).forEach(function (group) {
                         group.items.forEach(function (m) { hiddenInCluster[m.eventId] = true; });
                         var center = renderCityCluster(group);
                         if (center) {
@@ -761,8 +784,6 @@
             }
 
             map.addListener('zoom_changed', function () {
-                var clusterMode = (map.getZoom() || BG_ZOOM) <= CITY_CLUSTER_ZOOM;
-                if (clusterMode === lastClusterMode) return;
                 window.clearTimeout(rerenderTimer);
                 rerenderTimer = window.setTimeout(function () {
                     renderMarkers(currentFilter);
@@ -795,7 +816,7 @@
                     var keys = Object.keys(liveMarkers);
                     if (clusterMarkers.length === 1 && keys.length === 0) {
                         map.panTo(clusterMarkers[0].getPosition());
-                        map.setZoom(Math.min(CITY_CLUSTER_ZOOM, 11));
+                        map.setZoom(Math.min(MAX_CLUSTER_ZOOM, 10));
                     } else if (keys.length === 1 && clusterMarkers.length === 0) {
                         map.panTo(liveMarkers[keys[0]].getPosition());
                         map.setZoom(15);
