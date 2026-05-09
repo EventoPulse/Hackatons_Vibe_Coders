@@ -668,7 +668,7 @@
                 var bounds = new google.maps.LatLngBounds();
                 var any = false;
                 var clusterMode = (map.getZoom() || BG_ZOOM) <= CITY_CLUSTER_ZOOM;
-                var groupedApprox = {};
+                var groupedCities = {};
                 var hiddenInCluster = {};
                 var filteredMarkers = [];
                 lastClusterMode = clusterMode;
@@ -678,16 +678,16 @@
                     if (!eventMatchesFilter(m, filter)) return;
                     filteredMarkers.push(m);
 
-                    if (clusterMode && m.isApproximate) {
+                    if (clusterMode) {
                         var key = markerCityKey(m);
-                        groupedApprox[key] = groupedApprox[key] || { items: [] };
-                        groupedApprox[key].items.push(m);
+                        groupedCities[key] = groupedCities[key] || { items: [] };
+                        groupedCities[key].items.push(m);
                     }
                 });
 
                 if (clusterMode) {
-                    Object.keys(groupedApprox).forEach(function (key) {
-                        var group = groupedApprox[key];
+                    Object.keys(groupedCities).forEach(function (key) {
+                        var group = groupedCities[key];
                         if (!group || group.items.length < 2) return;
                         group.items.forEach(function (m) { hiddenInCluster[m.eventId] = true; });
                         var center = renderCityCluster(group);
@@ -698,10 +698,35 @@
                     });
                 }
 
+                var duplicatePositions = {};
+                if (!clusterMode) {
+                    filteredMarkers.forEach(function (m) {
+                        var key = Number(m.lat).toFixed(4) + ':' + Number(m.lng).toFixed(4);
+                        duplicatePositions[key] = duplicatePositions[key] || [];
+                        duplicatePositions[key].push(m.eventId);
+                    });
+                }
+
+                function visiblePosition(m) {
+                    if (clusterMode) return { lat: m.lat, lng: m.lng };
+                    var key = Number(m.lat).toFixed(4) + ':' + Number(m.lng).toFixed(4);
+                    var ids = duplicatePositions[key] || [];
+                    if (ids.length < 2) return { lat: m.lat, lng: m.lng };
+
+                    var idx = ids.indexOf(m.eventId);
+                    if (idx < 0) idx = 0;
+                    var angle = (Math.PI * 2 * idx) / ids.length;
+                    var radius = 0.00035 + Math.min(ids.length, 12) * 0.000025;
+                    return {
+                        lat: m.lat + Math.sin(angle) * radius,
+                        lng: m.lng + Math.cos(angle) * radius
+                    };
+                }
+
                 filteredMarkers.forEach(function (m) {
                     if (hiddenInCluster[m.eventId]) return;
 
-                    var pos = { lat: m.lat, lng: m.lng };
+                    var pos = visiblePosition(m);
                     var color = genreColor(m.genre);
                     var marker = new google.maps.Marker({
                         map: map,
