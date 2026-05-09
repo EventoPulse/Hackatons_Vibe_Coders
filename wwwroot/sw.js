@@ -33,6 +33,7 @@ self.addEventListener('fetch', (event) => {
     if (url.origin !== self.location.origin) return;
 
     if (url.pathname === '/confirm-email' ||
+        url.pathname === '/confirm-email.html' ||
         url.pathname === '/account/confirm-email' ||
         url.pathname.includes('/Account/ConfirmEmail')) {
         event.respondWith(fetch(req, { cache: 'no-store' }));

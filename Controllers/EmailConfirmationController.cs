@@ -30,7 +30,7 @@ namespace EventsApp.Controllers
         public async Task<IActionResult> Index(string? userId = null, string? code = null, string? returnUrl = null)
         {
             Response.ContentType = "text/html; charset=utf-8";
-            Response.Headers.ContentDisposition = "inline";
+            Response.Headers.Remove("Content-Disposition");
             Response.Headers.CacheControl = "no-store, no-cache, must-revalidate";
             Response.Headers.Pragma = "no-cache";
             Response.Headers.Expires = "0";
@@ -156,6 +156,19 @@ namespace EventsApp.Controllers
             return !string.IsNullOrWhiteSpace(url)
                 && url.StartsWith("/", StringComparison.Ordinal)
                 && !url.StartsWith("//", StringComparison.Ordinal);
+        }
+
+        [HttpGet]
+        public IActionResult RedirectToCanonical(string? userId = null, string? code = null, string? returnUrl = null)
+        {
+            var query = new Dictionary<string, string?>
+            {
+                ["userId"] = userId,
+                ["code"] = code,
+                ["returnUrl"] = returnUrl,
+            };
+
+            return Redirect(QueryHelpers.AddQueryString("/confirm-email.html", query));
         }
     }
 }
