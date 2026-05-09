@@ -14781,3 +14781,190 @@ html[data-theme="dark"] .quick-filter-jump {
     border-color: rgba(255, 255, 255, 0.18);
     box-shadow: 0 16px 42px rgba(0, 0, 0, 0.44);
 }
+
+/* Final mobile overflow guardrails */
+.post-comments-open .quick-filter-jump,
+.chat-share-open .quick-filter-jump {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.social-feed-page,
+.social-feed-page--stream,
+.social-feed-search,
+.social-feed-filter-panel,
+.social-feed-filter-rail,
+.social-feed-shell,
+.social-feed-main,
+.social-feed-section,
+.organizer-events-wrap,
+.organizer-events-table,
+.organizer-dashboard-table {
+    max-width: 100%;
+    min-width: 0;
+}
+
+.social-feed-filter-panel > *,
+.social-feed-filter-rail > * {
+    min-width: 0;
+}
+
+.social-feed-filter-rail {
+    overscroll-behavior-inline: contain;
+}
+
+@media (max-width: 767.98px) {
+    .quick-filter-jump {
+        right: max(0.8rem, env(safe-area-inset-right));
+        bottom: calc(82px + env(safe-area-inset-bottom));
+        z-index: 1025;
+        min-height: 42px;
+        padding: 0 0.85rem;
+        font-size: 0.9rem;
+    }
+
+    .social-feed-page--stream {
+        width: 100%;
+        margin-inline: 0 !important;
+        overflow-x: clip;
+    }
+
+    .social-feed-topbar,
+    .social-feed-search,
+    .social-feed-shell--stream,
+    .social-feed-section--stream {
+        width: 100%;
+        margin-inline: 0;
+    }
+
+    .social-feed-filter-panel {
+        width: 100%;
+        overflow: hidden;
+        padding: 0.65rem;
+        border-radius: 16px;
+    }
+
+    .social-feed-filter-rail {
+        width: 100%;
+        max-width: 100%;
+        padding-inline: 0.1rem;
+    }
+
+    .social-feed-filter-chip {
+        max-width: calc(100vw - 2.25rem);
+        white-space: nowrap;
+    }
+
+    .social-feed-sort-form {
+        min-width: 0;
+    }
+
+    .organizer-events-wrap {
+        overflow: visible !important;
+    }
+
+    .organizer-events-table,
+    .organizer-dashboard-table,
+    .organizer-events-table thead,
+    .organizer-dashboard-table thead,
+    .organizer-events-table tbody,
+    .organizer-dashboard-table tbody,
+    .organizer-events-table tr,
+    .organizer-dashboard-table tr,
+    .organizer-events-table td,
+    .organizer-dashboard-table td {
+        display: block;
+        width: 100%;
+    }
+
+    .organizer-events-table thead,
+    .organizer-dashboard-table thead {
+        display: none;
+    }
+
+    .organizer-events-table,
+    .organizer-dashboard-table {
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+
+    .organizer-event-row,
+    .organizer-ticket-row {
+        margin: 0.85rem;
+        padding: 0.85rem;
+        border: 1px solid rgba(15, 23, 42, 0.1);
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.92);
+        box-shadow: 0 14px 32px rgba(15, 23, 42, 0.08);
+    }
+
+    .organizer-event-row > td,
+    .organizer-ticket-row > td {
+        display: grid;
+        grid-template-columns: minmax(7rem, 0.42fr) minmax(0, 1fr);
+        gap: 0.75rem;
+        align-items: center;
+        border: 0 !important;
+        padding: 0.45rem 0 !important;
+        min-width: 0;
+    }
+
+    .organizer-event-row > td:first-child,
+    .organizer-ticket-row > td:first-child,
+    .organizer-event-row > td[data-label="Действия"],
+    .organizer-ticket-row > td[data-label="Действия"] {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .organizer-event-row > td::before,
+    .organizer-ticket-row > td::before {
+        content: attr(data-label);
+        color: var(--groove-muted, #667085);
+        font-size: 0.72rem;
+        font-weight: 900;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+    }
+
+    .organizer-event-row > td:first-child::before,
+    .organizer-ticket-row > td:first-child::before,
+    .organizer-event-row > td[data-label="Действия"]::before,
+    .organizer-ticket-row > td[data-label="Действия"]::before {
+        display: none;
+    }
+
+    .organizer-events-table .groove-list-actions,
+    .organizer-dashboard-table .groove-list-actions {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        width: 100%;
+        justify-content: stretch;
+    }
+
+    .organizer-events-table .groove-list-actions > *,
+    .organizer-dashboard-table .groove-list-actions > * {
+        width: 100%;
+        min-width: 0;
+        justify-content: center;
+    }
+}
+
+@media (max-width: 380px) {
+    .organizer-event-row > td,
+    .organizer-ticket-row > td {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 0.2rem;
+    }
+
+    .organizer-events-table .groove-list-actions,
+    .organizer-dashboard-table .groove-list-actions {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+html[data-theme="dark"] .organizer-event-row,
+html[data-theme="dark"] .organizer-ticket-row {
+    border-color: rgba(255, 255, 255, 0.12);
+    background: rgba(15, 23, 42, 0.92);
+    box-shadow: 0 14px 34px rgba(0, 0, 0, 0.32);
+}

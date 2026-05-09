@@ -527,8 +527,8 @@
             else
             {
                 <div class="groove-table-card">
-                    <div class="groove-table-wrap">
-                        <table class="table">
+                    <div class="groove-table-wrap organizer-events-wrap">
+                        <table class="table organizer-dashboard-table organizer-dashboard-table--events">
                             <thead>
                                 <tr>
                                     <th data-i18n="org.th.event">Събитие</th>
@@ -544,12 +544,12 @@
                             <tbody>
                                 @foreach (var row in Model.EventTicketRows)
                                 {
-                                    <tr>
-                                        <td>
+                                    <tr class="organizer-event-row">
+                                        <td data-label="Събитие">
                                             <strong>@row.EventTitle</strong>
                                         </td>
-                                        <td>@row.StartTime.ToString("dd.MM.yyyy HH:mm")</td>
-                                        <td>
+                                        <td data-label="Начало">@row.StartTime.ToString("dd.MM.yyyy HH:mm")</td>
+                                        <td data-label="Статус">
                                             @if (row.HasActiveTickets)
                                             {
                                                 <span class="groove-status-badge groove-status-badge-success" data-i18n="org.badge.active">Активни билети</span>
@@ -559,13 +559,13 @@
                                                 <span class="groove-status-badge groove-status-badge-muted" data-i18n="org.badge.none">Без билети</span>
                                             }
                                         </td>
-                                        <td>@row.Sold</td>
-                                        <td>@bgnFmt(row.Revenue)</td>
-                                        <td>
+                                        <td data-label="Продадени">@row.Sold</td>
+                                        <td data-label="Приходи">@bgnFmt(row.Revenue)</td>
+                                        <td data-label="Гледания">
                                             <strong>@row.Views</strong>
                                             <span class="text-muted small d-block">@row.UniqueViewers уникални</span>
                                         </td>
-                                        <td>
+                                        <td data-label="VIP">
                                             @if (row.VipBoostScore > 0)
                                             {
                                                 <span class="evt-card__chip evt-card__chip--vip organizer-vip-badge" style="position:static;">VIP x@row.VipBoostScore</span>
@@ -575,7 +575,7 @@
                                                 <span class="text-muted small">-</span>
                                             }
                                         </td>
-                                        <td>
+                                        <td data-label="Действия">
                                             <div class="groove-list-actions">
                                                 <a asp-controller="Events" asp-action="Edit" asp-route-id="@row.EventId" class="groove-button groove-button-paper">
                                                     <i class="bi bi-pencil"></i> <span data-i18n="org.btn.edit">Редакция</span>
@@ -594,8 +594,8 @@
             }
 
             <div class="groove-table-card mt-3">
-                <div class="groove-table-wrap">
-                    <table class="table">
+                <div class="groove-table-wrap organizer-events-wrap">
+                    <table class="table organizer-dashboard-table organizer-dashboard-table--tickets">
                         <thead>
                             <tr>
                                 <th>Билет</th>
@@ -617,26 +617,26 @@
                             {
                                 @foreach (var ticket in Model.SoldTickets)
                                 {
-                                    <tr>
-                                        <td>
+                                    <tr class="organizer-ticket-row">
+                                        <td data-label="Билет">
                                             <strong>@ticket.EventTitle</strong>
                                             <span class="text-muted small d-block">@ticket.TicketName · @ticket.StartTime.ToString("dd.MM HH:mm")</span>
                                         </td>
-                                        <td>
+                                        <td data-label="Купувач">
                                             @ticket.BuyerEmail
                                             @if (!string.IsNullOrWhiteSpace(ticket.AttendeeName))
                                             {
                                                 <span class="text-muted small d-block">@ticket.AttendeeName</span>
                                             }
                                         </td>
-                                        <td>@ticket.PurchasedAt.ToLocalTime().ToString("dd.MM HH:mm")</td>
-                                        <td>@bgnFmt(ticket.PricePaid)</td>
-                                        <td>
+                                        <td data-label="Дата">@ticket.PurchasedAt.ToLocalTime().ToString("dd.MM HH:mm")</td>
+                                        <td data-label="Цена">@bgnFmt(ticket.PricePaid)</td>
+                                        <td data-label="Състояние">
                                             <span class="groove-status-badge @(ticket.IsUsed ? "groove-status-badge-success" : "groove-status-badge-muted")">
                                                 @(ticket.IsUsed ? "Валидиран" : "Неизползван")
                                             </span>
                                         </td>
-                                        <td>
+                                        <td data-label="Действия">
                                             <a asp-controller="Tickets" asp-action="Details" asp-route-id="@ticket.Id" class="groove-button groove-button-paper">
                                                 <i class="bi bi-eye"></i> Детайли
                                             </a>

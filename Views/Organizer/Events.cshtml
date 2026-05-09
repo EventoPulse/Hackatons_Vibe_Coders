@@ -59,8 +59,8 @@
     else
     {
         <div class="groove-table-card">
-            <div class="groove-table-wrap">
-                <table class="table">
+            <div class="groove-table-wrap organizer-events-wrap">
+                <table class="table organizer-events-table">
                     <thead>
                         <tr>
                             <th>Събитие</th>
@@ -79,17 +79,17 @@
                             var isJustBoosted = boostedEventId == ev.Id;
 
                             <tr class="organizer-event-row @(isVipBoosted ? "is-vip-boosted" : "") @(isJustBoosted ? "is-vip-just-boosted" : "")">
-                                <td>
+                                <td data-label="Събитие">
                                     <strong>@ev.Title</strong>
                                     <span class="text-muted small d-block">@ev.City</span>
                                 </td>
-                                <td>@ev.OrganizerPageName</td>
-                                <td>@ev.StartTime.ToString("dd.MM.yyyy HH:mm")</td>
-                                <td>
+                                <td data-label="Страница">@ev.OrganizerPageName</td>
+                                <td data-label="Дата">@ev.StartTime.ToString("dd.MM.yyyy HH:mm")</td>
+                                <td data-label="Билети">
                                     @ev.TicketsCount вида
                                     <span class="text-muted small d-block">@ev.SoldTicketsCount продадени</span>
                                 </td>
-                                <td>
+                                <td data-label="Статус">
                                     @if (ev.HasPendingChanges)
                                     {
                                         <span class="groove-status-badge groove-status-badge-warning">Чака промени</span>
@@ -103,7 +103,7 @@
                                         <span class="groove-status-badge groove-status-badge-warning">Чака одобрение</span>
                                     }
                                 </td>
-                                <td>
+                                <td data-label="VIP">
                                     @if (isVipBoosted)
                                     {
                                         <span class="evt-card__chip evt-card__chip--vip organizer-vip-badge" style="position:static;">
@@ -115,7 +115,7 @@
                                         <span class="text-muted small">-</span>
                                     }
                                 </td>
-                                <td>
+                                <td data-label="Действия">
                                     <div class="groove-list-actions">
                                         <a asp-controller="Events" asp-action="Details" asp-route-id="@ev.Id" class="groove-button groove-button-paper">
                                             <i class="bi bi-eye"></i> Преглед
