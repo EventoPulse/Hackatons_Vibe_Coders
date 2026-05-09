@@ -838,8 +838,7 @@ namespace EventsApp.Controllers
 
             if (saved != null)
             {
-                var payload = BuildMessagePayload(saved, userId);
-                await _hubContext.Clients.Group(conversation.Token.ToString()).SendAsync("NewMessage", payload);
+                await BroadcastNewMessageAsync(conversation, saved);
                 await NotifyConversationParticipantsAsync(conversation.Id, saved);
             }
 
@@ -1028,8 +1027,7 @@ namespace EventsApp.Controllers
 
             if (saved != null)
             {
-                var payload = BuildMessagePayload(saved, userId);
-                await _hubContext.Clients.Group(conversation.Token.ToString()).SendAsync("NewMessage", payload);
+                await BroadcastNewMessageAsync(conversation, saved);
                 await NotifyConversationParticipantsAsync(conversation.Id, saved);
             }
 
@@ -1050,6 +1048,19 @@ namespace EventsApp.Controllers
             }
 
             return RedirectToAction(nameof(Details), new { token = conversation.Token });
+        }
+
+        private async Task BroadcastNewMessageAsync(Conversation conversation, Message message)
+        {
+            var participantIds = new[] { conversation.ParticipantOneId, conversation.ParticipantTwoId }
+                .Where(id => !string.IsNullOrWhiteSpace(id))
+                .Distinct()
+                .ToList();
+            foreach (var viewerUserId in participantIds)
+            {
+                var perViewerPayload = BuildMessagePayload(message, viewerUserId);
+                await _hubContext.Clients.User(viewerUserId).SendAsync("NewMessage", perViewerPayload);
+            }
         }
 
         private object BuildMessagePayload(Message message, string viewerUserId)
