@@ -1,8 +1,10 @@
 using System.Text;
 using System.Text.Encodings.Web;
+using System.Text.Json;
 using EventsApp.Data;
 using EventsApp.Models;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -16,17 +18,20 @@ namespace EventsApp.Controllers
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly ApplicationDbContext _db;
+        private readonly IDataProtector _linkProtector;
         private readonly ILogger<EmailConfirmationController> _logger;
 
         public EmailConfirmationController(
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
             ApplicationDbContext db,
+            IDataProtectionProvider dataProtectionProvider,
             ILogger<EmailConfirmationController> logger)
         {
             _userManager = userManager;
             _signInManager = signInManager;
             _db = db;
+            _linkProtector = dataProtectionProvider.CreateProtector("EventsApp.EmailConfirmationLinks.v2");
             _logger = logger;
         }
 
@@ -39,6 +44,32 @@ namespace EventsApp.Controllers
             Response.Headers.CacheControl = "no-store, no-cache, must-revalidate";
             Response.Headers.Pragma = "no-cache";
             Response.Headers.Expires = "0";
+
+            var payload = ReadProtectedPayload(requestId);
+            if (payload != null)
+            {
+                if (payload.ExpiresAt <= DateTimeOffset.UtcNow)
+                {
+                    return ConfirmationPage(
+                        "Невалиден линк",
+                        "Линкът за потвърждение е изтекъл. Поискай нов линк от страницата за вход.",
+                        "/Identity/Account/Login",
+                        "Към вход");
+                }
+
+                var payloadUser = await _userManager.FindByIdAsync(payload.UserId);
+                if (payloadUser == null)
+                {
+                    return ConfirmationPage(
+                        "Невалиден линк",
+                        "Не намерихме акаунт за този линк.",
+                        "/Identity/Account/Login",
+                        "Към вход");
+                }
+
+                var payloadReturnUrl = IsSafeLocalUrl(payload.ReturnUrl) ? payload.ReturnUrl : returnUrl;
+                return await ConfirmWithEncodedCodeAsync(payloadUser, payload.Code, payloadReturnUrl, null);
+            }
 
             var now = DateTime.UtcNow;
             var request = await _db.EmailConfirmationRequests
@@ -278,6 +309,20 @@ namespace EventsApp.Controllers
                 && !url.StartsWith("//", StringComparison.Ordinal);
         }
 
+        private EmailConfirmationPayload? ReadProtectedPayload(string payload)
+        {
+            try
+            {
+                var protectedBytes = WebEncoders.Base64UrlDecode(payload);
+                var json = Encoding.UTF8.GetString(_linkProtector.Unprotect(protectedBytes));
+                return JsonSerializer.Deserialize<EmailConfirmationPayload>(json);
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
         [HttpGet]
         public IActionResult RedirectToCanonical(string? userId = null, string? code = null, string? returnUrl = null)
         {
@@ -290,5 +335,12 @@ namespace EventsApp.Controllers
 
             return Redirect(QueryHelpers.AddQueryString("/email/confirm", query));
         }
+
+        private sealed record EmailConfirmationPayload(
+            string UserId,
+            string Email,
+            string Code,
+            string? ReturnUrl,
+            DateTimeOffset ExpiresAt);
     }
 }
