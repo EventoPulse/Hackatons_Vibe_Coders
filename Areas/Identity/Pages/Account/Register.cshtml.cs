@@ -290,16 +290,20 @@ namespace EventsApp.Areas.Identity.Pages.Account
                 var code = await _userManager.GenerateEmailConfirmationTokenAsync(user);
                 code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
 
-                var confirmPath = QueryHelpers.AddQueryString(
-                    "/confirm-email",
-                    new Dictionary<string, string?>
-                    {
-                        ["userId"] = user.Id,
-                        ["code"] = code,
-                        ["returnUrl"] = nextUrl,
-                    });
-
+                var confirmQuery = new Dictionary<string, string?>
+                {
+                    ["userId"] = user.Id,
+                    ["code"] = code,
+                    ["returnUrl"] = nextUrl,
+                };
+                var confirmPath = QueryHelpers.AddQueryString("/confirm-email", confirmQuery);
                 var confirmUrl = _appLinks.ToAbsoluteUrl(Request, confirmPath);
+                if (!IsUsableWebUrl(confirmUrl))
+                {
+                    confirmUrl = QueryHelpers.AddQueryString("https://evento.business/confirm-email", confirmQuery);
+                }
+
+                LogConfirmationLinkTarget(confirmUrl, user.Email);
                 var encodedUrl = HtmlEncoder.Default.Encode(confirmUrl);
                 var intro = organizerSignup
                     ? "Добре дошъл в Evento. Потвърди имейла си, за да продължиш спокойно със заявката си за организатор."
@@ -341,11 +345,43 @@ namespace EventsApp.Areas.Identity.Pages.Account
                         </table>
                     </div>
                     """);
+
+                _logger.LogInformation("Confirmation email was handed to the email sender for {Email}.", user.Email);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to send confirmation email to {Email}.", user.Email);
             }
+        }
+
+        private void LogConfirmationLinkTarget(string confirmUrl, string email)
+        {
+            if (Uri.TryCreate(confirmUrl, UriKind.Absolute, out var uri))
+            {
+                _logger.LogInformation(
+                    "Sending confirmation email to {Email}. Confirmation host={Host}, scheme={Scheme}.",
+                    email,
+                    uri.Host,
+                    uri.Scheme);
+            }
+        }
+
+        private static bool IsUsableWebUrl(string? url)
+        {
+            if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
+            {
+                return false;
+            }
+
+            if (string.IsNullOrWhiteSpace(uri.Host) ||
+                string.Equals(uri.Host, "localhost", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(uri.Host, "127.0.0.1", StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            return string.Equals(uri.Scheme, Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(uri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase);
         }
     }
 }

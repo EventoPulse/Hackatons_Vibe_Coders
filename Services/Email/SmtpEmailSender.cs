@@ -24,13 +24,16 @@ namespace EventsApp.Services.Email
 
         public async Task SendEmailAsync(string email, string subject, string htmlMessage)
         {
-            if (!GetBool(false, "EMAIL_ENABLED", "Email:Enabled"))
+            var brevoApiKey = GetSetting("BREVO_API_KEY", "BREVO_APIKEY", "BREVO__APIKEY", "Brevo__ApiKey", "Email:Brevo:ApiKey");
+            if (!IsEmailSendingEnabled(brevoApiKey))
             {
-                _logger.LogInformation("Email sending is disabled. Skipping message to {Email} with subject {Subject}.", email, subject);
+                _logger.LogWarning(
+                    "Email sending is disabled. Skipping message to {Email} with subject {Subject}. Set EMAIL_ENABLED=true in production.",
+                    email,
+                    subject);
                 return;
             }
 
-            var brevoApiKey = GetSetting("BREVO_API_KEY", "BREVO_APIKEY", "BREVO__APIKEY", "Brevo__ApiKey", "Email:Brevo:ApiKey");
             if (!string.IsNullOrWhiteSpace(brevoApiKey))
             {
                 await SendWithBrevoApiAsync(brevoApiKey, email, subject, htmlMessage);
@@ -129,6 +132,48 @@ namespace EventsApp.Services.Email
             }
 
             return null;
+        }
+
+        private bool IsEmailSendingEnabled(string? brevoApiKey)
+        {
+            if (GetBool(false, "EMAIL_DISABLED", "EMAIL_SUPPRESS_SEND", "Email:Disabled"))
+            {
+                return false;
+            }
+
+            var explicitEnv = _configuration["EMAIL_ENABLED"];
+            if (bool.TryParse(explicitEnv, out var envEnabled))
+            {
+                if (envEnabled)
+                {
+                    return true;
+                }
+
+                if (string.IsNullOrWhiteSpace(brevoApiKey))
+                {
+                    return false;
+                }
+
+                _logger.LogWarning(
+                    "EMAIL_ENABLED=false is ignored because Brevo API credentials are configured. Set EMAIL_DISABLED=true to suppress delivery.");
+                return true;
+            }
+
+            if (bool.TryParse(_configuration["Email:Enabled"], out var configuredEnabled) && configuredEnabled)
+            {
+                return true;
+            }
+
+            // In production Railway/Brevo setups the appsettings default is false.
+            // If real delivery credentials are present and EMAIL_ENABLED was not explicitly set, send.
+            if (!string.IsNullOrWhiteSpace(brevoApiKey))
+            {
+                return true;
+            }
+
+            var smtpHost = GetSetting("SMTP_HOST", "Email:Smtp:Host");
+            var smtpFrom = GetSetting("SMTP_FROM_EMAIL", "Email:From:Email", "SMTP_USERNAME", "SMTP_USER", "Email:Smtp:Username");
+            return !string.IsNullOrWhiteSpace(smtpHost) && !string.IsNullOrWhiteSpace(smtpFrom);
         }
 
         private int GetInt(int fallback, params string[] keys)
