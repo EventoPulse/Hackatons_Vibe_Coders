@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'evento-v3';
+const CACHE_VERSION = 'evento-v4';
 const APP_SHELL = [
     '/',
     '/css/site.css',
@@ -32,7 +32,9 @@ self.addEventListener('fetch', (event) => {
     const url = new URL(req.url);
     if (url.origin !== self.location.origin) return;
 
-    if (url.pathname === '/confirm-email' || url.pathname.includes('/Account/ConfirmEmail')) {
+    if (url.pathname === '/confirm-email' ||
+        url.pathname === '/account/confirm-email' ||
+        url.pathname.includes('/Account/ConfirmEmail')) {
         event.respondWith(fetch(req, { cache: 'no-store' }));
         return;
     }
