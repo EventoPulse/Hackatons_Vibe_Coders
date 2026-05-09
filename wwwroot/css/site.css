@@ -2877,9 +2877,28 @@ a.groove-stat-card:hover {
 }
 
 .social-chat-shell {
+    width: min(860px, 100%);
     max-width: 860px;
+    min-width: 0;
     margin: 0 auto;
     overflow: hidden;
+}
+
+.social-messages-page--chat {
+    max-width: 100vw;
+    overflow: hidden;
+    overscroll-behavior: contain;
+}
+
+.social-messages-page--chat .social-chat-shell {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    height: min(760px, calc(100dvh - 110px));
+    max-height: calc(100dvh - 110px);
+    min-height: 520px;
+    overflow: hidden;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
 }
 
 .social-chat-header {
@@ -2887,6 +2906,16 @@ a.groove-stat-card:hover {
     padding: 1rem;
     border-bottom: 1px solid var(--social-line);
     background: var(--social-soft);
+    min-width: 0;
+}
+
+.social-chat-header .social-author-link {
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+.social-chat-header .social-author-link > span {
+    min-width: 0;
 }
 
 .social-chat-thread {
@@ -2894,8 +2923,17 @@ a.groove-stat-card:hover {
     gap: 0.75rem;
     min-height: 360px;
     max-height: 62vh;
+    min-width: 0;
     overflow-y: auto;
+    overflow-x: hidden;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
     padding: 1rem;
+}
+
+.social-messages-page--chat .social-chat-thread {
+    min-height: 0;
+    max-height: none;
 }
 
 .social-message-bubble {
@@ -3364,6 +3402,7 @@ html[data-theme="dark"] .social-message-bubble__edit textarea {
     width: 100%;
     margin-left: auto;
     margin-right: auto;
+    min-width: 0;
 }
 
 .social-chat-reply-preview {
@@ -3412,7 +3451,9 @@ html[data-theme="dark"] .social-message-bubble__edit textarea {
     min-width: 0;
     border: 1px solid var(--social-line);
     border-radius: 8px;
+    font-size: 16px;
     padding: 0.8rem 0.9rem;
+    touch-action: manipulation;
 }
 
 .nav-link--with-badge {
@@ -3667,6 +3708,53 @@ html[data-theme="dark"] .evt-notification-prompt [data-push-dismiss] {
 }
 
 @media (max-width: 767.98px) {
+    .social-messages-page--chat {
+        width: 100%;
+        max-width: 100vw;
+        min-height: calc(100dvh - 66px);
+        padding: 0.35rem 0.45rem calc(0.45rem + env(safe-area-inset-bottom));
+        overflow: hidden;
+    }
+
+    .social-messages-page--chat .social-chat-shell {
+        height: calc(100dvh - 78px - env(safe-area-inset-bottom));
+        max-height: calc(100dvh - 78px - env(safe-area-inset-bottom));
+        min-height: 0;
+        border-radius: 16px;
+    }
+
+    .social-messages-page--chat .social-chat-header {
+        padding: 0.72rem;
+    }
+
+    .social-messages-page--chat .social-chat-thread {
+        padding: 0.72rem;
+    }
+
+    .social-messages-page--chat .social-chat-compose {
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.65rem;
+    }
+
+    .social-messages-page--chat .social-chat-compose > .small,
+    .social-messages-page--chat .social-chat-compose > .text-muted {
+        grid-column: 1 / -1;
+        width: auto;
+    }
+
+    .social-messages-page--chat .social-chat-compose input {
+        width: 100%;
+    }
+
+    .social-messages-page--chat .social-chat-compose .groove-button {
+        width: auto;
+        min-width: 46px;
+        min-height: 46px;
+        padding-inline: 0.85rem;
+    }
+
     .social-feed-hero,
     .social-section-heading,
     .social-profile-hero {

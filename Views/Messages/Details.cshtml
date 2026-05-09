@@ -4,7 +4,7 @@
     var initial = string.IsNullOrWhiteSpace(Model.OtherUserName) ? "?" : Model.OtherUserName[..1].ToUpperInvariant();
 }
 
-<section class="groove-app-page social-messages-page">
+<section class="groove-app-page social-messages-page social-messages-page--chat">
     <div class="social-chat-shell" data-current-conversation-token="@Model.Token">
         <header class="social-chat-header">
             <a asp-action="Index" class="btn btn-sm btn-outline-secondary" title="Back" data-i18n-title="common.back">
