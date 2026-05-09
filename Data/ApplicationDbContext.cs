@@ -713,6 +713,10 @@ namespace EventsApp.Data
                       .HasMaxLength(32)
                       .HasDefaultValue("Rectangle");
 
+                entity.Property(s => s.ColorHex)
+                      .HasMaxLength(16)
+                      .HasDefaultValue("#2456ff");
+
                 entity.HasOne(s => s.VenueLayout)
                       .WithMany(l => l.Sections)
                       .HasForeignKey(s => s.VenueLayoutId)

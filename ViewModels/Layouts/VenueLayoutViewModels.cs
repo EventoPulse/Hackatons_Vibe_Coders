@@ -76,6 +76,7 @@ namespace EventsApp.ViewModels.Layouts
         public string Shape { get; set; } = "Rectangle";
         public int Capacity { get; set; }
         public decimal PriceModifier { get; set; }
+        public string ColorHex { get; set; } = "#2456ff";
         public double X { get; set; }
         public double Y { get; set; }
         public double Width { get; set; } = 220;
@@ -129,6 +130,7 @@ namespace EventsApp.ViewModels.Layouts
         public LayoutSectionType Type { get; set; }
         public string Shape { get; set; } = "Rectangle";
         public decimal PriceModifier { get; set; }
+        public string ColorHex { get; set; } = "#2456ff";
         public double X { get; set; }
         public double Y { get; set; }
         public double Width { get; set; }

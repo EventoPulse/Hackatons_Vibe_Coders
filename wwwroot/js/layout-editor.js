@@ -49,6 +49,7 @@
             type: root.querySelector('[data-section-type]'),
             shape: root.querySelector('[data-section-shape]'),
             price: root.querySelector('[data-section-price]'),
+            color: root.querySelector('[data-section-color]'),
             x: root.querySelector('[data-section-x]'),
             y: root.querySelector('[data-section-y]'),
             width: root.querySelector('[data-section-width]'),
@@ -96,6 +97,20 @@
     function number(value, fallback) {
         var n = parseFloat(value);
         return Number.isFinite(n) ? n : fallback;
+    }
+
+    function defaultSectionColor(type) {
+        if (type === 'VIP') return '#f59e0b';
+        if (type === 'Table') return '#0d9488';
+        if (type === 'Standing') return '#22c55e';
+        return '#2456ff';
+    }
+
+    function normalizeColor(value, fallback) {
+        var color = (value || '').trim();
+        if (!color) return fallback;
+        if (color.charAt(0) !== '#') color = '#' + color;
+        return /^#[0-9a-fA-F]{6}$/.test(color) ? color.toLowerCase() : fallback;
     }
 
     function intFrom(text, patterns, fallback) {
@@ -146,6 +161,7 @@
             section.shape = section.shape || (section.type === 'Table' ? 'Circle' : 'Rectangle');
             section.capacity = Math.max(0, parseInt(section.capacity || '0', 10));
             section.priceModifier = number(section.priceModifier, 0);
+            section.colorHex = normalizeColor(section.colorHex, defaultSectionColor(section.type));
             section.x = number(section.x, 80 + index * 30);
             section.y = number(section.y, 80 + index * 30);
             section.width = Math.max(80, number(section.width, 260));
@@ -236,6 +252,7 @@
                 node.className = 'layout-pro-section shape-' + section.shape.toLowerCase() + (selected.type === 'section' && selected.id === section.clientId ? ' is-selected' : '');
                 node.dataset.sectionId = section.clientId;
                 node.dataset.sectionType = section.type;
+                node.style.setProperty('--layout-section-color', section.colorHex);
                 applyBox(node, section);
 
                 var head = document.createElement('button');
@@ -256,6 +273,7 @@
                     seatNode.type = 'button';
                     seatNode.className = 'layout-pro-seat' + (seat.seatType === 'Table' ? ' is-table' : '') + (seat.status === 'Blocked' ? ' is-blocked' : '') + (selected.type === 'seat' && selected.id === seat.clientId ? ' is-selected' : '');
                     seatNode.dataset.seatId = seat.clientId;
+                    seatNode.style.setProperty('--layout-seat-color', section.colorHex);
                     seatNode.style.left = seat.x + 'px';
                     seatNode.style.top = seat.y + 'px';
                     seatNode.style.width = (seat.radius * 2) + 'px';
@@ -326,6 +344,7 @@
             setValue(els.section.type, section.type);
             setValue(els.section.shape, section.shape);
             setValue(els.section.price, section.priceModifier);
+            setValue(els.section.color, section.colorHex);
             setValue(els.section.x, Math.round(section.x));
             setValue(els.section.y, Math.round(section.y));
             setValue(els.section.width, Math.round(section.width));
@@ -490,6 +509,7 @@
             shape: shape || 'Rectangle',
             capacity: type === 'Standing' ? 80 : 0,
             priceModifier: 0,
+            colorHex: defaultSectionColor(type || 'Seated'),
             x: 100 + count * 28,
             y: 100 + count * 28,
             width: type === 'Table' ? 230 : 360,
@@ -649,6 +669,7 @@
                 shape: 'Rounded',
                 capacity: scaledRows * perRow,
                 priceModifier: floorIndex === 0 ? 0 : 10,
+                colorHex: floorIndex === 0 ? '#2456ff' : '#8b5cf6',
                 x: 80,
                 y: 88,
                 width: sectionWidth,
@@ -688,6 +709,7 @@
                     shape: 'Rounded',
                     capacity: unlimited ? 0 : tableCount * tableCapacity,
                     priceModifier: wantsVip ? 20 : 0,
+                    colorHex: wantsVip ? '#f59e0b' : '#0d9488',
                     x: 80,
                     y: sectionHeight + 130,
                     width: clamp(Math.ceil(Math.sqrt(tableCount)) * 96 + 80, 340, 920),
@@ -725,6 +747,7 @@
                     shape: 'Rounded',
                     capacity: 120,
                     priceModifier: 0,
+                    colorHex: '#22c55e',
                     x: sectionWidth + 120,
                     y: 100,
                     width: 260,
@@ -958,9 +981,19 @@
     }
 
     bindInput(els.section.name, function () { updateSection('name', els.section.name.value); });
-    bindInput(els.section.type, function () { updateSection('type', els.section.type.value); });
+    bindInput(els.section.type, function () {
+        var section = selectedSection();
+        var previous = section ? section.type : null;
+        updateSection('type', els.section.type.value);
+        section = selectedSection();
+        if (section && section.colorHex === defaultSectionColor(previous || 'Seated')) {
+            section.colorHex = defaultSectionColor(section.type);
+            render();
+        }
+    });
     bindInput(els.section.shape, function () { updateSection('shape', els.section.shape.value); });
     bindInput(els.section.price, function () { updateSection('priceModifier', number(els.section.price.value, 0)); });
+    bindInput(els.section.color, function () { updateSection('colorHex', normalizeColor(els.section.color.value, defaultSectionColor('Seated'))); });
     bindInput(els.section.x, function () { updateSection('x', number(els.section.x.value, 0)); });
     bindInput(els.section.y, function () { updateSection('y', number(els.section.y.value, 0)); });
     bindInput(els.section.width, function () { updateSection('width', Math.max(80, number(els.section.width.value, 80))); });

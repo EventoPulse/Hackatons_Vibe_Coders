@@ -1555,6 +1555,7 @@ namespace EventsApp.Controllers
                         Type = section.Type,
                         Shape = string.IsNullOrWhiteSpace(section.Shape) ? "Rectangle" : section.Shape,
                         PriceModifier = section.PriceModifier,
+                        ColorHex = string.IsNullOrWhiteSpace(section.ColorHex) ? "#2456ff" : section.ColorHex,
                         X = section.X,
                         Y = section.Y,
                         Width = section.Width,

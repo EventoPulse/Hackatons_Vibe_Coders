@@ -934,6 +934,13 @@ namespace EventsApp.Migrations
                     b.Property<int>("Capacity")
                         .HasColumnType("integer");
 
+                    b.Property<string>("ColorHex")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasDefaultValue("#2456ff");
+
                     b.Property<string>("FloorName")
                         .IsRequired()
                         .ValueGeneratedOnAdd()

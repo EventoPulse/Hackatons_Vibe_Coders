@@ -8638,9 +8638,9 @@ html[data-theme="dark"] .evt-share__item.is-x i { color: #e8eaf2; }
 .layout-pro-section {
     position: absolute;
     transform-origin: center;
-    border: 2px solid rgba(36, 86, 255, 0.34);
+    border: 2px solid color-mix(in srgb, var(--layout-section-color, #2456ff) 62%, transparent);
     border-radius: 16px;
-    background: rgba(237, 243, 255, 0.78);
+    background: color-mix(in srgb, var(--layout-section-color, #2456ff) 13%, #ffffff);
     box-shadow: 0 14px 30px rgba(15, 23, 42, 0.08);
     transition: box-shadow 0.18s ease, border-color 0.18s ease, background-color 0.18s ease, outline-color 0.18s ease;
     will-change: left, top, width, height, transform;
@@ -8669,7 +8669,7 @@ html[data-theme="dark"] .evt-share__item.is-x i { color: #e8eaf2; }
 
 .layout-pro-section[data-section-type="Standing"] {
     border-style: dashed;
-    background: rgba(45, 166, 151, 0.12);
+    background: color-mix(in srgb, var(--layout-section-color, #22c55e) 16%, #ffffff);
 }
 
 .layout-pro-section.is-selected,
@@ -8725,7 +8725,7 @@ html[data-theme="dark"] .evt-share__item.is-x i { color: #e8eaf2; }
     place-items: center;
     border: 2px solid #fff;
     border-radius: 999px;
-    background: #2456ff;
+    background: var(--layout-seat-color, #2456ff);
     color: #fff;
     box-shadow: 0 8px 18px rgba(36, 86, 255, 0.22);
     font-size: 0.62rem;
@@ -8736,7 +8736,7 @@ html[data-theme="dark"] .evt-share__item.is-x i { color: #e8eaf2; }
 }
 
 .layout-pro-seat.is-table {
-    background: #0d9488;
+    background: var(--layout-seat-color, #0d9488);
     box-shadow: 0 8px 18px rgba(13, 148, 136, 0.26);
 }
 
@@ -9019,6 +9019,24 @@ html[data-theme="dark"] .evt-share__item.is-x i { color: #e8eaf2; }
     padding: 1rem;
 }
 
+.event-seat-admin-actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.65rem;
+    margin-bottom: 0.9rem;
+    padding: 0.75rem;
+    border: 1px dashed var(--social-line, #dce3f3);
+    border-radius: 16px;
+    background: rgba(36, 86, 255, 0.05);
+}
+
+.event-seat-admin-actions span {
+    color: var(--social-muted, #667085);
+    font-size: 0.86rem;
+    font-weight: 800;
+}
+
 .event-seat-floor-tabs {
     display: flex;
     gap: 0.5rem;
@@ -9042,9 +9060,9 @@ html[data-theme="dark"] .evt-share__item.is-x i { color: #e8eaf2; }
 .event-seat-section {
     position: absolute;
     transform-origin: center;
-    border: 1px solid rgba(36, 86, 255, 0.24);
+    border: 1px solid color-mix(in srgb, var(--seat-zone-color, #2456ff) 46%, transparent);
     border-radius: 14px;
-    background: rgba(255, 255, 255, 0.76);
+    background: color-mix(in srgb, var(--seat-zone-color, #2456ff) 10%, #ffffff);
 }
 
 .event-seat-section.shape-circle {
@@ -9057,7 +9075,7 @@ html[data-theme="dark"] .evt-share__item.is-x i { color: #e8eaf2; }
 
 .event-seat-section[data-section-type="Standing"] {
     border-style: dashed;
-    background: rgba(45, 166, 151, 0.1);
+    background: color-mix(in srgb, var(--seat-zone-color, #22c55e) 13%, #ffffff);
 }
 
 .event-seat-section__title {
@@ -9083,7 +9101,7 @@ html[data-theme="dark"] .evt-share__item.is-x i { color: #e8eaf2; }
     place-items: center;
     border: 2px solid #fff;
     border-radius: 999px;
-    background: #2456ff;
+    background: var(--seat-zone-color, #2456ff);
     color: #fff;
     box-shadow: 0 8px 18px rgba(36, 86, 255, 0.22);
     font-size: 0.62rem;
@@ -9091,12 +9109,23 @@ html[data-theme="dark"] .evt-share__item.is-x i { color: #e8eaf2; }
 }
 
 .event-seat-button.is-table {
-    background: #0d9488;
+    background: var(--seat-zone-color, #0d9488);
 }
 
+.event-seat-button.is-blocked,
 .event-seat-button:disabled {
     background: #98a2b3;
     opacity: 0.72;
+}
+
+.event-seat-button.is-reserved {
+    background: #f59e0b;
+    opacity: 0.82;
+}
+
+.event-seat-button.is-sold {
+    background: #ef4444;
+    opacity: 0.82;
 }
 
 .event-seat-button.is-selected {
@@ -9151,6 +9180,15 @@ html[data-theme="dark"] .layout-tutorial__dialog h2,
 html[data-theme="dark"] .layout-tutorial__dialog strong,
 html[data-theme="dark"] .layout-pro-floor-name {
     color: #e8eaf2 !important;
+}
+
+html[data-theme="dark"] .event-seat-admin-actions {
+    background: rgba(96, 165, 250, 0.1);
+    border-color: #334155;
+}
+
+html[data-theme="dark"] .event-seat-admin-actions span {
+    color: #cbd5e1;
 }
 
 html[data-theme="dark"] .layout-ai-status {

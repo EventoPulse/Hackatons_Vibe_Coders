@@ -87,6 +87,56 @@ namespace EventsApp.Controllers.Api
 
             return ok ? Ok(new { ok = true }) : NotFound(new { ok = false });
         }
+
+        [HttpPost("status")]
+        [Authorize(Roles = GlobalConstants.Roles.Admin + "," + GlobalConstants.Roles.Organizer)]
+        public async Task<IActionResult> SetStatus(SeatStatusRequest request)
+        {
+            if (request.Status != EventSeatInventoryStatus.Available &&
+                request.Status != EventSeatInventoryStatus.Blocked)
+            {
+                return BadRequest(new { ok = false, message = "Only Available and Blocked can be set manually." });
+            }
+
+            var userId = _userManager.GetUserId(User)!;
+            var isAdmin = User.IsInRole(GlobalConstants.Roles.Admin);
+
+            var inventory = await _db.EventSeatInventories
+                .Include(i => i.Event)
+                .Include(i => i.EventOccurrence)
+                    .ThenInclude(o => o!.EventSeries)
+                        .ThenInclude(s => s.Event)
+                .FirstOrDefaultAsync(i => i.Id == request.InventoryId);
+
+            if (inventory == null)
+            {
+                return NotFound(new { ok = false });
+            }
+
+            var ev = inventory.Event ?? inventory.EventOccurrence?.EventSeries.Event;
+            if (ev == null || (!isAdmin && ev.OrganizerId != userId))
+            {
+                return Forbid();
+            }
+
+            if (inventory.Status == EventSeatInventoryStatus.Sold)
+            {
+                return Conflict(new { ok = false, message = "Sold seats cannot be changed manually." });
+            }
+
+            if (inventory.Status == EventSeatInventoryStatus.Reserved)
+            {
+                return Conflict(new { ok = false, message = "Reserved seats cannot be changed until the hold expires." });
+            }
+
+            inventory.Status = request.Status;
+            inventory.ReservedUntil = null;
+            inventory.ReservedByUserId = null;
+            inventory.TicketId = null;
+            await _db.SaveChangesAsync();
+
+            return Ok(new { ok = true, inventory.Id, Status = inventory.Status.ToString() });
+        }
     }
 
     public class SeatReservationRequest
@@ -99,5 +149,11 @@ namespace EventsApp.Controllers.Api
     public class SeatReleaseRequest
     {
         public int InventoryId { get; set; }
+    }
+
+    public class SeatStatusRequest
+    {
+        public int InventoryId { get; set; }
+        public EventSeatInventoryStatus Status { get; set; }
     }
 }

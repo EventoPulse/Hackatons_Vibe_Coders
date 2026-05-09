@@ -309,6 +309,7 @@ namespace EventsApp.Controllers
                         ? inputSection.Seats.Sum(s => s.IsCapacityUnlimited ? 0 : Math.Max(1, s.Capacity))
                         : Math.Max(0, inputSection.Capacity),
                     PriceModifier = inputSection.PriceModifier,
+                    ColorHex = NormalizeColorHex(inputSection.ColorHex, DefaultSectionColor(inputSection.Type)),
                     X = inputSection.X,
                     Y = inputSection.Y,
                     Width = inputSection.Width,
@@ -351,6 +352,35 @@ namespace EventsApp.Controllers
             return shape.Length > 32 ? shape[..32] : shape;
         }
 
+        private static string NormalizeColorHex(string? value, string fallback)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return fallback;
+            }
+
+            var color = value.Trim();
+            if (!color.StartsWith("#", StringComparison.Ordinal))
+            {
+                color = "#" + color;
+            }
+
+            return System.Text.RegularExpressions.Regex.IsMatch(color, "^#[0-9a-fA-F]{6}$")
+                ? color.ToLowerInvariant()
+                : fallback;
+        }
+
+        private static string DefaultSectionColor(LayoutSectionType type)
+        {
+            return type switch
+            {
+                LayoutSectionType.VIP => "#f59e0b",
+                LayoutSectionType.Table => "#0d9488",
+                LayoutSectionType.Standing => "#22c55e",
+                _ => "#2456ff",
+            };
+        }
+
         private static string BuildLayoutJson(VenueLayout layout)
         {
             var payload = new VenueLayoutJsonModel
@@ -381,6 +411,7 @@ namespace EventsApp.Controllers
                         Shape = NormalizeShape(section.Shape),
                         Capacity = section.Capacity,
                         PriceModifier = section.PriceModifier,
+                        ColorHex = NormalizeColorHex(section.ColorHex, DefaultSectionColor(section.Type)),
                         X = section.X,
                         Y = section.Y,
                         Width = section.Width,

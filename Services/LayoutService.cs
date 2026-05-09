@@ -91,6 +91,7 @@ namespace EventsApp.Services
                     Shape = section.Shape,
                     Capacity = section.Capacity,
                     PriceModifier = section.PriceModifier,
+                    ColorHex = section.ColorHex,
                     X = section.X,
                     Y = section.Y,
                     Width = section.Width,

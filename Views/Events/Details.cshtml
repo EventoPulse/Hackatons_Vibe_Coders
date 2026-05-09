@@ -384,6 +384,18 @@
                     </div>
                     <span class="groove-status-badge groove-status-badge-muted" data-seat-selected-label data-i18n="seat.none">Няма избрано място</span>
                 </div>
+                @if (Model.CanManageTickets)
+                {
+                    <div class="event-seat-admin-actions" data-seat-admin-actions>
+                        <button type="button" class="groove-button groove-button-paper" data-seat-mark-blocked disabled>
+                            <i class="bi bi-slash-circle"></i> Маркирай като заето на място
+                        </button>
+                        <button type="button" class="groove-button groove-button-paper" data-seat-mark-available disabled>
+                            <i class="bi bi-check2-circle"></i> Освободи място
+                        </button>
+                        <span data-seat-admin-status></span>
+                    </div>
+                }
                 @if (Model.SeatMap.Floors.Count > 1)
                 {
                     <div class="event-seat-floor-tabs" role="tablist">
@@ -401,7 +413,7 @@
                         <div class="event-seat-section @sectionShape"
                              data-seat-floor="@seatSection.FloorName"
                              data-section-type="@seatSection.Type"
-                             style="left:@(seatSection.X)px;top:@(seatSection.Y)px;width:@(seatSection.Width)px;height:@(seatSection.Height)px;transform:rotate(@(seatSection.Rotation)deg);">
+                             style="--seat-zone-color:@seatSection.ColorHex;left:@(seatSection.X)px;top:@(seatSection.Y)px;width:@(seatSection.Width)px;height:@(seatSection.Height)px;transform:rotate(@(seatSection.Rotation)deg);">
                             <span class="event-seat-section__title">
                                 @seatSection.Name
                                 @if (seatSection.PriceModifier != 0)
@@ -412,16 +424,27 @@
                             @foreach (var seat in seatSection.Seats)
                             {
                                 var seatClass = seat.SeatType == SeatType.Table ? "is-table" : "";
+                                var statusClass = seat.Status == EventSeatInventoryStatus.Blocked
+                                    ? "is-blocked"
+                                    : seat.Status == EventSeatInventoryStatus.Reserved
+                                        ? "is-reserved"
+                                        : seat.Status == EventSeatInventoryStatus.Sold
+                                            ? "is-sold"
+                                            : "";
+                                var disabledSeat = seat.Status == EventSeatInventoryStatus.Sold
+                                    || seat.Status == EventSeatInventoryStatus.Reserved
+                                    || (!seat.Selectable && !Model.CanManageTickets);
                                 <button type="button"
-                                        class="event-seat-button @seatClass"
+                                        class="event-seat-button @seatClass @statusClass"
                                         data-seat-id="@seat.Id"
+                                        data-seat-inventory-id="@seat.InventoryId"
                                         data-seat-label="@seat.Label"
                                         data-seat-capacity="@seat.Capacity"
                                         data-seat-unlimited="@seat.IsCapacityUnlimited.ToString().ToLowerInvariant()"
                                         data-seat-type="@seat.SeatType"
                                         data-status="@seat.Status"
-                                        style="left:@(seat.X)px;top:@(seat.Y)px;width:@(seat.Radius * 2)px;height:@(seat.Radius * 2)px;transform:rotate(@(seat.Rotation)deg);"
-                                        disabled="@(!seat.Selectable)">
+                                        style="--seat-zone-color:@seatSection.ColorHex;left:@(seat.X)px;top:@(seat.Y)px;width:@(seat.Radius * 2)px;height:@(seat.Radius * 2)px;transform:rotate(@(seat.Rotation)deg);"
+                                        disabled="@disabledSeat">
                                     <span>@seat.Label</span>
                                     @if (seat.SeatType == SeatType.Table && seat.IsCapacityUnlimited)
                                     {
@@ -813,6 +836,11 @@
             var floorTabs = map.querySelectorAll('[data-seat-floor-tab]');
             var sections = map.querySelectorAll('[data-seat-floor]');
             var quantitySelects = document.querySelectorAll('[data-seat-quantity]');
+            var adminActions = document.querySelector('[data-seat-admin-actions]');
+            var adminBlocked = document.querySelector('[data-seat-mark-blocked]');
+            var adminAvailable = document.querySelector('[data-seat-mark-available]');
+            var adminStatus = document.querySelector('[data-seat-admin-status]');
+            var selectedSeatButton = null;
             var submitButtons = Array.from(inputs).map(function (input) {
                 return input.closest('form') ? input.closest('form').querySelector('button[type="submit"]') : null;
             }).filter(Boolean);
@@ -821,6 +849,58 @@
                 submitButtons.forEach(function (button) {
                     button.disabled = !enabled;
                 });
+            }
+
+            function updateAdminActions(button) {
+                if (!adminActions) return;
+                var status = button ? button.getAttribute('data-status') : '';
+                var canBlock = !!button && status === 'Available';
+                var canRelease = !!button && status === 'Blocked';
+                if (adminBlocked) adminBlocked.disabled = !canBlock;
+                if (adminAvailable) adminAvailable.disabled = !canRelease;
+                if (adminStatus) {
+                    adminStatus.textContent = button
+                        ? 'Статус: ' + status
+                        : 'Избери място от схемата.';
+                }
+            }
+
+            function setSeatStatus(button, status) {
+                button.setAttribute('data-status', status);
+                button.classList.toggle('is-blocked', status === 'Blocked');
+                button.classList.toggle('is-reserved', status === 'Reserved');
+                button.classList.toggle('is-sold', status === 'Sold');
+                var available = status === 'Available';
+                setSubmitEnabled(available);
+                updateAdminActions(button);
+            }
+
+            async function updateSeatInventory(status) {
+                if (!selectedSeatButton) return;
+                var inventoryId = parseInt(selectedSeatButton.getAttribute('data-seat-inventory-id') || '0', 10);
+                if (!inventoryId) return;
+                var originalText = adminStatus ? adminStatus.textContent : '';
+                if (adminStatus) adminStatus.textContent = 'Запазвам...';
+                try {
+                    var response = await fetch('/api/seat-inventory/status', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json'
+                        },
+                        credentials: 'same-origin',
+                        body: JSON.stringify({ inventoryId: inventoryId, status: status === 'Blocked' ? 3 : 0 })
+                    });
+                    if (!response.ok) throw new Error('HTTP ' + response.status);
+                    setSeatStatus(selectedSeatButton, status);
+                    if (adminStatus) {
+                        adminStatus.textContent = status === 'Blocked'
+                            ? 'Мястото е блокирано за продажба на място.'
+                            : 'Мястото е свободно онлайн.';
+                    }
+                } catch (_) {
+                    if (adminStatus) adminStatus.textContent = originalText || 'Не успях да променя мястото.';
+                }
             }
 
             function setSeatQuantityLimit(maxQuantity) {
@@ -866,11 +946,13 @@
                 button.addEventListener('click', function () {
                     buttons.forEach(function (item) { item.classList.remove('is-selected'); });
                     button.classList.add('is-selected');
+                    selectedSeatButton = button;
                     inputs.forEach(function (input) { input.value = button.getAttribute('data-seat-id'); });
                     var seatLabel = button.getAttribute('data-seat-label');
                     var capacity = parseInt(button.getAttribute('data-seat-capacity') || '1', 10);
                     var isTable = button.getAttribute('data-seat-type') === 'Table';
                     var isUnlimited = button.getAttribute('data-seat-unlimited') === 'true';
+                    var status = button.getAttribute('data-status');
                     setSeatQuantityLimit(isTable ? (isUnlimited ? 50 : capacity) : 1);
                     if (label) {
                         var lang = (document.querySelector('meta[name="x-app-lang"]') || {}).content === 'en' ? 'en' : 'bg';
@@ -886,9 +968,18 @@
                             ? 'Table ' + seatLabel + ' selected for up to ' + capacity
                             : 'Маса ' + seatLabel + ' избрана до ' + capacity + ' души';
                     }
-                    setSubmitEnabled(true);
+                    setSubmitEnabled(status === 'Available');
+                    updateAdminActions(button);
                 });
             });
+
+            if (adminBlocked) {
+                adminBlocked.addEventListener('click', function () { updateSeatInventory('Blocked'); });
+            }
+            if (adminAvailable) {
+                adminAvailable.addEventListener('click', function () { updateSeatInventory('Available'); });
+            }
+            updateAdminActions(null);
         })();
 
         (function () {
