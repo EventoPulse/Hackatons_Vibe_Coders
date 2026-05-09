@@ -548,7 +548,9 @@
                             {
                                 if (!t.SoldOut && Model.SelectedOccurrenceStatus != EventOccurrenceStatus.Cancelled)
                                 {
-                                    <form asp-controller="Tickets" asp-action="Buy" asp-route-id="@t.Id" method="post">
+                                    <form asp-controller="Tickets" asp-action="Buy" asp-route-id="@t.Id" method="post"
+                                          data-ticket-purchase-form
+                                          data-ticket-section-prices='@sectionPricesJson'>
                                         @Html.AntiForgeryToken()
                                         @if (Model.SelectedOccurrenceId.HasValue)
                                         {
@@ -592,7 +594,7 @@
                                                  <div class="ticket-attendee-panel__rows" data-attendee-rows></div>
                                              </div>
                                          }
-                                         <button type="submit" class="groove-button groove-button-dark">
+                                         <button type="submit" class="groove-button groove-button-dark" data-ticket-submit>
                                              <i class="bi bi-bag-check"></i> <span data-i18n="@ticketActionKey">@ticketActionText</span>
                                          </button>
                                     </form>
@@ -883,6 +885,7 @@
             var sections = map.querySelectorAll('[data-seat-floor]');
             var quantitySelects = document.querySelectorAll('[data-seat-quantity]');
             var ticketPrices = document.querySelectorAll('[data-ticket-price]');
+            var purchaseForms = document.querySelectorAll('[data-ticket-purchase-form]');
             var modal = document.querySelector('[data-seat-choice-modal]');
             var modalClose = document.querySelector('[data-seat-choice-close]');
             var modalConfirm = document.querySelector('[data-seat-choice-confirm]');
@@ -902,6 +905,13 @@
             }).filter(Boolean);
 
             function setSubmitEnabled(enabled) {
+                if (purchaseForms.length) {
+                    purchaseForms.forEach(function (form) {
+                        setFormEnabled(form, enabled && formAllowsSeat(form, selectedSeatButton));
+                    });
+                    return;
+                }
+
                 submitButtons.forEach(function (button) {
                     button.disabled = !enabled;
                 });
@@ -914,11 +924,29 @@
             }
 
             function parseSectionPrices(node) {
+                if (!node) return {};
                 try {
                     return JSON.parse(node.getAttribute('data-section-prices') || '{}') || {};
                 } catch (_) {
                     return {};
                 }
+            }
+
+            function formAllowsSeat(form, button) {
+                var prices = parseSectionPrices(form);
+                var keys = Object.keys(prices);
+                if (!keys.length) return true;
+                if (!button) return false;
+                var sectionId = button.getAttribute('data-seat-section-id');
+                return !!sectionId && Object.prototype.hasOwnProperty.call(prices, sectionId);
+            }
+
+            function setFormEnabled(form, enabled) {
+                var submit = form.querySelector('[data-ticket-submit], button[type="submit"]');
+                var quantity = form.querySelector('[data-seat-quantity]');
+                if (submit) submit.disabled = !enabled;
+                if (quantity) quantity.disabled = !enabled;
+                form.classList.toggle('is-sector-mismatch', !enabled && !!selectedSeatButton);
             }
 
             function seatPriceForTicket(node, button) {
@@ -939,15 +967,23 @@
             }
 
             function firstSeatPrice(button) {
-                var values = Array.from(ticketPrices).map(function (node) {
-                    return seatPriceForTicket(node, button);
-                });
+                var values = Array.from(ticketPrices)
+                    .filter(function (node) {
+                        return formAllowsSeat(node.closest('[data-ticket-purchase-form]'), button);
+                    })
+                    .map(function (node) {
+                        return seatPriceForTicket(node, button);
+                    });
                 if (!values.length) return 0;
                 return Math.min.apply(Math, values);
             }
 
             function updateTicketPrices(button) {
                 ticketPrices.forEach(function (node) {
+                    if (!formAllowsSeat(node.closest('[data-ticket-purchase-form]'), button)) {
+                        node.textContent = 'Не важи за този сектор';
+                        return;
+                    }
                     node.textContent = formatMoney(seatPriceForTicket(node, button));
                 });
             }

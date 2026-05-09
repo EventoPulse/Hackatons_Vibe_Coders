@@ -19,15 +19,31 @@
                     <input asp-for="LayoutSections[i].Name" type="hidden" />
                     <input asp-for="LayoutSections[i].ColorHex" type="hidden" />
                     <input asp-for="LayoutSections[i].SeatsCount" type="hidden" />
+                    <input asp-for="LayoutSections[i].Included" class="ticket-sector-price__check" data-sector-price-toggle />
                     <span class="ticket-sector-price__dot" style="background:@Model.LayoutSections[i].ColorHex"></span>
                     <span class="ticket-sector-price__name">
                         <strong>@Model.LayoutSections[i].Name</strong>
                         <small>@Model.LayoutSections[i].SeatsCount места</small>
                     </span>
-                    <input asp-for="LayoutSections[i].SectionPrice" type="number" step="0.01" min="0" />
+                    <input asp-for="LayoutSections[i].SectionPrice" type="number" step="0.01" min="0" data-sector-price-input disabled="@(!Model.LayoutSections[i].Included)" />
                     <span asp-validation-for="LayoutSections[i].SectionPrice" class="text-danger small"></span>
                 </label>
             }
         </div>
     </section>
+
+    <script>
+        (function () {
+            document.querySelectorAll('[data-sector-price-toggle]').forEach(function (toggle) {
+                var row = toggle.closest('.ticket-sector-price');
+                var price = row ? row.querySelector('[data-sector-price-input]') : null;
+                function sync() {
+                    if (price) price.disabled = !toggle.checked;
+                    if (row) row.classList.toggle('is-included', toggle.checked);
+                }
+                toggle.addEventListener('change', sync);
+                sync();
+            });
+        })();
+    </script>
 }

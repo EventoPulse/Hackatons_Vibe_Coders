@@ -118,5 +118,24 @@ namespace EventsApp.ViewModels.Events
         public int? VenueLayoutId { get; set; }
 
         public IEnumerable<SelectListItem> VenueLayouts { get; set; } = Array.Empty<SelectListItem>();
+
+        public List<EventLayoutTicketSectionViewModel> LayoutTicketSections { get; set; } = new();
+    }
+
+    public class EventLayoutTicketSectionViewModel
+    {
+        public int SectionId { get; set; }
+
+        public string SectionName { get; set; } = null!;
+
+        public string ColorHex { get; set; } = "#2456ff";
+
+        public int SeatsCount { get; set; }
+
+        [StringLength(GlobalConstants.Ticket.NameMaxLength, MinimumLength = GlobalConstants.Ticket.NameMinLength)]
+        public string? TicketName { get; set; }
+
+        [Range(0, 1_000_000)]
+        public decimal Price { get; set; }
     }
 }

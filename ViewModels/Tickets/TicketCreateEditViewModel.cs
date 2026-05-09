@@ -67,6 +67,8 @@ namespace EventsApp.ViewModels.Tickets
 
         public int SeatsCount { get; set; }
 
+        public bool Included { get; set; }
+
         [Range(0, 1_000_000)]
         public decimal SectionPrice { get; set; }
     }

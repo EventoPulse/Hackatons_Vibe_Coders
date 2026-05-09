@@ -387,6 +387,34 @@ namespace EventsApp.Controllers
             return View(vm);
         }
 
+        [HttpGet]
+        [Authorize(Roles = GlobalConstants.Roles.Admin + "," + GlobalConstants.Roles.Organizer)]
+        public async Task<IActionResult> LayoutTicketSections(int layoutId)
+        {
+            var userId = _userManager.GetUserId(User)!;
+            var isAdmin = User.IsInRole(GlobalConstants.Roles.Admin);
+
+            var layoutAvailable = await _db.VenueLayouts
+                .AsNoTracking()
+                .AnyAsync(l => l.Id == layoutId
+                               && l.Status != VenueLayoutStatus.Archived
+                               && (isAdmin || l.OrganizerId == userId));
+            if (!layoutAvailable)
+            {
+                return NotFound();
+            }
+
+            var sections = await GetLayoutTicketSectionsAsync(layoutId);
+            return Json(sections.Select(s => new
+            {
+                sectionId = s.SectionId,
+                sectionName = s.SectionName,
+                colorHex = s.ColorHex,
+                seatsCount = s.SeatsCount,
+                ticketName = s.TicketName,
+            }));
+        }
+
 
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -420,6 +448,9 @@ namespace EventsApp.Controllers
 
             ValidateRecurringInput(input);
             await ValidateLayoutInputAsync(input, userId, isAdmin);
+            var hadSubmittedLayoutTickets = input.LayoutTicketSections.Count > 0;
+            await PopulateLayoutTicketSectionsAsync(input, userId, isAdmin, useSubmittedValues: true);
+            ValidateInitialLayoutTickets(input, hadSubmittedLayoutTickets);
 
 
             if (!ModelState.IsValid)
@@ -523,6 +554,7 @@ namespace EventsApp.Controllers
             }
 
             await EnsureSeatInventoriesForEventAsync(ev.Id);
+            await CreateInitialLayoutTicketsAsync(ev, input);
 
             TempData["StatusMessage"] = "Събитието е създадено.";
             return RedirectToAction(nameof(Details), new { id = ev.Id });
@@ -1669,6 +1701,183 @@ namespace EventsApp.Controllers
             {
                 ModelState.AddModelError(nameof(input.VenueLayoutId), "Този layout не е наличен.");
             }
+        }
+
+        private async Task PopulateLayoutTicketSectionsAsync(
+            EventCreateEditViewModel input,
+            string userId,
+            bool isAdmin,
+            bool useSubmittedValues)
+        {
+            if (input.Id != 0
+                || input.TicketingMode == EventTicketingMode.GeneralAdmission
+                || !input.VenueLayoutId.HasValue)
+            {
+                input.LayoutTicketSections.Clear();
+                return;
+            }
+
+            var layoutAvailable = await _db.VenueLayouts
+                .AsNoTracking()
+                .AnyAsync(l => l.Id == input.VenueLayoutId.Value
+                               && l.Status != VenueLayoutStatus.Archived
+                               && (isAdmin || l.OrganizerId == userId));
+            if (!layoutAvailable)
+            {
+                input.LayoutTicketSections.Clear();
+                return;
+            }
+
+            var submitted = useSubmittedValues
+                ? input.LayoutTicketSections
+                    .GroupBy(s => s.SectionId)
+                    .ToDictionary(g => g.Key, g => g.First())
+                : new Dictionary<int, EventLayoutTicketSectionViewModel>();
+
+            input.LayoutTicketSections = await GetLayoutTicketSectionsAsync(input.VenueLayoutId.Value, submitted);
+        }
+
+        private async Task<List<EventLayoutTicketSectionViewModel>> GetLayoutTicketSectionsAsync(
+            int layoutId,
+            IReadOnlyDictionary<int, EventLayoutTicketSectionViewModel>? submitted = null)
+        {
+            var sections = await _db.LayoutSections
+                .AsNoTracking()
+                .Where(s => s.VenueLayoutId == layoutId)
+                .Select(s => new
+                {
+                    s.Id,
+                    s.Name,
+                    s.ColorHex,
+                    SeatsCount = s.Seats.Count(seat => seat.Status == LayoutSeatStatus.Active),
+                })
+                .Where(s => s.SeatsCount > 0)
+                .OrderBy(s => s.Name)
+                .ToListAsync();
+
+            return sections
+                .Select(section =>
+                {
+                    EventLayoutTicketSectionViewModel? posted = null;
+                    submitted?.TryGetValue(section.Id, out posted);
+                    var name = string.IsNullOrWhiteSpace(posted?.TicketName)
+                        ? section.Name
+                        : posted!.TicketName!.Trim();
+
+                    return new EventLayoutTicketSectionViewModel
+                    {
+                        SectionId = section.Id,
+                        SectionName = section.Name,
+                        ColorHex = string.IsNullOrWhiteSpace(section.ColorHex) ? "#2456ff" : section.ColorHex,
+                        SeatsCount = section.SeatsCount,
+                        TicketName = name,
+                        Price = posted?.Price ?? 0m,
+                    };
+                })
+                .ToList();
+        }
+
+        private void ValidateInitialLayoutTickets(EventCreateEditViewModel input, bool hadSubmittedLayoutTickets)
+        {
+            if (input.Id != 0
+                || input.TicketingMode == EventTicketingMode.GeneralAdmission
+                || !input.VenueLayoutId.HasValue)
+            {
+                return;
+            }
+
+            if (!hadSubmittedLayoutTickets)
+            {
+                ModelState.AddModelError(nameof(input.VenueLayoutId), "Избери layout и задай цени за секторите.");
+            }
+
+            if (input.LayoutTicketSections.Count == 0)
+            {
+                ModelState.AddModelError(nameof(input.VenueLayoutId), "Този layout няма активни места за билети.");
+                return;
+            }
+
+            for (var i = 0; i < input.LayoutTicketSections.Count; i++)
+            {
+                var section = input.LayoutTicketSections[i];
+                if (section.Price < 0)
+                {
+                    ModelState.AddModelError($"LayoutTicketSections[{i}].Price", "Цената не може да е отрицателна.");
+                }
+
+                if (!string.IsNullOrWhiteSpace(section.TicketName)
+                    && section.TicketName.Length > GlobalConstants.Ticket.NameMaxLength)
+                {
+                    ModelState.AddModelError($"LayoutTicketSections[{i}].TicketName", $"Името е до {GlobalConstants.Ticket.NameMaxLength} символа.");
+                }
+            }
+        }
+
+        private async Task CreateInitialLayoutTicketsAsync(Event ev, EventCreateEditViewModel input)
+        {
+            if (input.Id != 0
+                || ev.VenueLayoutId == null
+                || ev.TicketingMode == EventTicketingMode.GeneralAdmission
+                || input.LayoutTicketSections.Count == 0)
+            {
+                return;
+            }
+
+            var sectionIds = input.LayoutTicketSections.Select(s => s.SectionId).ToHashSet();
+            var actualSeats = await _db.LayoutSections
+                .AsNoTracking()
+                .Where(s => s.VenueLayoutId == ev.VenueLayoutId.Value && sectionIds.Contains(s.Id))
+                .Select(s => new
+                {
+                    s.Id,
+                    s.Name,
+                    SeatsCount = s.Seats.Count(seat => seat.Status == LayoutSeatStatus.Active),
+                })
+                .ToDictionaryAsync(s => s.Id);
+
+            foreach (var section in input.LayoutTicketSections)
+            {
+                if (!actualSeats.TryGetValue(section.SectionId, out var actual) || actual.SeatsCount <= 0)
+                {
+                    continue;
+                }
+
+                var price = Math.Max(0m, section.Price);
+                var ticket = new Ticket
+                {
+                    EventId = ev.Id,
+                    Name = BuildLayoutTicketName(section),
+                    Description = $"Сектор {actual.Name}",
+                    Price = price,
+                    QuantityTotal = actual.SeatsCount,
+                    QuantityRemaining = actual.SeatsCount,
+                    IsActive = true,
+                };
+                ticket.SectionPrices.Add(new TicketSectionPrice
+                {
+                    SectionId = section.SectionId,
+                    Price = price,
+                });
+                _db.Tickets.Add(ticket);
+            }
+
+            await _db.SaveChangesAsync();
+        }
+
+        private static string BuildLayoutTicketName(EventLayoutTicketSectionViewModel section)
+        {
+            var name = string.IsNullOrWhiteSpace(section.TicketName)
+                ? section.SectionName
+                : section.TicketName.Trim();
+
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                name = "Билет";
+            }
+
+            return name.Length <= GlobalConstants.Ticket.NameMaxLength
+                ? name
+                : name[..GlobalConstants.Ticket.NameMaxLength];
         }
 
         private static EventPendingChangePayload BuildPendingChangePayload(

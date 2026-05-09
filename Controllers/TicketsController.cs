@@ -428,6 +428,13 @@ namespace EventsApp.Controllers
                     return RedirectToAction("Details", "Events", new { id = ticket.EventId, occurrenceId });
                 }
 
+                if (ticket.SectionPrices.Count > 0
+                    && ticket.SectionPrices.All(p => p.SectionId != selectedSeat.SectionId))
+                {
+                    TempData["StatusMessage"] = "Този билет не важи за избрания сектор.";
+                    return RedirectToAction("Details", "Events", new { id = ticket.EventId, occurrenceId });
+                }
+
                 var isTableSeat = selectedSeat.SeatType == SeatType.Table || selectedSeat.Section.Type == LayoutSectionType.Table;
                 var maxSeatQuantity = isTableSeat
                     ? selectedSeat.IsCapacityUnlimited
@@ -1171,6 +1178,7 @@ namespace EventsApp.Controllers
                         Name = section.Name,
                         ColorHex = string.IsNullOrWhiteSpace(section.ColorHex) ? "#2456ff" : section.ColorHex,
                         SeatsCount = section.Seats.Count(seat => seat.Status == LayoutSeatStatus.Active),
+                        Included = postedSection?.Included ?? existing.ContainsKey(section.Id),
                         SectionPrice = postedSection?.SectionPrice
                             ?? (existing.TryGetValue(section.Id, out var price)
                                 ? price
@@ -1187,9 +1195,14 @@ namespace EventsApp.Controllers
                 return;
             }
 
+            if (!input.LayoutSections.Any(s => s.Included))
+            {
+                ModelState.AddModelError(nameof(input.LayoutSections), "Избери поне един сектор, за който важи този билет.");
+            }
+
             for (var i = 0; i < input.LayoutSections.Count; i++)
             {
-                if (input.LayoutSections[i].SectionPrice < 0)
+                if (input.LayoutSections[i].Included && input.LayoutSections[i].SectionPrice < 0)
                 {
                     ModelState.AddModelError(
                         $"LayoutSections[{i}].SectionPrice",
@@ -1206,7 +1219,7 @@ namespace EventsApp.Controllers
                 return;
             }
 
-            var posted = input.LayoutSections.ToDictionary(s => s.SectionId);
+            var posted = input.LayoutSections.Where(s => s.Included).ToDictionary(s => s.SectionId);
             var existing = ticket.SectionPrices.ToDictionary(p => p.SectionId);
             var postedSectionIds = posted.Keys.ToHashSet();
 

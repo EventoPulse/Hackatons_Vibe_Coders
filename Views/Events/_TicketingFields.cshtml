@@ -50,5 +50,67 @@
                 </a>
             </div>
         </div>
+
+        @if (Model.Id == 0)
+        {
+            <section class="event-layout-ticket-builder" data-layout-ticket-builder hidden>
+                <div class="event-layout-ticket-builder__head">
+                    <div>
+                        <span class="groove-kicker">Билети по сектор</span>
+                        <h4>Задай цена за всеки цвят от схемата</h4>
+                        <p>Бройката се взема автоматично от активните места. При създаване на събитието ще се направят нормални билети за всеки сектор.</p>
+                    </div>
+                    <span data-layout-ticket-total>0 места</span>
+                </div>
+                <div class="event-layout-ticket-builder__rows" data-layout-ticket-rows>
+                    @for (var i = 0; i < Model.LayoutTicketSections.Count; i++)
+                    {
+                        <label class="event-layout-ticket-row">
+                            <input asp-for="LayoutTicketSections[i].SectionId" type="hidden" />
+                            <input asp-for="LayoutTicketSections[i].SectionName" type="hidden" />
+                            <input asp-for="LayoutTicketSections[i].ColorHex" type="hidden" />
+                            <input asp-for="LayoutTicketSections[i].SeatsCount" type="hidden" />
+                            <span class="event-layout-ticket-row__dot" style="background:@Model.LayoutTicketSections[i].ColorHex"></span>
+                            <span class="event-layout-ticket-row__meta">
+                                <strong>@Model.LayoutTicketSections[i].SectionName</strong>
+                                <small>@Model.LayoutTicketSections[i].SeatsCount места</small>
+                            </span>
+                            <span class="event-layout-ticket-row__field">
+                                <small>Име</small>
+                                <input asp-for="LayoutTicketSections[i].TicketName" type="text" placeholder="@Model.LayoutTicketSections[i].SectionName" />
+                                <span asp-validation-for="LayoutTicketSections[i].TicketName" class="text-danger small"></span>
+                            </span>
+                            <span class="event-layout-ticket-row__field">
+                                <small>Цена</small>
+                                <input asp-for="LayoutTicketSections[i].Price" type="number" step="0.01" min="0" />
+                                <span asp-validation-for="LayoutTicketSections[i].Price" class="text-danger small"></span>
+                            </span>
+                        </label>
+                    }
+                </div>
+                <p class="event-layout-ticket-builder__empty" data-layout-ticket-empty hidden>Този layout няма активни места за ценообразуване.</p>
+                <template data-layout-ticket-row-template>
+                    <label class="event-layout-ticket-row">
+                        <input name="LayoutTicketSections[__index__].SectionId" type="hidden" value="__sectionId__" />
+                        <input name="LayoutTicketSections[__index__].SectionName" type="hidden" value="__sectionName__" />
+                        <input name="LayoutTicketSections[__index__].ColorHex" type="hidden" value="__colorHex__" />
+                        <input name="LayoutTicketSections[__index__].SeatsCount" type="hidden" value="__seatsCount__" />
+                        <span class="event-layout-ticket-row__dot" style="background:__colorHex__"></span>
+                        <span class="event-layout-ticket-row__meta">
+                            <strong>__sectionName__</strong>
+                            <small>__seatsCount__ места</small>
+                        </span>
+                        <span class="event-layout-ticket-row__field">
+                            <small>Име</small>
+                            <input name="LayoutTicketSections[__index__].TicketName" type="text" value="__ticketName__" placeholder="__sectionName__" />
+                        </span>
+                        <span class="event-layout-ticket-row__field">
+                            <small>Цена</small>
+                            <input name="LayoutTicketSections[__index__].Price" type="number" step="0.01" min="0" value="0" />
+                        </span>
+                    </label>
+                </template>
+            </section>
+        }
     </div>
 </section>
