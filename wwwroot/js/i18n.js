@@ -16,7 +16,10 @@
         'auth.login':      { bg: 'Вход',            en: 'Login' },
         'auth.register':   { bg: 'Регистрация',     en: 'Register' },
         'auth.logout':     { bg: 'Изход',           en: 'Logout' },
-        'account.overview':{ bg: 'Преглед',         en: 'Overview' },
+        'account.overview':{ bg: 'Профил',          en: 'Profile' },
+        'common.translate': { bg: 'Преведи',         en: 'Translate' },
+        'common.original':  { bg: 'Оригинал',        en: 'Original' },
+        'common.error':     { bg: 'Грешка',          en: 'Error' },
         'account.title': { bg: 'Акаунт', en: 'Account' },
         'account.since': { bg: 'От', en: 'Since' },
         'account.preferences': { bg: 'Предпочитания', en: 'Preferences' },
@@ -1168,6 +1171,19 @@
         translateAttributes(document.body, dict);
     }
 
+    window.EventoI18n = window.EventoI18n || {};
+    window.EventoI18n.apply = function (root) {
+        var current = getLang();
+        translateKeyed(current, root || document);
+        if (current === 'bg') {
+            walkAndTranslate(root || document.body, BG);
+            translateAttributes(root || document.body, BG);
+        } else {
+            walkAndTranslate(root || document.body, EN);
+            translateAttributes(root || document.body, EN);
+        }
+    };
+
     // ── Boot ───────────────────────────────────────────────────────────────────
 
     var lang = getLang();
@@ -1205,30 +1221,11 @@
         });
     }
 
-    function autoTranslateQueue() {
-        if (typeof window.gtTranslate !== 'function') return;
-        var btns = Array.from(document.querySelectorAll('.groove-translate-btn'))
-            .filter(function (b) { return b.dataset.state !== '1' && b.offsetParent !== null; })
-            .slice(0, 10);
-        if (!btns.length) return;
-        var i = 0;
-        function fire() {
-            if (i >= btns.length) return;
-            var btn = btns[i++];
-            if (btn.dataset.state !== '1' && btn.offsetParent !== null && typeof window.gtTranslate === 'function') {
-                window.gtTranslate(btn);
-            }
-            setTimeout(fire, 650);
-        }
-        fire();
-    }
-
     function run() {
         applyTranslations(lang);
         collapseComments();
         if (lang !== 'bg') {
             showTranslateBtns();
-            setTimeout(autoTranslateQueue, 0);
         }
 
         if (window.MutationObserver) {

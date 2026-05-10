@@ -83,7 +83,7 @@
     }
 
     <div class="groove-split">
-        <article class="groove-paper-card">
+        <article class="groove-paper-card" data-translate-scope>
             @if (!string.IsNullOrWhiteSpace(Model.ImageUrl))
             {
                 <img src="@Model.ImageUrl" class="img-fluid rounded mb-3" alt="@Model.Title" style="max-height:420px;width:100%;object-fit:cover;" />
@@ -98,10 +98,16 @@
                 </div>
             }
             <span class="groove-kicker">@Model.Genre.GetDisplayName()</span>
-            <h1 class="groove-panel-title">@Model.Title</h1>
+            <h1 class="groove-panel-title" data-translate-text="event-title">@Model.Title</h1>
+            <button class="groove-translate-btn" type="button" data-translate-target="event-title" onclick="gtTranslate(this)">
+                <i class="bi bi-translate"></i> <span data-i18n="common.translate">Translate</span>
+            </button>
             @if (!string.IsNullOrWhiteSpace(Model.Description))
             {
-                <p class="groove-panel-intro mt-3">@Model.Description</p>
+                <p class="groove-panel-intro mt-3" data-translate-text="event-description">@Model.Description</p>
+                <button class="groove-translate-btn" type="button" data-translate-target="event-description" onclick="gtTranslate(this)">
+                    <i class="bi bi-translate"></i> <span data-i18n="common.translate">Translate</span>
+                </button>
             }
         </article>
 
@@ -704,8 +710,8 @@
                                     <span class="groove-badge ms-2" data-i18n="@c.AuthorBadgeKey">@c.AuthorBadgeText</span>
                                     <p class="groove-list-meta mt-1">@c.CreatedAt.ToString("dd.MM.yyyy HH:mm")</p>
                                     <p id="evctext-@c.Id">@EventsApp.Common.MentionRenderer.RenderWithMentions(c.Content)</p>
-                                    <button class="groove-translate-btn" data-target="#evctext-@c.Id" onclick="gtTranslate(this)">
-                                        <i class="bi bi-translate"></i> Translate
+                                    <button class="groove-translate-btn" type="button" data-target="#evctext-@c.Id" onclick="gtTranslate(this)">
+                                        <i class="bi bi-translate"></i> <span data-i18n="common.translate">Translate</span>
                                     </button>
                                     <div class="social-comment-toolbar">
                                         @if (User.Identity?.IsAuthenticated == true)
@@ -788,8 +794,8 @@
                                                 <span class="groove-badge ms-2" data-i18n="@reply.AuthorBadgeKey">@reply.AuthorBadgeText</span>
                                                 <p class="groove-list-meta mt-1">@reply.CreatedAt.ToString("dd.MM.yyyy HH:mm")</p>
                                                 <p id="evrtext-@reply.Id">@EventsApp.Common.MentionRenderer.RenderWithMentions(reply.Content)</p>
-                                                <button class="groove-translate-btn" data-target="#evrtext-@reply.Id" onclick="gtTranslate(this)">
-                                                    <i class="bi bi-translate"></i> Translate
+                                                <button class="groove-translate-btn" type="button" data-target="#evrtext-@reply.Id" onclick="gtTranslate(this)">
+                                                    <i class="bi bi-translate"></i> <span data-i18n="common.translate">Translate</span>
                                                 </button>
                                                 <div class="social-comment-toolbar">
                                                     @if (User.Identity?.IsAuthenticated == true)

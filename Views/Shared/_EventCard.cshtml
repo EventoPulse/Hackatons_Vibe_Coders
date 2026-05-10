@@ -13,7 +13,7 @@
     var cardGenres = Model.Genres.Take(EventGenreTags.MaxGenresPerEvent).ToList();
 }
 
-<div class="card event-card evt-card" data-event-id="@Model.Id" data-card-href="@detailsUrl" aria-label="@Model.Title">
+<div class="card event-card evt-card" data-event-id="@Model.Id" data-card-href="@detailsUrl" data-translate-scope aria-label="@Model.Title">
     <div class="evt-card__media">
         @if (!string.IsNullOrWhiteSpace(Model.ImageUrl))
         {
@@ -59,8 +59,11 @@
     <div class="evt-card__body">
         <div class="evt-card__heading">
             <h3 class="evt-card__title">
-                <a asp-controller="Events" asp-action="Details" asp-route-id="@Model.Id">@Model.Title</a>
+                <a asp-controller="Events" asp-action="Details" asp-route-id="@Model.Id" data-translate-text="event-title">@Model.Title</a>
             </h3>
+            <button class="groove-translate-btn" type="button" data-translate-target="event-title" onclick="gtTranslate(this)">
+                <i class="bi bi-translate"></i> <span data-i18n="common.translate">Translate</span>
+            </button>
             @if (Model.IsFreeEvent)
             {
                 <span class="evt-card__price evt-card__price--free" data-i18n="event.price.free">Безплатно</span>

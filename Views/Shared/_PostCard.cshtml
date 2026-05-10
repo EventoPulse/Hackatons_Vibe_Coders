@@ -96,8 +96,8 @@
         }
 
         <p class="card-text post-body flex-grow-1" id="post-body-@Model.Id">@preview</p>
-        <button class="groove-translate-btn" data-target="#post-body-@Model.Id" onclick="gtTranslate(this)">
-            <i class="bi bi-translate"></i> Translate
+        <button class="groove-translate-btn" type="button" data-target="#post-body-@Model.Id" onclick="gtTranslate(this)">
+            <i class="bi bi-translate"></i> <span data-i18n="common.translate">Translate</span>
         </button>
 
         <div class="social-card-actions mt-auto">

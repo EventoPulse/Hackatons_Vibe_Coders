@@ -129,8 +129,8 @@
         }
 
         <p class="groove-panel-intro mt-4" style="white-space:pre-wrap;" id="post-detail-@Model.Id">@EventsApp.Common.MentionRenderer.RenderWithMentions(Model.Content)</p>
-        <button class="groove-translate-btn" data-target="#post-detail-@Model.Id" onclick="gtTranslate(this)">
-            <i class="bi bi-translate"></i> Translate
+        <button class="groove-translate-btn" type="button" data-target="#post-detail-@Model.Id" onclick="gtTranslate(this)">
+            <i class="bi bi-translate"></i> <span data-i18n="common.translate">Translate</span>
         </button>
 
         @if (Model.Media.Count > 0)
@@ -274,8 +274,8 @@
                                     <span class="groove-badge ms-2" data-i18n="@c.AuthorBadgeKey">@c.AuthorBadgeText</span>
                                     <p class="groove-list-meta mt-1">@c.CreatedAt.ToString("dd.MM.yyyy HH:mm")</p>
                                                     <p id="ctext-@c.Id">@EventsApp.Common.MentionRenderer.RenderWithMentions(c.Content)</p>
-                                    <button class="groove-translate-btn" data-target="#ctext-@c.Id" onclick="gtTranslate(this)">
-                                        <i class="bi bi-translate"></i> Translate
+                                    <button class="groove-translate-btn" type="button" data-target="#ctext-@c.Id" onclick="gtTranslate(this)">
+                                        <i class="bi bi-translate"></i> <span data-i18n="common.translate">Translate</span>
                                     </button>
                                     <div class="social-comment-toolbar">
                                         @if (User.Identity?.IsAuthenticated == true)
@@ -358,8 +358,8 @@
                                                 <span class="groove-badge ms-2" data-i18n="@reply.AuthorBadgeKey">@reply.AuthorBadgeText</span>
                                                 <p class="groove-list-meta mt-1">@reply.CreatedAt.ToString("dd.MM.yyyy HH:mm")</p>
                                                 <p id="rtext-@reply.Id">@EventsApp.Common.MentionRenderer.RenderWithMentions(reply.Content)</p>
-                                                <button class="groove-translate-btn" data-target="#rtext-@reply.Id" onclick="gtTranslate(this)">
-                                                    <i class="bi bi-translate"></i> Translate
+                                                <button class="groove-translate-btn" type="button" data-target="#rtext-@reply.Id" onclick="gtTranslate(this)">
+                                                    <i class="bi bi-translate"></i> <span data-i18n="common.translate">Translate</span>
                                                 </button>
                                                 <div class="social-comment-toolbar">
                                                     @if (User.Identity?.IsAuthenticated == true)

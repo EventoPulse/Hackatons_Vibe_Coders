@@ -76,7 +76,10 @@
                             }
                             <small>@c.CreatedAt.ToString("dd.MM HH:mm")</small>
                         </div>
-                        <p>@c.Content</p>
+                        <p id="sheet-ctext-@c.Id">@c.Content</p>
+                        <button class="groove-translate-btn" type="button" data-target="#sheet-ctext-@c.Id" onclick="gtTranslate(this)">
+                            <i class="bi bi-translate"></i> <span data-i18n="common.translate">Translate</span>
+                        </button>
                         <div class="post-comment__actions">
                             @if (User.Identity?.IsAuthenticated == true)
                             {
@@ -118,7 +121,10 @@
                                                 <strong>@reply.UserName</strong>
                                                 <small>@reply.CreatedAt.ToString("dd.MM HH:mm")</small>
                                             </div>
-                                            <p>@reply.Content</p>
+                                            <p id="sheet-rtext-@reply.Id">@reply.Content</p>
+                                            <button class="groove-translate-btn" type="button" data-target="#sheet-rtext-@reply.Id" onclick="gtTranslate(this)">
+                                                <i class="bi bi-translate"></i> <span data-i18n="common.translate">Translate</span>
+                                            </button>
                                         </div>
                                     </article>
                                 }
