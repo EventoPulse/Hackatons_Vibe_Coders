@@ -6,18 +6,18 @@
 <section class="groove-app-page">
     <div class="groove-page-hero">
         <div class="groove-page-hero__copy">
-            <span class="groove-stamp groove-stamp-yellow">Админ преглед</span>
-            <h1>Промени по събитие.</h1>
-            <p>Публикуваната версия остава активна, докато тези промени не бъдат одобрени.</p>
+            <span class="groove-stamp groove-stamp-yellow" data-i18n="admin.review.kicker">Админ преглед</span>
+            <h1 data-i18n="admin.event.change.title">Промени по събитие.</h1>
+            <p data-i18n="admin.event.change.desc">Публикуваната версия остава активна, докато тези промени не бъдат одобрени.</p>
         </div>
         <div class="groove-page-actions">
             <a asp-action="Events" asp-route-pending="true" class="groove-button groove-button-paper">
-                <i class="bi bi-arrow-left"></i> Чакащи
+                <i class="bi bi-arrow-left"></i> <span data-i18n="admin.pending">Чакащи</span>
             </a>
             <form asp-action="ApproveEvent" asp-route-id="@Model.EventId" method="post">
                 @Html.AntiForgeryToken()
                 <button class="groove-button groove-button-dark" type="submit">
-                    <i class="bi bi-check-circle"></i> Одобри промени
+                    <i class="bi bi-check-circle"></i> <span data-i18n="admin.action.approve.changes">Одобри промени</span>
                 </button>
             </form>
         </div>
@@ -25,41 +25,41 @@
 
     <div class="groove-split">
         <article class="groove-info-card">
-            <span class="groove-kicker">Текуща версия</span>
+            <span class="groove-kicker" data-i18n="admin.current.version">Текуща версия</span>
             @if (!string.IsNullOrWhiteSpace(Model.CurrentImageUrl))
             {
                 <img src="@Model.CurrentImageUrl" class="img-fluid rounded mb-3" alt="@Model.CurrentTitle" style="max-height:240px;width:100%;object-fit:cover;" />
             }
             <h2 class="groove-panel-title">@Model.CurrentTitle</h2>
             <dl class="groove-data-list mt-3">
-                <dt>Локация</dt>
+                <dt data-i18n="admin.table.location">Локация</dt>
                 <dd>@Model.CurrentAddress, @Model.CurrentCity</dd>
-                <dt>Начало</dt>
+                <dt data-i18n="admin.table.start">Начало</dt>
                 <dd>@Model.CurrentStartTime.ToString("dd.MM.yyyy HH:mm")</dd>
-                <dt>Край</dt>
+                <dt data-i18n="admin.table.end">Край</dt>
                 <dd>@Model.CurrentEndTime.ToString("dd.MM.yyyy HH:mm")</dd>
-                <dt>Жанр</dt>
-                <dd>@Model.CurrentGenre.GetDisplayName()</dd>
+                <dt data-i18n="admin.table.genre">Жанр</dt>
+                <dd data-i18n="@($"genre.{Model.CurrentGenre}")">@Model.CurrentGenre.GetDisplayName()</dd>
             </dl>
         </article>
 
         <article class="groove-info-card">
-            <span class="groove-kicker">Нова версия</span>
+            <span class="groove-kicker" data-i18n="admin.new.version">Нова версия</span>
             @if (!string.IsNullOrWhiteSpace(Model.Pending.ImageUrl))
             {
                 <img src="@Model.Pending.ImageUrl" class="img-fluid rounded mb-3" alt="@Model.Pending.Title" style="max-height:240px;width:100%;object-fit:cover;" />
             }
             <h2 class="groove-panel-title">@Model.Pending.Title</h2>
             <dl class="groove-data-list mt-3">
-                <dt>Локация</dt>
+                <dt data-i18n="admin.table.location">Локация</dt>
                 <dd>@Model.Pending.Address, @Model.Pending.City</dd>
-                <dt>Начало</dt>
+                <dt data-i18n="admin.table.start">Начало</dt>
                 <dd>@Model.Pending.StartTime.ToString("dd.MM.yyyy HH:mm")</dd>
-                <dt>Край</dt>
+                <dt data-i18n="admin.table.end">Край</dt>
                 <dd>@Model.Pending.EndTime.ToString("dd.MM.yyyy HH:mm")</dd>
-                <dt>Жанр</dt>
-                <dd>@Model.Pending.Genre.GetDisplayName()</dd>
-                <dt>Изпратено</dt>
+                <dt data-i18n="admin.table.genre">Жанр</dt>
+                <dd data-i18n="@($"genre.{Model.Pending.Genre}")">@Model.Pending.Genre.GetDisplayName()</dd>
+                <dt data-i18n="admin.table.submitted">Изпратено</dt>
                 <dd>@Model.SubmittedAt.ToString("dd.MM.yyyy HH:mm")</dd>
             </dl>
         </article>
@@ -67,7 +67,7 @@
 
     <section class="groove-page-section">
         <div class="groove-info-card">
-            <span class="groove-kicker">Описание</span>
+            <span class="groove-kicker" data-i18n="admin.table.description">Описание</span>
             <p class="mb-0">@Model.Pending.Description</p>
         </div>
     </section>

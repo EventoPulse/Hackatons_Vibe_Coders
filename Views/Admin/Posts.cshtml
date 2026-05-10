@@ -6,13 +6,13 @@
 <section class="groove-app-page">
     <div class="groove-page-hero">
         <div class="groove-page-hero__copy">
-            <span class="groove-stamp groove-stamp-red">Поток</span>
-            <h1>Админ преглед на <span>публикациите</span>.</h1>
-            <p>Виж съдържанието, активността и бързо премахвай неподходящи публикации.</p>
+            <span class="groove-stamp groove-stamp-red" data-i18n="nav.feed">Поток</span>
+            <h1 data-i18n-html="admin.posts.title">Админ преглед на <span>публикациите</span>.</h1>
+            <p data-i18n="admin.posts.desc">Виж съдържанието, активността и бързо премахвай неподходящи публикации.</p>
         </div>
         <div class="groove-page-actions">
             <a asp-action="Index" class="groove-button groove-button-paper">
-                <i class="bi bi-arrow-left"></i> Към админ
+                <i class="bi bi-arrow-left"></i> <span data-i18n="common.back.admin">Към админ</span>
             </a>
         </div>
     </div>
@@ -21,7 +21,7 @@
     {
         <div class="groove-empty-card">
             <i class="bi bi-chat-square-text"></i>
-            <h2 class="groove-panel-title">Няма <span>публикации</span>.</h2>
+            <h2 class="groove-panel-title" data-i18n-html="admin.posts.empty.title">Няма <span>публикации</span>.</h2>
         </div>
     }
     else
@@ -31,10 +31,10 @@
                 <table class="table">
                     <thead>
                         <tr>
-                            <th>Организатор</th>
-                            <th>Съдържание</th>
-                            <th>Свързано събитие</th>
-                            <th>Публикувана</th>
+                            <th data-i18n="admin.table.organizer">Организатор</th>
+                            <th data-i18n="admin.table.content">Съдържание</th>
+                            <th data-i18n="admin.table.related.event">Свързано събитие</th>
+                            <th data-i18n="admin.table.published">Публикувана</th>
                             <th><i class="bi bi-heart"></i></th>
                             <th><i class="bi bi-chat"></i></th>
                             <th></th>
@@ -64,16 +64,15 @@
                                 <td>
                                     <div class="groove-list-actions">
                                         <a asp-controller="Posts" asp-action="Details" asp-route-id="@post.Id" class="groove-button groove-button-paper">
-                                            <i class="bi bi-eye"></i> Преглед
+                                            <i class="bi bi-eye"></i> <span data-i18n="common.preview">Преглед</span>
                                         </a>
                                         <a asp-controller="Posts" asp-action="Edit" asp-route-id="@post.Id" class="groove-button groove-button-paper">
-                                            <i class="bi bi-pencil"></i> Редакция
+                                            <i class="bi bi-pencil"></i> <span data-i18n="common.edit">Редакция</span>
                                         </a>
-                                        <form asp-action="DeletePost" asp-route-id="@post.Id" method="post"
-                                              onsubmit="return confirm('Да изтрия ли тази публикация?')">
+                                        <form asp-action="DeletePost" asp-route-id="@post.Id" method="post">
                                             @Html.AntiForgeryToken()
-                                            <button class="groove-button groove-button-dark" type="submit">
-                                                <i class="bi bi-trash"></i> Изтрий
+                                            <button class="groove-button groove-button-dark" type="submit" data-confirm-key="admin.posts.delete.confirm">
+                                                <i class="bi bi-trash"></i> <span data-i18n="common.delete">Изтрий</span>
                                             </button>
                                         </form>
                                     </div>

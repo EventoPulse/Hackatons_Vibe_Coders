@@ -59,7 +59,7 @@
     }
     else
     {
-        var approvalClass = Model.Approved ? "groove-status-badge-success" : "groove-status-badge-warning";
+        var approvalClass = Model.Approved ? "groove-status-badge-success" : "groove-status-badge-warning groove-status-badge-pending";
         var hasOrganizerPage = Model.ActivePageId.HasValue || Model.Pages.Any();
         var hasEvent = Model.EventsCount > 0;
         var hasTickets = Model.TicketTypesCount > 0;

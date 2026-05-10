@@ -26,15 +26,24 @@
                 <span class="groove-stamp groove-stamp-red" data-i18n="account.title">Акаунт</span>
                 <h1>@displayName</h1>
                 <p>@Model.Email</p>
-                <div class="groove-inline-actions">
-                    <span class="groove-badge"><i class="bi bi-calendar-check"></i> <span data-i18n="account.since">От</span> @Model.CreatedAt.ToString("MMMM yyyy")</span>
+                <div class="groove-inline-actions account-overview-hero__meta">
+                    <span class="groove-badge account-meta-badge">
+                        <i class="bi bi-calendar-check"></i>
+                        <span><span data-i18n="account.since">От</span> @Model.CreatedAt.ToString("MMMM yyyy")</span>
+                    </span>
                     @if (Model.EmailConfirmed)
                     {
-                        <span class="groove-status-badge groove-status-badge-success"><i class="bi bi-patch-check-fill"></i> Потвърден имейл</span>
+                        <span class="groove-status-badge groove-status-badge-success account-meta-badge">
+                            <i class="bi bi-patch-check-fill"></i>
+                            <span data-i18n="account.email.verified">Потвърден имейл</span>
+                        </span>
                     }
                     else
                     {
-                        <span class="groove-status-badge groove-status-badge-warning"><i class="bi bi-exclamation-triangle"></i> Непотвърден имейл</span>
+                        <span class="groove-status-badge groove-status-badge-warning account-meta-badge">
+                            <i class="bi bi-exclamation-triangle"></i>
+                            <span data-i18n="account.email.unverified">Непотвърден имейл</span>
+                        </span>
                     }
                 </div>
             </div>

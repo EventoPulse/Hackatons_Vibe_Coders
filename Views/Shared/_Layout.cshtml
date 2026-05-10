@@ -132,6 +132,7 @@
 
                 <button id="app-theme-btn" type="button" onclick="toggleAppTheme()"
                         title="Светла / Тъмна тема"
+                        data-i18n-title="theme.toggle"
                         style="background:transparent;border:1px solid #e5e7ef;border-radius:999px;font-size:14px;padding:5px 10px;cursor:pointer;white-space:nowrap;color:#0d1424;">
                     <i class="bi bi-moon-stars"></i>
                 </button>
@@ -141,7 +142,7 @@
                 </button>
                 <div id="google_translate_element" style="display:none;"></div>
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav"
-                        aria-controls="mainNav" aria-expanded="false" aria-label="Навигация">
+                        aria-controls="mainNav" aria-expanded="false" aria-label="Навигация" data-i18n-aria-label="nav.menu">
                     <span class="navbar-toggler-icon"></span>
                 </button>
                 <div class="collapse navbar-collapse" id="mainNav">
@@ -175,7 +176,7 @@
                         {
                             <li class="nav-item">
                                 <a class="nav-link" asp-controller="Admin" asp-action="Index">
-                                    <i class="bi bi-shield-check"></i> <span data-i18n="nav.admin">Admin Panel</span>
+                                    <i class="bi bi-shield-check"></i> <span data-i18n="nav.admin.panel">Админ панел</span>
                                 </a>
                             </li>
                         }
@@ -206,7 +207,7 @@
         {
             <div class="alert alert-info alert-dismissible fade show" role="alert">
                 @statusMessage
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Затвори"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Затвори" data-i18n-aria-label="common.close"></button>
             </div>
         }
         <main role="main" class="pb-3">
@@ -348,40 +349,40 @@
         }
         window.googleTranslateElementInit = googleTranslateElementInit;
     </script>
-    <script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit" async defer></script>
+    <script src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit" async defer></script>
 
     <partial name="_MobileNav" />
 
     <!-- PWA install banner -->
-    <div id="evt-pwa-banner" hidden class="evt-pwa-banner" role="dialog" aria-live="polite" aria-label="Инсталирай Evento">
-        <button id="evt-pwa-close-btn" type="button" class="evt-pwa-banner__close" aria-label="Затвори">
+    <div id="evt-pwa-banner" hidden class="evt-pwa-banner" role="dialog" aria-live="polite" aria-label="Инсталирай Evento" data-i18n-aria-label="pwa.install.title">
+        <button id="evt-pwa-close-btn" type="button" class="evt-pwa-banner__close" aria-label="Затвори" data-i18n-aria-label="common.close">
             <i class="bi bi-x-lg"></i>
         </button>
         <div class="evt-pwa-banner__main">
             <img src="/img/logo.svg" alt="Evento" class="evt-pwa-banner__logo" />
             <div class="evt-pwa-banner__text">
-                <strong id="evt-pwa-title">Инсталирай Evento</strong>
-                <span id="evt-pwa-subtitle">Добави го на началния екран с Android прозореца за инсталиране.</span>
+                <strong id="evt-pwa-title" data-i18n="pwa.install.title">Инсталирай Evento</strong>
+                <span id="evt-pwa-subtitle" data-i18n="pwa.install.subtitle">Добави го на началния екран с Android прозореца за инсталиране.</span>
             </div>
         </div>
         <div id="evt-pwa-actions" class="evt-pwa-banner__actions">
             <button id="evt-pwa-install-btn" type="button" class="evt-pwa-banner__install">
-                <i class="bi bi-download"></i> Инсталирай
+                <i class="bi bi-download"></i> <span data-i18n="pwa.install.action">Инсталирай</span>
             </button>
             <button id="evt-pwa-help-btn" type="button" class="evt-pwa-banner__platform-btn">
-                <i class="bi bi-three-dots-vertical"></i> Ръчно
+                <i class="bi bi-three-dots-vertical"></i> <span data-i18n="pwa.manual">Ръчно</span>
             </button>
         </div>
         <div id="evt-pwa-android-steps" hidden class="evt-pwa-banner__steps">
             <ol>
-                <li>Отвори <i class="bi bi-three-dots-vertical"></i> менюто на Chrome</li>
-                <li>Избери <strong>"Добави към началния екран"</strong></li>
+                <li data-i18n-html="pwa.android.step1">Отвори <i class="bi bi-three-dots-vertical"></i> менюто на Chrome</li>
+                <li data-i18n-html="pwa.android.step2">Избери <strong>"Добави към началния екран"</strong></li>
             </ol>
         </div>
         <div id="evt-pwa-ios-steps" hidden class="evt-pwa-banner__steps">
             <ol>
-                <li>Отвори Safari и натисни <i class="bi bi-box-arrow-up"></i></li>
-                <li>Избери <strong>"Добави към началния екран"</strong></li>
+                <li data-i18n-html="pwa.ios.step1">Отвори Safari и натисни <i class="bi bi-box-arrow-up"></i></li>
+                <li data-i18n-html="pwa.android.step2">Избери <strong>"Добави към началния екран"</strong></li>
             </ol>
         </div>
     </div>
@@ -413,6 +414,21 @@
             var androidSteps = document.getElementById('evt-pwa-android-steps');
             var iosSteps = document.getElementById('evt-pwa-ios-steps');
             var hasShown = false;
+            var pwaText = {
+                installTitle: { bg: 'Инсталирай Evento', en: 'Install Evento' },
+                installSubtitle: { bg: 'Натисни бутона и Android ще отвори прозореца за инсталиране.', en: 'Tap the button and Android will open the install prompt.' },
+                addTitle: { bg: 'Добави Evento', en: 'Add Evento' },
+                androidManual: { bg: 'Ако prompt-ът не излезе, добави го от менюто на Chrome.', en: 'If the prompt does not appear, add it from the Chrome menu.' },
+                iosManual: { bg: 'iOS използва бутона за споделяне в Safari.', en: 'iOS uses the share button in Safari.' }
+            };
+
+            function currentLang() {
+                return (document.documentElement.lang || localStorage.getItem('appLang') || 'bg').toLowerCase() === 'en' ? 'en' : 'bg';
+            }
+
+            function text(key) {
+                return pwaText[key][currentLang()] || pwaText[key].bg;
+            }
 
             window.addEventListener('beforeinstallprompt', function (e) {
                 e.preventDefault();
@@ -435,8 +451,8 @@
 
             function showAndroidPrompt() {
                 if (!isAndroid || !deferred) return;
-                if (title) title.textContent = 'Инсталирай Evento';
-                if (subtitle) subtitle.textContent = 'Натисни бутона и Android ще отвори прозореца за инсталиране.';
+                if (title) title.textContent = text('installTitle');
+                if (subtitle) subtitle.textContent = text('installSubtitle');
                 if (installBtn) installBtn.hidden = false;
                 if (helpBtn) helpBtn.hidden = false;
                 if (androidSteps) androidSteps.hidden = true;
@@ -445,16 +461,16 @@
             }
 
             function showManualAndroid() {
-                if (title) title.textContent = 'Добави Evento';
-                if (subtitle) subtitle.textContent = 'Ако prompt-ът не излезе, добави го от менюто на Chrome.';
+                if (title) title.textContent = text('addTitle');
+                if (subtitle) subtitle.textContent = text('androidManual');
                 if (androidSteps) androidSteps.hidden = false;
                 if (iosSteps) iosSteps.hidden = true;
                 showBanner();
             }
 
             function showIosHelp() {
-                if (title) title.textContent = 'Добави Evento';
-                if (subtitle) subtitle.textContent = 'iOS използва бутона за споделяне в Safari.';
+                if (title) title.textContent = text('addTitle');
+                if (subtitle) subtitle.textContent = text('iosManual');
                 if (installBtn) installBtn.hidden = true;
                 if (helpBtn) helpBtn.hidden = true;
                 if (androidSteps) androidSteps.hidden = true;

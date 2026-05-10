@@ -1,7 +1,7 @@
 @model OrganizerProfileViewModel
 @{
     ViewData["Title"] = Model.Id.HasValue ? "Редакция на публична организаторска страница" : "Нова публична организаторска страница";
-    var badgeClass = Model.Approved ? "groove-status-badge-success" : "groove-status-badge-warning";
+    var badgeClass = Model.Approved ? "groove-status-badge-success" : "groove-status-badge-warning groove-status-badge-pending";
     var badgeText = Model.Approved ? "Одобрен организатор" : "Чака одобрение";
     var badgeKey = Model.Approved ? "org.approved" : "org.pending";
     var actionKey = Model.Id.HasValue ? "org.btn.edit" : "home.events.create";

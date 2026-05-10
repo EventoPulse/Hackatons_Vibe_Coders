@@ -15,7 +15,7 @@
             ? fullName
             : (!string.IsNullOrWhiteSpace(currentUser?.UserName)
                 ? currentUser!.UserName
-                : (!string.IsNullOrWhiteSpace(currentUser?.Email) ? currentUser!.Email : "Профил"));
+                : (!string.IsNullOrWhiteSpace(currentUser?.Email) ? currentUser!.Email : "Profile"));
         var currentUserId = currentUser?.Id;
         var canCreatePublicContent = await Permissions.CanCreatePostAsync(User);
         var initials = !string.IsNullOrWhiteSpace(fullName)
@@ -23,7 +23,7 @@
             : (displayName?.Length > 0 ? displayName[0].ToString().ToUpper() : "У");
         <li class="nav-item dropdown site-account-menu">
             <a class="nav-link dropdown-toggle p-1 d-flex align-items-center gap-2" href="#" id="accountMenu" role="button" data-bs-toggle="dropdown" aria-expanded="false" title="@displayName">
-                <span class="evt-avatar-circle">@initials</span>
+                        <span class="evt-avatar-circle notranslate" translate="no">@initials</span>
                 <span class="d-none d-md-inline text-truncate" style="max-width:130px;font-size:.875rem;font-weight:600;">@displayName</span>
             </a>
             <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="accountMenu">
@@ -80,7 +80,7 @@
                         </li>
                         <li>
                             <a class="dropdown-item" asp-controller="Organizer" asp-action="Validators">
-                                <i class="bi bi-person-check"></i> Validators
+                                <i class="bi bi-person-check"></i> <span data-i18n="nav.validators">Валидатори</span>
                             </a>
                         </li>
                     }
@@ -94,7 +94,7 @@
                 {
                     <li>
                         <a class="dropdown-item" asp-controller="Admin" asp-action="Index">
-                        <i class="bi bi-shield-check"></i> <span data-i18n="nav.admin">Admin</span>
+                        <i class="bi bi-shield-check"></i> <span data-i18n="nav.admin.panel">Админ панел</span>
                         </a>
                     </li>
                 }

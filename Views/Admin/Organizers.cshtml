@@ -8,13 +8,13 @@
 <section class="groove-app-page">
     <div class="groove-page-hero">
         <div class="groove-page-hero__copy">
-            <span class="groove-stamp groove-stamp-red">Кандидатури</span>
-            <h1>Организаторски <span>профили</span>.</h1>
-            <p>Преглеждай новите заявки и управлявай вече одобрените организатори.</p>
+            <span class="groove-stamp groove-stamp-red" data-i18n="admin.kicker.applications">Кандидатури</span>
+            <h1 data-i18n-html="admin.organizers.title">Организаторски <span>профили</span>.</h1>
+            <p data-i18n="admin.organizers.desc">Преглеждай новите заявки и управлявай вече одобрените организатори.</p>
         </div>
         <div class="groove-page-actions">
             <a asp-action="Index" class="groove-button groove-button-paper">
-                <i class="bi bi-arrow-left"></i> Към админ
+                <i class="bi bi-arrow-left"></i> <span data-i18n="common.back.admin">Към админ</span>
             </a>
         </div>
     </div>
@@ -23,8 +23,8 @@
     {
         <div class="groove-empty-card">
             <i class="bi bi-person-badge"></i>
-            <h2 class="groove-panel-title">Още няма <span>кандидатури</span>.</h2>
-            <p class="groove-panel-intro">Когато някой кандидатства за организатор, ще се появи тук.</p>
+            <h2 class="groove-panel-title" data-i18n-html="admin.organizers.empty.title">Още няма <span>кандидатури</span>.</h2>
+            <p class="groove-panel-intro" data-i18n="admin.organizers.empty.desc">Когато някой кандидатства за организатор, ще се появи тук.</p>
         </div>
     }
     else
@@ -32,15 +32,15 @@
         <section class="groove-page-section">
             <div class="groove-section-bar">
                 <div>
-                    <span class="groove-kicker">За преглед</span>
-                    <h2>@pending.Count <span>чакащи</span> кандидатури.</h2>
+                    <span class="groove-kicker" data-i18n="admin.review">За преглед</span>
+                    <h2>@pending.Count <span data-i18n="admin.badge.pending">чакащи</span> <span data-i18n="admin.applications">кандидатури</span>.</h2>
                 </div>
             </div>
 
             @if (pending.Count == 0)
             {
                 <div class="groove-alert groove-alert-success">
-                    Няма чакащи кандидатури в момента.
+                    <span data-i18n="admin.organizers.no.pending">Няма чакащи кандидатури в момента.</span>
                 </div>
             }
             else
@@ -51,17 +51,17 @@
                         <article class="groove-paper-card">
                             <div class="d-flex justify-content-between align-items-start gap-2">
                                 <span class="groove-kicker">@org.UserName</span>
-                                <span class="groove-status-badge groove-status-badge-warning">Чака</span>
+                                <span class="admin-badge admin-badge--status-pending" data-i18n="admin.status.pending.approval">Чака одобрение</span>
                             </div>
 
                             <h3 class="mt-3">@org.OrganizationName</h3>
                             <dl class="groove-data-list mt-3">
-                                <dt>Имейл</dt>
+                                <dt data-i18n="admin.table.email">Имейл</dt>
                                 <dd>@org.Email</dd>
 
                                 @if (!string.IsNullOrWhiteSpace(org.PhoneNumber))
                                 {
-                                    <dt>Телефон</dt>
+                                    <dt data-i18n="admin.table.phone">Телефон</dt>
                                     <dd>@org.PhoneNumber</dd>
                                 }
 
@@ -69,29 +69,29 @@
                                 {
                                     var location = string.Join(", ", new[] { org.City, org.Country }
                                         .Where(value => !string.IsNullOrWhiteSpace(value)));
-                                    <dt>Град / държава</dt>
+                                    <dt data-i18n="admin.table.city.country">Град / държава</dt>
                                     <dd>@location</dd>
                                 }
 
                                 @if (!string.IsNullOrWhiteSpace(org.ReferralSource))
                                 {
-                                    <dt>Източник</dt>
+                                    <dt data-i18n="admin.table.source">Източник</dt>
                                     <dd>@org.ReferralSource</dd>
                                 }
 
                                 @if (!string.IsNullOrWhiteSpace(org.CompanyNumber))
                                 {
-                                    <dt>Фирмен номер</dt>
+                                    <dt data-i18n="admin.table.company.number">Фирмен номер</dt>
                                     <dd>@org.CompanyNumber</dd>
                                 }
 
                                 @if (!string.IsNullOrWhiteSpace(org.Website))
                                 {
-                                    <dt>Уебсайт</dt>
+                                    <dt data-i18n="profile.website">Уебсайт</dt>
                                     <dd><a href="@org.Website" target="_blank" rel="noopener">@org.Website</a></dd>
                                 }
 
-                                <dt>Подадена</dt>
+                                <dt data-i18n="admin.table.submitted">Подадена</dt>
                                 <dd>@org.CreatedAt.ToString("dd.MM.yyyy HH:mm")</dd>
                             </dl>
 
@@ -99,7 +99,7 @@
                                 <form asp-action="ApproveOrganizer" asp-route-id="@org.OrganizerId" method="post">
                                     @Html.AntiForgeryToken()
                                     <button class="groove-button groove-button-dark" type="submit">
-                                        <i class="bi bi-check-circle"></i> Одобри организатор
+                                        <i class="bi bi-check-circle"></i> <span data-i18n="admin.action.approve.organizer">Одобри организатор</span>
                                     </button>
                                 </form>
                             </div>
@@ -114,8 +114,8 @@
             <section class="groove-page-section">
                 <div class="groove-section-bar">
                     <div>
-                        <span class="groove-kicker">Активни</span>
-                        <h2>@approved.Count <span>одобрени</span> организатори.</h2>
+                        <span class="groove-kicker" data-i18n="admin.active">Активни</span>
+                        <h2>@approved.Count <span data-i18n="admin.approved.plural">одобрени</span> <span data-i18n="admin.organizers.lower">организатори</span>.</h2>
                     </div>
                 </div>
 
@@ -124,13 +124,13 @@
                         <table class="table">
                             <thead>
                                 <tr>
-                                    <th>Организация</th>
-                                    <th>Потребител</th>
-                                    <th>Имейл</th>
-                                    <th>Телефон</th>
-                                    <th>Град</th>
-                                    <th>Фирмен номер</th>
-                                    <th>От</th>
+                                    <th data-i18n="admin.table.organization">Организация</th>
+                                    <th data-i18n="admin.table.user">Потребител</th>
+                                    <th data-i18n="admin.table.email">Имейл</th>
+                                    <th data-i18n="admin.table.phone">Телефон</th>
+                                    <th data-i18n="admin.table.city">Град</th>
+                                    <th data-i18n="admin.table.company.number">Фирмен номер</th>
+                                    <th data-i18n="account.since">От</th>
                                     <th></th>
                                 </tr>
                             </thead>
@@ -150,8 +150,8 @@
                                                 @Html.AntiForgeryToken()
                                                 <button class="groove-button groove-button-paper"
                                                         type="submit"
-                                                        onclick="return confirm('Да отнема ли организаторските права на @org.UserName?')">
-                                                    <i class="bi bi-person-dash"></i> Отнеми
+                                                        data-confirm-key="admin.organizers.revoke.confirm">
+                                                    <i class="bi bi-person-dash"></i> <span data-i18n="admin.action.revoke">Отнеми</span>
                                                 </button>
                                             </form>
                                         </td>

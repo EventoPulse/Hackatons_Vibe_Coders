@@ -7,23 +7,23 @@
 <section class="groove-app-page">
     <div class="groove-page-hero">
         <div class="groove-page-hero__copy">
-            <span class="groove-stamp groove-stamp-teal">Каталог</span>
-            <h1>Админ преглед на <span>събития</span>.</h1>
-            <p>Одобрявай, редактирай и управлявай публикуваните събития и билетите към тях.</p>
+            <span class="groove-stamp groove-stamp-teal" data-i18n="admin.kicker.catalog">Каталог</span>
+            <h1 data-i18n-html="admin.events.title">Админ преглед на <span>събития</span>.</h1>
+            <p data-i18n="admin.events.desc">Одобрявай, редактирай и управлявай публикуваните събития и билетите към тях.</p>
         </div>
         <div class="groove-page-actions">
             <a asp-action="Events" asp-route-pending="@(!pendingOnly)" class="groove-button groove-button-paper">
                 @if (pendingOnly)
                 {
-                    <text><i class="bi bi-list"></i> Покажи всички</text>
+                    <text><i class="bi bi-list"></i> <span data-i18n="common.show.all">Покажи всички</span></text>
                 }
                 else
                 {
-                    <text><i class="bi bi-hourglass-split"></i> Само чакащи</text>
+                    <text><i class="bi bi-hourglass-split"></i> <span data-i18n="admin.events.pending.only">Само чакащи</span></text>
                 }
             </a>
             <a asp-action="Index" class="groove-button groove-button-paper">
-                <i class="bi bi-arrow-left"></i> Към админ
+                <i class="bi bi-arrow-left"></i> <span data-i18n="common.back.admin">Към админ</span>
             </a>
         </div>
     </div>
@@ -32,7 +32,7 @@
     {
         <div class="groove-empty-card">
             <i class="bi bi-calendar2-event"></i>
-            <h2 class="groove-panel-title">Няма <span>събития</span>.</h2>
+            <h2 class="groove-panel-title" data-i18n-html="admin.events.empty.title">Няма <span>събития</span>.</h2>
         </div>
     }
     else
@@ -42,12 +42,12 @@
                 <table class="table">
                     <thead>
                         <tr>
-                            <th>Заглавие</th>
-                            <th>Организатор</th>
-                            <th>Локация</th>
-                            <th>Начало</th>
-                            <th>Жанр</th>
-                            <th>Статус</th>
+                            <th data-i18n="admin.table.title">Заглавие</th>
+                            <th data-i18n="admin.table.organizer">Организатор</th>
+                            <th data-i18n="admin.table.location">Локация</th>
+                            <th data-i18n="admin.table.start">Начало</th>
+                            <th data-i18n="admin.table.genre">Жанр</th>
+                            <th data-i18n="admin.table.status">Статус</th>
                             <th></th>
                         </tr>
                     </thead>
@@ -59,39 +59,39 @@
                                 <td>@ev.OrganizerName</td>
                                 <td>@ev.Address, @ev.City</td>
                                 <td>@ev.StartTime.ToString("dd.MM.yyyy HH:mm")</td>
-                                <td><span class="groove-badge">@ev.Genre.GetDisplayName()</span></td>
+                                <td><span class="admin-badge admin-badge--genre" data-i18n="@($"genre.{ev.Genre}")">@ev.Genre.GetDisplayName()</span></td>
                                 <td>
                                     @if (ev.HasPendingChanges)
                                     {
-                                        <span class="groove-status-badge groove-status-badge-warning">Чака промени</span>
+                                        <span class="admin-badge admin-badge--status-pending" data-i18n="admin.status.pending.changes">Чака промени</span>
                                     }
                                     else if (ev.IsApproved)
                                     {
-                                        <span class="groove-status-badge groove-status-badge-success">Одобрено</span>
+                                        <span class="admin-badge admin-badge--status-approved" data-i18n="admin.status.approved">Одобрено</span>
                                     }
                                     else
                                     {
-                                        <span class="groove-status-badge groove-status-badge-warning">Чака</span>
+                                        <span class="admin-badge admin-badge--status-pending" data-i18n="admin.status.pending.approval">Чака одобрение</span>
                                     }
                                 </td>
                                 <td>
                                     <div class="groove-list-actions">
                                         <a asp-controller="Events" asp-action="Details" asp-route-id="@ev.Id" class="groove-button groove-button-paper">
-                                            <i class="bi bi-eye"></i> Преглед
+                                            <i class="bi bi-eye"></i> <span data-i18n="common.preview">Преглед</span>
                                         </a>
                                         <a asp-controller="Events" asp-action="Edit" asp-route-id="@ev.Id" class="groove-button groove-button-paper">
-                                            <i class="bi bi-pencil"></i> Редакция
+                                            <i class="bi bi-pencil"></i> <span data-i18n="common.edit">Редакция</span>
                                         </a>
                                         <a asp-controller="Tickets" asp-action="Manage" asp-route-id="@ev.Id" class="groove-button groove-button-paper">
-                                            <i class="bi bi-ticket-perforated"></i> Билети
+                                            <i class="bi bi-ticket-perforated"></i> <span data-i18n="admin.tickets">Билети</span>
                                         </a>
                                         <a asp-controller="Events" asp-action="Delete" asp-route-id="@ev.Id" class="groove-button groove-button-paper">
-                                            <i class="bi bi-trash"></i> Изтрий
+                                            <i class="bi bi-trash"></i> <span data-i18n="common.delete">Изтрий</span>
                                         </a>
                                         @if (ev.HasPendingChanges)
                                         {
                                             <a asp-action="EventChange" asp-route-id="@ev.Id" class="groove-button groove-button-paper">
-                                                <i class="bi bi-file-earmark-diff"></i> Промени
+                                                <i class="bi bi-file-earmark-diff"></i> <span data-i18n="admin.status.changes">Промени</span>
                                             </a>
                                         }
                                         <form asp-action="ApproveEvent" asp-route-id="@ev.Id" method="post">
@@ -99,19 +99,19 @@
                                             @if (ev.HasPendingChanges)
                                             {
                                                 <button class="groove-button groove-button-dark" type="submit">
-                                                    <i class="bi bi-check-circle"></i> Одобри промени
+                                                    <i class="bi bi-check-circle"></i> <span data-i18n="admin.action.approve.changes">Одобри промени</span>
                                                 </button>
                                             }
                                             else if (ev.IsApproved)
                                             {
                                                 <button class="groove-button groove-button-paper" type="submit">
-                                                    <i class="bi bi-pause-circle"></i> Свали одобрение
+                                                    <i class="bi bi-pause-circle"></i> <span data-i18n="admin.action.unapprove">Свали одобрение</span>
                                                 </button>
                                             }
                                             else
                                             {
                                                 <button class="groove-button groove-button-dark" type="submit">
-                                                    <i class="bi bi-check-circle"></i> Одобри
+                                                    <i class="bi bi-check-circle"></i> <span data-i18n="common.approve">Одобри</span>
                                                 </button>
                                             }
                                         </form>

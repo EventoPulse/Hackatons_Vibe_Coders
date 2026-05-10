@@ -23,6 +23,8 @@
         'account.title': { bg: 'Акаунт', en: 'Account' },
         'account.since': { bg: 'От', en: 'Since' },
         'account.preferences': { bg: 'Предпочитания', en: 'Preferences' },
+        'account.email.verified': { bg: 'Потвърден имейл', en: 'Verified email' },
+        'account.email.unverified': { bg: 'Непотвърден имейл', en: 'Unverified email' },
         'account.saved.posts': { bg: 'запазени публикации', en: 'Saved posts' },
         'account.saved.events': { bg: 'Запазени събития', en: 'Saved events' },
         'account.your.posts': { bg: 'Твоите публикации', en: 'Your posts' },
@@ -993,6 +995,155 @@
         'wrapped.kicker.ai':      { bg: 'Evento AI ти казва',               en: 'Evento AI tells you' },
     });
 
+    Object.assign(KEYED, {
+        'nav.admin.panel': { bg: 'Админ панел', en: 'Admin Panel' },
+        'nav.validators': { bg: 'Валидатори', en: 'Validators' },
+        'common.save': { bg: 'Запази', en: 'Save' },
+        'common.approve': { bg: 'Одобри', en: 'Approve' },
+        'common.preview': { bg: 'Преглед', en: 'Preview' },
+        'common.details': { bg: 'Детайли', en: 'Details' },
+        'common.back.admin': { bg: 'Към админ', en: 'Back to admin' },
+        'common.show.all': { bg: 'Покажи всички', en: 'Show all' },
+        'common.close': { bg: 'Затвори', en: 'Close' },
+        'currency.bgn': { bg: 'лв.', en: 'BGN' },
+        'theme.toggle': { bg: 'Светла / Тъмна тема', en: 'Light / dark theme' },
+        'nav.menu': { bg: 'Навигация', en: 'Navigation' },
+        'pwa.install.title': { bg: 'Инсталирай Evento', en: 'Install Evento' },
+        'pwa.install.subtitle': { bg: 'Добави го на началния екран с Android прозореца за инсталиране.', en: 'Add it to your home screen with the Android install prompt.' },
+        'pwa.install.action': { bg: 'Инсталирай', en: 'Install' },
+        'pwa.manual': { bg: 'Ръчно', en: 'Manual' },
+        'pwa.android.step1': { bg: 'Отвори <i class="bi bi-three-dots-vertical"></i> менюто на Chrome', en: 'Open the Chrome <i class="bi bi-three-dots-vertical"></i> menu' },
+        'pwa.android.step2': { bg: 'Избери <strong>"Добави към началния екран"</strong>', en: 'Choose <strong>"Add to Home screen"</strong>' },
+        'pwa.ios.step1': { bg: 'Отвори Safari и натисни <i class="bi bi-box-arrow-up"></i>', en: 'Open Safari and tap <i class="bi bi-box-arrow-up"></i>' },
+
+        'role.admin': { bg: 'Админ', en: 'Admin' },
+        'role.organizer': { bg: 'Организатор', en: 'Organizer' },
+        'role.user': { bg: 'Потребител', en: 'User' },
+        'role.none': { bg: 'Без роля', en: 'No role' },
+        'admin.status.approved': { bg: 'Одобрено', en: 'Approved' },
+        'admin.status.pending.approval': { bg: 'Чака одобрение', en: 'Pending approval' },
+        'admin.status.pending.changes': { bg: 'Чака промени', en: 'Pending changes' },
+        'admin.status.changes': { bg: 'Промени', en: 'Changes' },
+        'ticket.status.valid': { bg: 'Валиден', en: 'Valid' },
+        'ticket.status.used': { bg: 'Използван', en: 'Used' },
+        'transaction.status.pending': { bg: 'Изчаква', en: 'Pending' },
+        'transaction.status.paid': { bg: 'Платено', en: 'Paid' },
+        'transaction.status.failed': { bg: 'Неуспешно', en: 'Failed' },
+        'transaction.status.cancelled': { bg: 'Отказано', en: 'Cancelled' },
+        'transaction.status.refunded': { bg: 'Възстановено', en: 'Refunded' },
+        'transaction.status.unknown': { bg: 'Неизвестно', en: 'Unknown' },
+
+        'admin.kicker.control': { bg: 'Контрол', en: 'Control' },
+        'admin.dashboard.title': { bg: 'Админ <span>център</span>.', en: 'Admin <span>center</span>.' },
+        'admin.dashboard.desc': { bg: 'Оттук управляваш роли, кандидатури, събития, публикации, билети и транзакции в Evento.', en: 'Manage roles, applications, events, posts, tickets, and transactions in Evento.' },
+        'admin.users': { bg: 'Потребители', en: 'Users' },
+        'admin.organizers': { bg: 'Организатори', en: 'Organizers' },
+        'admin.events': { bg: 'Събития', en: 'Events' },
+        'admin.posts': { bg: 'Публикации', en: 'Posts' },
+        'admin.tickets': { bg: 'Билети', en: 'Tickets' },
+        'admin.transactions': { bg: 'Транзакции', en: 'Transactions' },
+        'admin.quick.actions': { bg: 'Бързи действия', en: 'Quick actions' },
+        'admin.all.panels': { bg: 'Всички <span>админ панели</span>.', en: 'All <span>admin panels</span>.' },
+        'admin.kicker.roles': { bg: 'Роли', en: 'Roles' },
+        'admin.kicker.applications': { bg: 'Кандидатури', en: 'Applications' },
+        'admin.kicker.content': { bg: 'Съдържание', en: 'Content' },
+        'admin.kicker.sales': { bg: 'Продажби', en: 'Sales' },
+        'admin.kicker.finance': { bg: 'Финанси', en: 'Finance' },
+        'admin.kicker.catalog': { bg: 'Каталог', en: 'Catalog' },
+        'admin.users.card.desc': { bg: 'Смяна на роли и редакция на акаунти.', en: 'Change roles and edit accounts.' },
+        'admin.organizers.card.desc': { bg: 'Преглед и одобряване на нови организатори.', en: 'Review and approve new organizers.' },
+        'admin.events.card.desc': { bg: 'Одобряване и управление на публикуваните събития.', en: 'Approve and manage published events.' },
+        'admin.posts.card.desc': { bg: 'Преглед на постовете и тяхната активност.', en: 'Review posts and their activity.' },
+        'admin.tickets.card.desc': { bg: 'Следене на продадени, използвани и активни билети.', en: 'Track sold, used, and active tickets.' },
+        'admin.transactions.card.desc': { bg: 'Списък с плащания и обобщение на приходите.', en: 'List of payments and revenue summary.' },
+        'admin.activity': { bg: 'Активност', en: 'Activity' },
+        'admin.latest.posts': { bg: 'Последни <span>публикации</span>.', en: 'Latest <span>posts</span>.' },
+        'admin.badge.pending': { bg: 'чакащи', en: 'pending' },
+        'admin.badge.for.review': { bg: 'за преглед', en: 'for review' },
+
+        'admin.users.title': { bg: 'Управление на <span>потребители</span>.', en: 'User <span>management</span>.' },
+        'admin.users.desc': { bg: 'Променяй роли и редактирай профили от едно място.', en: 'Change roles and edit profiles from one place.' },
+        'admin.users.empty.title': { bg: 'Няма <span>потребители</span>.', en: 'No <span>users</span>.' },
+        'admin.users.empty.desc': { bg: 'След като се регистрират акаунти, ще се появят тук.', en: 'Registered accounts will appear here.' },
+
+        'admin.events.title': { bg: 'Админ преглед на <span>събития</span>.', en: 'Admin review of <span>events</span>.' },
+        'admin.events.desc': { bg: 'Одобрявай, редактирай и управлявай публикуваните събития и билетите към тях.', en: 'Approve, edit, and manage published events and their tickets.' },
+        'admin.events.pending.only': { bg: 'Само чакащи', en: 'Pending only' },
+        'admin.events.empty.title': { bg: 'Няма <span>събития</span>.', en: 'No <span>events</span>.' },
+        'admin.action.approve.changes': { bg: 'Одобри промени', en: 'Approve changes' },
+        'admin.action.unapprove': { bg: 'Свали одобрение', en: 'Remove approval' },
+
+        'admin.tickets.title': { bg: 'Обзор на <span>билетите</span>.', en: 'Ticket <span>overview</span>.' },
+        'admin.tickets.desc': { bg: 'Следи активните типове билети, продажбите, използваните входове и демонстрационния приход.', en: 'Track active ticket types, sales, used entries, and demo revenue.' },
+        'admin.stat.ticket.types': { bg: 'Типове билети', en: 'Ticket types' },
+        'admin.stat.sold': { bg: 'Продадени', en: 'Sold' },
+        'admin.stat.used': { bg: 'Използвани', en: 'Used' },
+        'admin.stat.remaining': { bg: 'Оставащи', en: 'Remaining' },
+        'admin.stat.revenue': { bg: 'Приход', en: 'Revenue' },
+        'admin.tickets.latest.purchases': { bg: 'Последни покупки', en: 'Latest purchases' },
+        'admin.tickets.recent.motion': { bg: 'Скорошно <span>движение</span>.', en: 'Recent <span>activity</span>.' },
+        'admin.tickets.empty.title': { bg: 'Все още няма <span>покупки</span>.', en: 'No <span>purchases</span> yet.' },
+
+        'admin.transactions.title': { bg: 'Платежни <span>транзакции</span>.', en: 'Payment <span>transactions</span>.' },
+        'admin.transactions.desc': { bg: 'Преглед на извършените демонстрационни плащания и общия приход от платените поръчки.', en: 'Review completed demo payments and total revenue from paid orders.' },
+        'admin.total.revenue': { bg: 'Общ приход:', en: 'Total revenue:' },
+        'admin.transactions.empty.title': { bg: 'Няма <span>транзакции</span>.', en: 'No <span>transactions</span>.' },
+
+        'admin.organizers.title': { bg: 'Организаторски <span>профили</span>.', en: 'Organizer <span>profiles</span>.' },
+        'admin.organizers.desc': { bg: 'Преглеждай новите заявки и управлявай вече одобрените организатори.', en: 'Review new applications and manage approved organizers.' },
+        'admin.organizers.empty.title': { bg: 'Още няма <span>кандидатури</span>.', en: 'No <span>applications</span> yet.' },
+        'admin.organizers.empty.desc': { bg: 'Когато някой кандидатства за организатор, ще се появи тук.', en: 'Organizer applications will appear here.' },
+        'admin.review': { bg: 'За преглед', en: 'For review' },
+        'admin.review.kicker': { bg: 'Админ преглед', en: 'Admin review' },
+        'admin.pending': { bg: 'Чакащи', en: 'Pending' },
+        'admin.applications': { bg: 'кандидатури', en: 'applications' },
+        'admin.organizers.no.pending': { bg: 'Няма чакащи кандидатури в момента.', en: 'There are no pending applications right now.' },
+        'admin.action.approve.organizer': { bg: 'Одобри организатор', en: 'Approve organizer' },
+        'admin.active': { bg: 'Активни', en: 'Active' },
+        'admin.approved.plural': { bg: 'одобрени', en: 'approved' },
+        'admin.organizers.lower': { bg: 'организатори', en: 'organizers' },
+        'admin.action.revoke': { bg: 'Отнеми', en: 'Revoke' },
+        'admin.posts.title': { bg: 'Админ преглед на <span>публикациите</span>.', en: 'Admin review of <span>posts</span>.' },
+        'admin.posts.desc': { bg: 'Виж съдържанието, активността и бързо премахвай неподходящи публикации.', en: 'Review content and activity, and quickly remove inappropriate posts.' },
+        'admin.posts.empty.title': { bg: 'Няма <span>публикации</span>.', en: 'No <span>posts</span>.' },
+        'admin.event.change.title': { bg: 'Промени по събитие.', en: 'Event changes.' },
+        'admin.event.change.desc': { bg: 'Публикуваната версия остава активна, докато тези промени не бъдат одобрени.', en: 'The published version remains active until these changes are approved.' },
+        'admin.current.version': { bg: 'Текуща версия', en: 'Current version' },
+        'admin.new.version': { bg: 'Нова версия', en: 'New version' },
+
+        'admin.table.user': { bg: 'Потребител', en: 'User' },
+        'admin.table.email': { bg: 'Имейл', en: 'Email' },
+        'admin.table.current.role': { bg: 'Текуща роля', en: 'Current role' },
+        'admin.table.new.role': { bg: 'Нова роля', en: 'New role' },
+        'admin.table.actions': { bg: 'Действия', en: 'Actions' },
+        'admin.table.title': { bg: 'Заглавие', en: 'Title' },
+        'admin.table.organizer': { bg: 'Организатор', en: 'Organizer' },
+        'admin.table.location': { bg: 'Локация', en: 'Location' },
+        'admin.table.start': { bg: 'Начало', en: 'Start' },
+        'admin.table.end': { bg: 'Край', en: 'End' },
+        'admin.table.genre': { bg: 'Жанр', en: 'Genre' },
+        'admin.table.status': { bg: 'Статус', en: 'Status' },
+        'admin.table.event': { bg: 'Събитие', en: 'Event' },
+        'admin.table.ticket': { bg: 'Билет', en: 'Ticket' },
+        'admin.table.owner': { bg: 'Притежател', en: 'Owner' },
+        'admin.table.price': { bg: 'Цена', en: 'Price' },
+        'admin.table.purchased': { bg: 'Купен', en: 'Purchased' },
+        'admin.table.amount': { bg: 'Сума', en: 'Amount' },
+        'admin.table.tickets': { bg: 'Билети', en: 'Tickets' },
+        'admin.table.date': { bg: 'Дата', en: 'Date' },
+        'admin.table.phone': { bg: 'Телефон', en: 'Phone' },
+        'admin.table.city.country': { bg: 'Град / държава', en: 'City / country' },
+        'admin.table.source': { bg: 'Източник', en: 'Source' },
+        'admin.table.company.number': { bg: 'Фирмен номер', en: 'Company number' },
+        'admin.table.submitted': { bg: 'Подадена', en: 'Submitted' },
+        'admin.table.organization': { bg: 'Организация', en: 'Organization' },
+        'admin.table.city': { bg: 'Град', en: 'City' },
+        'admin.table.content': { bg: 'Съдържание', en: 'Content' },
+        'admin.table.related.event': { bg: 'Свързано събитие', en: 'Related event' },
+        'admin.table.published': { bg: 'Публикувана', en: 'Published' },
+        'admin.table.description': { bg: 'Описание', en: 'Description' },
+    });
+
     function getLang() {
         var meta = document.querySelector('meta[name="x-app-lang"]');
         return meta ? meta.getAttribute('content') : 'bg';
@@ -1006,10 +1157,12 @@
         0x02DC: 0x98, 0x2122: 0x99, 0x0161: 0x9A, 0x203A: 0x9B, 0x0153: 0x9C, 0x017E: 0x9E, 0x0178: 0x9F
     };
 
+    function isNoI18nElement(el) {
+        return !el || !!(el.closest && el.closest('[data-no-i18n], .notranslate, [translate="no"], .gm-style'));
+    }
+
     function shouldSkipElement(el) {
-        return !el
-            || SKIP_TAGS[el.tagName]
-            || !!(el.closest && el.closest('[data-no-i18n], .notranslate, [translate="no"], .gm-style'));
+        return isNoI18nElement(el) || SKIP_TAGS[el.tagName];
     }
 
     function hasMojibake(value) {
@@ -1112,18 +1265,18 @@
     }
 
     function translateKeyedElement(el, lang) {
-        if (!el || shouldSkipElement(el)) return;
+        if (isNoI18nElement(el)) return;
 
         var key = el.getAttribute('data-i18n');
         var entry = key ? KEYED[key] : null;
-        if (key) {
+        if (key && !SKIP_TAGS[el.tagName]) {
             var originalText = getOriginal(el, 'text', el.textContent);
             el.textContent = pickTranslation(entry, lang, originalText);
         }
 
         key = el.getAttribute('data-i18n-html');
         entry = key ? KEYED[key] : null;
-        if (key) {
+        if (key && !SKIP_TAGS[el.tagName]) {
             var originalHtml = getOriginal(el, 'html', el.innerHTML);
             el.innerHTML = pickTranslation(entry, lang, originalHtml);
         }

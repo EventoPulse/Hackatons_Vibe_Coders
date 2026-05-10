@@ -15786,3 +15786,279 @@ body.chat-thread-locked .social-messages-page--chat .social-chat-thread {
         max-width: 100%;
     }
 }
+
+/* Account overview header fixes */
+.account-overview-hero {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) minmax(190px, max-content);
+    align-items: start !important;
+    gap: clamp(1rem, 3vw, 1.5rem) !important;
+}
+
+.account-overview-hero__identity {
+    display: grid !important;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center !important;
+    min-width: 0;
+}
+
+.account-overview-hero__identity > div:not(.groove-avatar) {
+    container-type: inline-size;
+    min-width: 0;
+    max-width: 100%;
+}
+
+.account-overview-hero h1 {
+    max-width: 100%;
+    font-size: clamp(1.7rem, 4.5vw, 3.75rem) !important;
+    line-height: 1.02 !important;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    text-wrap: balance;
+}
+
+@supports (font-size: 1cqw) {
+    .account-overview-hero h1 {
+        font-size: clamp(1.7rem, 8cqw, 3.75rem) !important;
+    }
+}
+
+.account-overview-hero__identity p {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+.account-overview-hero__meta {
+    max-width: 100%;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.account-overview-hero__meta > .account-meta-badge {
+    flex: 0 1 auto;
+    width: auto !important;
+}
+
+.account-meta-badge {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center;
+    min-height: 2rem;
+    max-width: 100%;
+    gap: 0.38rem !important;
+    padding: 0.38rem 0.7rem !important;
+    border-radius: 999px !important;
+    line-height: 1 !important;
+    white-space: nowrap;
+    text-align: center;
+}
+
+.account-meta-badge i {
+    display: inline-flex;
+    align-items: center;
+    flex: 0 0 auto;
+    font-size: 0.95em;
+    line-height: 1;
+}
+
+.account-meta-badge > span {
+    min-width: 0;
+    line-height: 1;
+}
+
+.account-overview-hero__actions {
+    display: flex !important;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    justify-self: end;
+    width: clamp(190px, 20vw, 230px);
+    max-width: 100%;
+    gap: 0.65rem !important;
+}
+
+.account-overview-hero__actions .groove-button {
+    width: 100%;
+    justify-content: flex-start;
+    min-height: 2.6rem;
+    text-align: left;
+    white-space: normal;
+}
+
+.groove-status-badge-pending {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center;
+    min-height: 1.9rem;
+    gap: 0.35rem !important;
+    padding: 0.38rem 0.78rem !important;
+    border: 0 !important;
+    border-radius: 999px !important;
+    background: #facc15 !important;
+    box-shadow: none !important;
+    color: #3f2f00 !important;
+    font-size: 0.74rem !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.06em !important;
+    line-height: 1 !important;
+    text-align: center;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.groove-status-badge-pending > span {
+    line-height: 1;
+}
+
+html[data-theme="dark"] .groove-status-badge-pending {
+    background: #fde047 !important;
+    color: #2d2300 !important;
+}
+
+html[data-theme="dark"] .groove-status-badge-pending * {
+    color: #2d2300 !important;
+}
+
+@media (max-width: 767.98px) {
+    .account-overview-hero {
+        grid-template-columns: 1fr;
+    }
+
+    .account-overview-hero__identity {
+        align-items: start !important;
+    }
+
+    .account-overview-hero__actions {
+        justify-self: stretch;
+        width: 100%;
+        display: grid !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .account-overview-hero__actions .groove-button {
+        justify-content: center;
+        text-align: center;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .account-overview-hero__identity {
+        grid-template-columns: 1fr;
+    }
+
+    .account-overview-hero__actions {
+        grid-template-columns: 1fr;
+    }
+
+    .account-meta-badge {
+        white-space: normal;
+        text-wrap: balance;
+    }
+}
+
+/* Admin table badges */
+.admin-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: fit-content;
+    max-width: 100%;
+    min-height: 1.75rem;
+    gap: 0.35rem;
+    border: 1px solid transparent;
+    border-radius: 999px;
+    box-shadow: none !important;
+    padding: 0.35rem 0.65rem;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif !important;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    line-height: 1;
+    text-align: center;
+    text-transform: none;
+    white-space: nowrap;
+    vertical-align: middle;
+}
+
+.admin-badge--role-admin {
+    background: #fee2e2;
+    border-color: #fecaca;
+    color: #991b1b;
+}
+
+.admin-badge--role-organizer {
+    background: #dbeafe;
+    border-color: #bfdbfe;
+    color: #1d4ed8;
+}
+
+.admin-badge--role-user,
+.admin-badge--status-used,
+.admin-badge--status-neutral {
+    background: #f1f5f9;
+    border-color: #e2e8f0;
+    color: #334155;
+}
+
+.admin-badge--status-approved,
+.admin-badge--status-valid,
+.admin-badge--status-paid {
+    background: #dcfce7;
+    border-color: #bbf7d0;
+    color: #166534;
+}
+
+.admin-badge--status-pending {
+    background: #fef3c7;
+    border-color: #fde68a;
+    color: #92400e;
+}
+
+.admin-badge--status-danger {
+    background: #fee2e2;
+    border-color: #fecaca;
+    color: #991b1b;
+}
+
+.admin-badge--genre {
+    background: #eef2ff;
+    border-color: #c7d2fe;
+    color: #3730a3;
+}
+
+html[data-theme="dark"] .admin-badge--role-admin,
+html[data-theme="dark"] .admin-badge--status-danger {
+    background: rgba(248, 113, 113, 0.16);
+    border-color: rgba(248, 113, 113, 0.28);
+    color: #fecaca;
+}
+
+html[data-theme="dark"] .admin-badge--role-organizer,
+html[data-theme="dark"] .admin-badge--genre {
+    background: rgba(129, 140, 248, 0.16);
+    border-color: rgba(129, 140, 248, 0.30);
+    color: #c7d2fe;
+}
+
+html[data-theme="dark"] .admin-badge--role-user,
+html[data-theme="dark"] .admin-badge--status-used,
+html[data-theme="dark"] .admin-badge--status-neutral {
+    background: rgba(148, 163, 184, 0.16);
+    border-color: rgba(148, 163, 184, 0.26);
+    color: #e2e8f0;
+}
+
+html[data-theme="dark"] .admin-badge--status-approved,
+html[data-theme="dark"] .admin-badge--status-valid,
+html[data-theme="dark"] .admin-badge--status-paid {
+    background: rgba(74, 222, 128, 0.16);
+    border-color: rgba(74, 222, 128, 0.28);
+    color: #bbf7d0;
+}
+
+html[data-theme="dark"] .admin-badge--status-pending {
+    background: rgba(251, 191, 36, 0.18);
+    border-color: rgba(251, 191, 36, 0.34);
+    color: #fde68a;
+}

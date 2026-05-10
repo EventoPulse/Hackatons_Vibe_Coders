@@ -299,6 +299,18 @@ document.addEventListener('click', async function (event) {
                 'workspace.delete.confirm': {
                     bg: 'Сигурен ли си, че искаш да изтриеш този workspace? Публичните страници под него ще бъдат спрени, но историята за билети и плащания ще остане запазена.',
                     en: 'Are you sure you want to delete this workspace? Public pages under it will be disabled, but ticket and payment history will stay preserved.'
+                },
+                'admin.users.delete.confirm': {
+                    bg: 'Сигурен ли си? Това ще изтрие потребителя и свързаните му данни от базата.',
+                    en: 'Are you sure? This will delete the user and related data from the database.'
+                },
+                'admin.organizers.revoke.confirm': {
+                    bg: 'Да отнема ли организаторските права на този потребител?',
+                    en: 'Revoke organizer permissions for this user?'
+                },
+                'admin.posts.delete.confirm': {
+                    bg: 'Да изтрия ли тази публикация?',
+                    en: 'Delete this post?'
                 }
             };
             var entry = messages[key];

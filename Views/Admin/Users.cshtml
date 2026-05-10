@@ -6,13 +6,13 @@
 <section class="groove-app-page">
     <div class="groove-page-hero">
         <div class="groove-page-hero__copy">
-            <span class="groove-stamp groove-stamp-yellow">Роли</span>
-            <h1>Управление на <span>потребители</span>.</h1>
-            <p>Променяй роли и редактирай профили от едно място.</p>
+            <span class="groove-stamp groove-stamp-yellow" data-i18n="admin.kicker.roles">Роли</span>
+            <h1 data-i18n-html="admin.users.title">Управление на <span>потребители</span>.</h1>
+            <p data-i18n="admin.users.desc">Променяй роли и редактирай профили от едно място.</p>
         </div>
         <div class="groove-page-actions">
             <a asp-action="Index" class="groove-button groove-button-paper">
-                <i class="bi bi-arrow-left"></i> Към админ
+                <i class="bi bi-arrow-left"></i> <span data-i18n="common.back.admin">Към админ</span>
             </a>
         </div>
     </div>
@@ -21,8 +21,8 @@
     {
         <div class="groove-empty-card">
             <i class="bi bi-people"></i>
-            <h2 class="groove-panel-title">Няма <span>потребители</span>.</h2>
-            <p class="groove-panel-intro">След като се регистрират акаунти, ще се появят тук.</p>
+            <h2 class="groove-panel-title" data-i18n-html="admin.users.empty.title">Няма <span>потребители</span>.</h2>
+            <p class="groove-panel-intro" data-i18n="admin.users.empty.desc">След като се регистрират акаунти, ще се появят тук.</p>
         </div>
     }
     else
@@ -32,47 +32,49 @@
                 <table class="table">
                     <thead>
                         <tr>
-                            <th>Потребител</th>
-                            <th>Имейл</th>
-                            <th>Текуща роля</th>
-                            <th>Нова роля</th>
-                            <th>Действия</th>
+                            <th data-i18n="admin.table.user">Потребител</th>
+                            <th data-i18n="admin.table.email">Имейл</th>
+                            <th data-i18n="admin.table.current.role">Текуща роля</th>
+                            <th data-i18n="admin.table.new.role">Нова роля</th>
+                            <th data-i18n="admin.table.actions">Действия</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach (var (user, roles) in Model)
                         {
                             var currentRole = roles.FirstOrDefault();
-                            var roleDisplay = currentRole.ToRoleDisplay();
-                            var roleClass = currentRole == GlobalConstants.Roles.Admin ? "groove-status-badge-danger"
-                                : currentRole == GlobalConstants.Roles.Organizer ? "groove-status-badge-success"
-                                : "groove-status-badge-muted";
+                            var roleKey = currentRole == GlobalConstants.Roles.Admin ? "role.admin"
+                                : currentRole == GlobalConstants.Roles.Organizer ? "role.organizer"
+                                : currentRole == GlobalConstants.Roles.User ? "role.user"
+                                : "role.none";
+                            var roleClass = currentRole == GlobalConstants.Roles.Admin ? "admin-badge--role-admin"
+                                : currentRole == GlobalConstants.Roles.Organizer ? "admin-badge--role-organizer"
+                                : "admin-badge--role-user";
 
                             <tr>
                                 <td><strong>@user.UserName</strong></td>
                                 <td>@user.Email</td>
-                                <td><span class="groove-status-badge @roleClass">@roleDisplay</span></td>
+                                <td><span class="admin-badge @roleClass" data-i18n="@roleKey">@currentRole.ToRoleDisplay()</span></td>
                                 <td>
                                     <form asp-action="SetRole" method="post" class="d-flex flex-wrap gap-2">
                                         @Html.AntiForgeryToken()
                                         <input type="hidden" name="userId" value="@user.Id" />
                                         <select name="role" class="form-select form-select-sm" style="max-width: 180px;">
-                                            <option value="@GlobalConstants.Roles.User" selected="@(currentRole == GlobalConstants.Roles.User)">Потребител</option>
-                                            <option value="@GlobalConstants.Roles.Organizer" selected="@(currentRole == GlobalConstants.Roles.Organizer)">Организатор</option>
-                                            <option value="@GlobalConstants.Roles.Admin" selected="@(currentRole == GlobalConstants.Roles.Admin)">Админ</option>
+                                            <option value="@GlobalConstants.Roles.User" selected="@(currentRole == GlobalConstants.Roles.User)" data-i18n="role.user">Потребител</option>
+                                            <option value="@GlobalConstants.Roles.Organizer" selected="@(currentRole == GlobalConstants.Roles.Organizer)" data-i18n="role.organizer">Организатор</option>
+                                            <option value="@GlobalConstants.Roles.Admin" selected="@(currentRole == GlobalConstants.Roles.Admin)" data-i18n="role.admin">Админ</option>
                                         </select>
                                         <button type="submit" class="groove-button groove-button-dark">
-                                            <i class="bi bi-check2"></i> Запази
+                                            <i class="bi bi-check2"></i> <span data-i18n="common.save">Запази</span>
                                         </button>
                                     </form>
                                 </td>
                                 <td>
-                                    <form asp-action="DeleteUser" method="post"
-                                          onsubmit="return confirm('Сигурен ли си? Това ще изтрие потребителя и свързаните му данни от базата.');">
+                                    <form asp-action="DeleteUser" method="post">
                                         @Html.AntiForgeryToken()
                                         <input type="hidden" name="id" value="@user.Id" />
-                                        <button type="submit" class="groove-button groove-button-paper text-danger">
-                                            <i class="bi bi-trash"></i> Изтрий
+                                        <button type="submit" class="groove-button groove-button-paper text-danger" data-confirm-key="admin.users.delete.confirm">
+                                            <i class="bi bi-trash"></i> <span data-i18n="common.delete">Изтрий</span>
                                         </button>
                                     </form>
                                 </td>
