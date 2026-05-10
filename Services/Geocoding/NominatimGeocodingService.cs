@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Net.Http.Headers;
 using System.Text.Json;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace EventsApp.Services.Geocoding
 {
@@ -8,11 +9,13 @@ namespace EventsApp.Services.Geocoding
     {
         private readonly HttpClient _http;
         private readonly ILogger<NominatimGeocodingService> _logger;
+        private readonly IMemoryCache _cache;
 
-        public NominatimGeocodingService(HttpClient http, ILogger<NominatimGeocodingService> logger)
+        public NominatimGeocodingService(HttpClient http, ILogger<NominatimGeocodingService> logger, IMemoryCache cache)
         {
             _http = http;
             _logger = logger;
+            _cache = cache;
             if (_http.BaseAddress == null)
             {
                 _http.BaseAddress = new Uri("https://nominatim.openstreetmap.org/");
@@ -31,6 +34,11 @@ namespace EventsApp.Services.Geocoding
             var query = string.IsNullOrWhiteSpace(city)
                 ? address.Trim()
                 : (string.IsNullOrWhiteSpace(address) ? city!.Trim() : $"{address.Trim()}, {city.Trim()}");
+            var cacheKey = "geocode:" + query.Trim().ToLowerInvariant();
+            if (_cache.TryGetValue(cacheKey, out GeocodeResult? cached))
+            {
+                return cached;
+            }
 
             var url = "search?format=jsonv2" +
                       $"&q={Uri.EscapeDataString(query)}" +
@@ -56,7 +64,9 @@ namespace EventsApp.Services.Geocoding
                 if (!double.TryParse(lonEl.GetString(), NumberStyles.Float, CultureInfo.InvariantCulture, out var lng)) return null;
 
                 var display = first.TryGetProperty("display_name", out var dn) ? dn.GetString() : null;
-                return new GeocodeResult(lat, lng, display);
+                var result = new GeocodeResult(lat, lng, display);
+                _cache.Set(cacheKey, result, TimeSpan.FromDays(30));
+                return result;
             }
             catch (Exception ex)
             {

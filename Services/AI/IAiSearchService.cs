@@ -5,8 +5,10 @@ namespace EventsApp.Services.AI
     public class AiSearchIntent
     {
         public string? City { get; set; }
+        public string[] Cities { get; set; } = Array.Empty<string>();
         public string? Keyword { get; set; }
         public EventGenre? Genre { get; set; }
+        public EventGenre[] Genres { get; set; } = Array.Empty<EventGenre>();
         public DateTime? DateFrom { get; set; }
         public DateTime? DateTo { get; set; }
         public bool NearMe { get; set; }

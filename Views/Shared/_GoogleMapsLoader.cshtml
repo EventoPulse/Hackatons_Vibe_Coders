@@ -12,14 +12,64 @@
 {
     <script>
         window.GROOVEON_MAPS = window.GROOVEON_MAPS || { ready: false, callbacks: [] };
+        window.GROOVEON_MAPS.loading = window.GROOVEON_MAPS.loading || false;
+        window.GROOVEON_MAPS.loaded = window.GROOVEON_MAPS.loaded || false;
         window.@(Html.Raw(callback)) = function () {
             window.GROOVEON_MAPS.ready = true;
+            window.GROOVEON_MAPS.loaded = true;
             (window.GROOVEON_MAPS.callbacks || []).forEach(function (cb) { try { cb(); } catch (e) { console.error(e); } });
             window.GROOVEON_MAPS.callbacks = [];
         };
+        window.GrooveLoadGoogleMaps = window.GrooveLoadGoogleMaps || function () {
+            if (window.GROOVEON_MAPS.loaded || window.GROOVEON_MAPS.loading || (window.google && window.google.maps)) return;
+            window.GROOVEON_MAPS.loading = true;
+            var script = document.createElement('script');
+            script.async = true;
+            script.defer = true;
+            script.src = 'https://maps.googleapis.com/maps/api/js?key=@key&libraries=@libraries&region=@region&language=@language&callback=@callback';
+            script.onerror = function () { window.GROOVEON_MAPS.loading = false; };
+            document.head.appendChild(script);
+        };
+        (function () {
+            function armLazyLoad() {
+                var targets = Array.prototype.slice.call(document.querySelectorAll('#events-map, #event-location-map'));
+                var address = document.getElementById('Address');
+                var trigger = function () { window.GrooveLoadGoogleMaps(); };
+
+                if (address) {
+                    address.addEventListener('focus', trigger, { once: true });
+                    address.addEventListener('input', trigger, { once: true });
+                }
+
+                document.addEventListener('click', function (e) {
+                    if (e.target.closest('#events-map, #event-location-map, #use-my-location, #btn-use-my-location')) {
+                        trigger();
+                    }
+                }, { once: true });
+
+                if (!targets.length) return;
+                if ('IntersectionObserver' in window) {
+                    var observer = new IntersectionObserver(function (entries) {
+                        entries.forEach(function (entry) {
+                            if (!entry.isIntersecting) return;
+                            observer.disconnect();
+                            trigger();
+                        });
+                    }, { rootMargin: '420px 0px' });
+                    targets.forEach(function (el) { observer.observe(el); });
+                    return;
+                }
+
+                window.setTimeout(trigger, 900);
+            }
+
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', armLazyLoad);
+            } else {
+                armLazyLoad();
+            }
+        })();
     </script>
-    <script async defer
-            src="https://maps.googleapis.com/maps/api/js?key=@key&libraries=@libraries&region=@region&language=@language&callback=@callback"></script>
 }
 else
 {

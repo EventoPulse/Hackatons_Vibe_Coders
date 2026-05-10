@@ -39,6 +39,7 @@
 
 @section Scripts {
     <script id="home-events-data" type="application/json">@Html.Raw(dataJson)</script>
+    @{ ViewData["GoogleMapsLibraries"] = "marker"; }
     <partial name="_GoogleMapsLoader" />
     <script src="~/js/home-map.js" asp-append-version="true"></script>
     <script>

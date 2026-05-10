@@ -3,7 +3,9 @@ namespace EventsApp.Models.AI
     public class AiSearchResult
     {
         public string? City { get; set; }
+        public string[] Cities { get; set; } = System.Array.Empty<string>();
         public string? Genre { get; set; }
+        public string[] Genres { get; set; } = System.Array.Empty<string>();
         public string? Keyword { get; set; }
         public string? DateIntent { get; set; }
         public bool NearMe { get; set; }

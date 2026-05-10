@@ -1,8 +1,10 @@
 using System.Globalization;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using EventsApp.Models;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 
 namespace EventsApp.Services.AI
@@ -22,7 +24,9 @@ Return ONLY valid JSON. No markdown. No explanations.
 Schema:
 {
   ""city"": string or null,
+  ""cities"": string[],
   ""genre"": string or null,
+  ""genres"": string[],
   ""keyword"": string or null,
   ""dateIntent"": string or null,
   ""dateFrom"": string or null,
@@ -35,9 +39,11 @@ Schema:
 
 Rules:
 - Detect Bulgarian cities: София/Sofia, Пловдив/Plovdiv, Варна/Varna, Бургас/Burgas, Русе/Ruse, Стара Загора/Stara Zagora, Плевен/Pleven, Велико Търново/Veliko Tarnovo, Благоевград/Blagoevgrad, Шумен/Shumen, Добрич/Dobrich, Сливен/Sliven, Перник/Pernik, Хасково/Haskovo, Ямбол/Yambol. Always return city in canonical English form or null.
-- Map genres to one of [Techno, House, HipHop, Pop, Rock, Jazz, Classical, Other] or null. техно=Techno, хаус=House, чалга=Pop, рок=Rock, джаз=Jazz.
+- Map genres to app enum names such as Nightlife, Electronic, House, Techno, Pop, Rock, Jazz, LiveMusic, Theater, Festival, Kids, Classical, Cinema, Sports, FoodAndDrinks, Workshop, Networking, Other.
 - If query says 'около мен' or 'near me', set nearMe=true.
 - Ignore filler words like 'искам', 'търся', 'покажи', 'намери', 'събитие', 'event'.
+- Detect broad regional intent too. If user says sea/beach/coast/морето/плаж/Черноморие, set cities to [""Varna"",""Burgas"",""Dobrich""].
+- Map genres to app enum names. If the query is broad, return multiple genres in genres. Example: ""party on the beach"" -> genres [""Nightlife"",""Electronic"",""House"",""Techno"",""Pop""], cities [""Varna"",""Burgas"",""Dobrich""].
 - dateIntent: short label such as 'tonight','tomorrow','this weekend','this week' or null.
 - dateFrom/dateTo: ISO 8601 date strings or null.
 - Return ONLY the JSON object.";
@@ -49,15 +55,17 @@ Rules:
         private readonly HttpClient _http;
         private readonly AiOptions _opts;
         private readonly ILogger<OpenAiService> _logger;
+        private readonly IMemoryCache _cache;
 
         public AiStatus LastStatus { get; private set; } = AiStatus.Disabled;
         public string? LastStatusDetail { get; private set; }
 
-        public OpenAiService(HttpClient http, IOptions<AiOptions> opts, ILogger<OpenAiService> logger)
+        public OpenAiService(HttpClient http, IOptions<AiOptions> opts, ILogger<OpenAiService> logger, IMemoryCache cache)
         {
             _http = http;
             _opts = opts.Value;
             _logger = logger;
+            _cache = cache;
 
             if (_opts.IsConfigured)
             {
@@ -79,7 +87,32 @@ Rules:
         public Task<AiSearchIntent?> InterpretAsync(string query, CancellationToken cancellationToken = default)
         {
             if (string.IsNullOrWhiteSpace(query)) return Task.FromResult<AiSearchIntent?>(null);
-            return InterpretInternalAsync(query, cancellationToken);
+            var trimmed = query.Trim();
+            if (trimmed.Length > _opts.MaxSearchQueryLength)
+            {
+                trimmed = trimmed[.._opts.MaxSearchQueryLength];
+            }
+
+            var cacheKey = "ai-search:" + Sha256(trimmed.ToLowerInvariant());
+            if (_cache.TryGetValue(cacheKey, out AiSearchIntent? cached))
+            {
+                LastStatus = AiStatus.Ok;
+                LastStatusDetail = "Cached";
+                return Task.FromResult(cached);
+            }
+
+            return InterpretCachedAsync(trimmed, cacheKey, cancellationToken);
+        }
+
+        private async Task<AiSearchIntent?> InterpretCachedAsync(string query, string cacheKey, CancellationToken cancellationToken)
+        {
+            var intent = await InterpretInternalAsync(query, cancellationToken);
+            if (intent != null)
+            {
+                _cache.Set(cacheKey, intent, TimeSpan.FromMinutes(Math.Clamp(_opts.SearchCacheMinutes, 5, 24 * 60)));
+            }
+
+            return intent;
         }
 
         private async Task<AiSearchIntent?> InterpretInternalAsync(string query, CancellationToken cancellationToken)
@@ -87,7 +120,7 @@ Rules:
             var userContent = "User query: " + query.Trim() +
                               "\nCurrent UTC date: " + DateTime.UtcNow.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
 
-            var raw = await CallChatAsync(SearchSystemPrompt, userContent, 400, 0.2, cancellationToken);
+            var raw = await CallChatAsync(SearchSystemPrompt, userContent, 220, 0.1, cancellationToken);
             if (raw == null) return null;
 
             var intent = ParseIntentJson(raw);
@@ -106,7 +139,8 @@ Rules:
         public async Task<string?> GenerateTextAsync(string prompt, string tag, CancellationToken cancellationToken = default)
         {
             if (string.IsNullOrWhiteSpace(prompt)) return null;
-            var raw = await CallChatAsync("You are a helpful assistant.", prompt, 800, 0.7, cancellationToken);
+            prompt = Truncate(prompt.Trim(), Math.Clamp(_opts.MaxPromptCharacters, 500, 6000));
+            var raw = await CallChatAsync("You are a helpful assistant. Keep answers concise.", prompt, 450, 0.5, cancellationToken);
             if (raw == null) return null;
             var clean = raw.Trim().Trim('"').Trim();
             return string.IsNullOrWhiteSpace(clean) ? null : clean;
@@ -133,7 +167,7 @@ Rules:
             var user = "Today: " + DateTime.UtcNow.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)
                 + "\nUser request: " + description.Trim();
 
-            var raw = await CallChatAsync(sys.ToString(), user, 300, 0.1, cancellationToken);
+            var raw = await CallChatAsync(sys.ToString(), user, 220, 0.1, cancellationToken);
             if (raw == null) return null;
             return ParseDayPlanIntentJson(raw);
         }
@@ -186,7 +220,7 @@ Rules:
                 }
             }
 
-            var raw = await CallChatAsync(sys.ToString(), user.ToString(), 800, 0.6, cancellationToken);
+            var raw = await CallChatAsync(sys.ToString(), user.ToString(), 600, 0.5, cancellationToken);
             if (raw == null) return null;
             return ParseDayPlanTimelineJson(raw);
         }
@@ -199,9 +233,9 @@ Rules:
             sb.AppendLine("Event title: " + title.Trim());
             if (!string.IsNullOrWhiteSpace(city)) sb.AppendLine("City: " + city.Trim());
             if (!string.IsNullOrWhiteSpace(genre)) sb.AppendLine("Genre: " + genre.Trim());
-            if (!string.IsNullOrWhiteSpace(hints)) sb.AppendLine("Extra notes: " + hints.Trim());
+            if (!string.IsNullOrWhiteSpace(hints)) sb.AppendLine("Extra notes: " + Truncate(hints.Trim(), 500));
 
-            var raw = await CallChatAsync(GetDescriptionSystemPrompt(lang), sb.ToString(), 200, 0.8, cancellationToken);
+            var raw = await CallChatAsync(GetDescriptionSystemPrompt(lang), sb.ToString(), 160, 0.7, cancellationToken);
             if (raw == null) return null;
             var clean = raw.Trim().Trim('"').Trim();
             return string.IsNullOrWhiteSpace(clean) ? null : clean;
@@ -298,6 +332,11 @@ Rules:
                     Longitude = ReadDouble(r, "longitude"),
                     Keywords = ReadStringArray(r, "keywords"),
                 };
+                intent.Cities = ReadStringArray(r, "cities");
+                if (intent.Cities.Length == 0 && !string.IsNullOrWhiteSpace(intent.City))
+                {
+                    intent.Cities = new[] { intent.City };
+                }
 
                 var genreStr = ReadString(r, "genre");
                 if (!string.IsNullOrWhiteSpace(genreStr))
@@ -311,11 +350,21 @@ Rules:
                             intent.Genre = g2;
                     }
                 }
+                intent.Genres = ReadGenreArray(r, "genres");
+                if (intent.Genres.Length == 0 && intent.Genre.HasValue)
+                {
+                    intent.Genres = new[] { intent.Genre.Value };
+                }
+                if (!intent.Genre.HasValue && intent.Genres.Length > 0)
+                {
+                    intent.Genre = intent.Genres[0];
+                }
 
                 if (TryParseDate(ReadString(r, "dateFrom"), out var df)) intent.DateFrom = df;
                 if (TryParseDate(ReadString(r, "dateTo"), out var dt)) intent.DateTo = dt;
 
                 if (intent.City == null && intent.Keyword == null && intent.Genre == null &&
+                    intent.Cities.Length == 0 && intent.Genres.Length == 0 &&
                     intent.DateFrom == null && intent.DateTo == null && !intent.NearMe &&
                     intent.Keywords.Length == 0)
                     return null;
@@ -358,17 +407,50 @@ Rules:
             return list.ToArray();
         }
 
+        private static EventGenre[] ReadGenreArray(JsonElement el, string prop)
+        {
+            if (!el.TryGetProperty(prop, out var v) || v.ValueKind != JsonValueKind.Array)
+                return Array.Empty<EventGenre>();
+
+            var list = new List<EventGenre>();
+            foreach (var item in v.EnumerateArray())
+            {
+                if (item.ValueKind != JsonValueKind.String) continue;
+                var s = item.GetString();
+                if (string.IsNullOrWhiteSpace(s)) continue;
+                if (Enum.TryParse<EventGenre>(s, ignoreCase: true, out var genre) && Enum.IsDefined(genre))
+                {
+                    if (!list.Contains(genre)) list.Add(genre);
+                    continue;
+                }
+
+                var normalized = NormalizeGenre(s);
+                if (normalized != null && Enum.TryParse<EventGenre>(normalized, ignoreCase: true, out var normalizedGenre) && !list.Contains(normalizedGenre))
+                {
+                    list.Add(normalizedGenre);
+                }
+            }
+
+            return list.ToArray();
+        }
+
         private static string? NormalizeGenre(string s)
         {
             return s.Trim().ToLowerInvariant() switch
             {
                 "техно" or "techno" => "Techno",
                 "хаус" or "house" => "House",
+                "електронна" or "електронно" or "electronic" or "edm" => "Electronic",
                 "хип хоп" or "хип-хоп" or "hip hop" or "hip-hop" or "hiphop" or "rap" or "рап" => "HipHop",
-                "поп" or "pop" or "чалга" or "chalga" => "Pop",
+                "поп" or "pop" => "Pop",
+                "чалга" or "chalga" => "Chalga",
                 "рок" or "rock" => "Rock",
                 "джаз" or "jazz" => "Jazz",
                 "класика" or "classical" or "classic" => "Classical",
+                "парти" or "party" or "клуб" or "club" or "nightlife" => "Nightlife",
+                "концерт" or "концерти" or "live" => "LiveMusic",
+                "театър" or "theater" or "theatre" => "Theater",
+                "фестивал" or "festival" => "Festival",
                 _ => null,
             };
         }
@@ -383,6 +465,12 @@ Rules:
 
         private static string Truncate(string s, int max) =>
             string.IsNullOrEmpty(s) || s.Length <= max ? s : s[..max] + "...";
+
+        private static string Sha256(string value)
+        {
+            var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(value));
+            return Convert.ToHexString(bytes);
+        }
 
         private static string? ExtractJson(string raw)
         {

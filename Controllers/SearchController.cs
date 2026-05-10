@@ -17,7 +17,7 @@ namespace EventsApp.Controllers
     public class SearchController : Controller
     {
         private const int ResultsPerSection = 12;
-        private const int MaxAiQueryLength = 240;
+        private const int MaxAiQueryLength = 180;
 
         private readonly ApplicationDbContext _db;
         private readonly UserManager<ApplicationUser> _userManager;
@@ -45,11 +45,18 @@ namespace EventsApp.Controllers
             var userId = _userManager.GetUserId(User);
             var isAdmin = User.IsInRole(GlobalConstants.Roles.Admin);
 
-            AiSearchIntent? intent = null;
-            if (_ai.IsEnabled)
+            var local = LocalEventSearchInterpreter.Parse(term, DateTime.UtcNow);
+            AiSearchIntent? intent = local.Intent;
+            var aiWasCalled = false;
+            if (_ai.IsEnabled && !local.HasStrongIntent && local.ShouldAskAi)
             {
                 var aiTerm = term.Length > MaxAiQueryLength ? term[..MaxAiQueryLength] : term;
-                intent = await _ai.InterpretAsync(aiTerm, cancellationToken);
+                var aiIntent = await _ai.InterpretAsync(aiTerm, cancellationToken);
+                if (aiIntent != null)
+                {
+                    intent = LocalEventSearchInterpreter.Merge(intent, aiIntent);
+                    aiWasCalled = true;
+                }
             }
 
             var keyword = ResolveKeyword(term, intent);
@@ -60,17 +67,16 @@ namespace EventsApp.Controllers
 
             var eventsQuery = visibleEventsQuery;
 
-            if (intent?.City != null)
+            var cityFilters = GetCityFilters(intent);
+            if (cityFilters.Count > 0)
             {
-                var cityVariants = CityCoordinates.GetEquivalentNames(intent.City);
-                eventsQuery = eventsQuery.Where(e => cityVariants.Contains(e.City));
+                eventsQuery = eventsQuery.Where(e => cityFilters.Contains(e.City));
             }
 
-            if (intent?.Genre.HasValue == true)
+            var genreFilters = GetGenreFilters(intent);
+            if (genreFilters.Count > 0)
             {
-                var g = intent.Genre.Value;
-                var genreToken = EventGenreTags.Token(g);
-                eventsQuery = eventsQuery.Where(e => e.Genre == g || (e.GenreTags != null && e.GenreTags.Contains(genreToken)));
+                eventsQuery = ApplyGenreSearch(eventsQuery, genreFilters);
             }
 
             if (intent?.DateFrom.HasValue == true)
@@ -85,13 +91,10 @@ namespace EventsApp.Controllers
                 eventsQuery = eventsQuery.Where(e => e.StartTime < dt);
             }
 
-            if (!string.IsNullOrWhiteSpace(keyword))
+            var keywordTerms = BuildKeywordTerms(keyword, intent);
+            if (keywordTerms.Count > 0)
             {
-                eventsQuery = eventsQuery.Where(e =>
-                    e.Title.Contains(keyword)
-                    || (e.Description != null && e.Description.Contains(keyword))
-                    || e.Address.Contains(keyword)
-                    || e.City.Contains(keyword));
+                eventsQuery = ApplyKeywordSearch(eventsQuery, keywordTerms);
             }
 
             var matchedEvents = await ProjectEventCards(eventsQuery, userId)
@@ -99,7 +102,7 @@ namespace EventsApp.Controllers
                 .Take(ResultsPerSection)
                 .ToListAsync(cancellationToken);
 
-            var matchedPosts = await ProjectPostCards(keyword, userId)
+            var matchedPosts = await ProjectPostCards(keywordTerms, userId)
                 .OrderByDescending(p => p.CreatedAt)
                 .Take(ResultsPerSection)
                 .ToListAsync(cancellationToken);
@@ -134,7 +137,7 @@ namespace EventsApp.Controllers
                 vm.InterpretedNearMe = intent.NearMe;
             }
 
-            ApplyHint(vm, intent != null);
+            ApplyHint(vm, intent != null, aiWasCalled);
             return View(vm);
         }
 
@@ -177,18 +180,26 @@ namespace EventsApp.Controllers
             });
         }
 
-        private IQueryable<PostCardViewModel> ProjectPostCards(string? keyword, string? userId)
+        private IQueryable<PostCardViewModel> ProjectPostCards(IReadOnlyList<string> keywordTerms, string? userId)
         {
             var posts = _db.Posts.AsNoTracking();
 
-            if (string.IsNullOrWhiteSpace(keyword))
+            if (keywordTerms.Count == 0)
             {
                 posts = posts.Where(_ => false);
             }
             else
             {
-                var term = keyword.Trim();
-                posts = posts.Where(p => p.Content.Contains(term) || (p.Event != null && p.Event.Title.Contains(term)));
+                var filtered = posts.Where(_ => false);
+                foreach (var term in keywordTerms)
+                {
+                    var pattern = "%" + EscapeLike(term) + "%";
+                    filtered = filtered.Concat(posts.Where(p =>
+                        EF.Functions.ILike(p.Content, pattern) ||
+                        (p.Event != null && EF.Functions.ILike(p.Event.Title, pattern))));
+                }
+
+                posts = filtered.Distinct();
             }
 
             return posts.Select(p => new PostCardViewModel
@@ -222,12 +233,19 @@ namespace EventsApp.Controllers
             });
         }
 
-        private void ApplyHint(SearchResultsViewModel vm, bool intentExtracted)
+        private void ApplyHint(SearchResultsViewModel vm, bool intentExtracted, bool aiWasCalled = false)
         {
             if (!_ai.IsEnabled)
             {
-                vm.AiHintLevel = "warning";
-                vm.AiHint = "Smart AI is OFF. Add OPENAI_API_KEY or AI_API_KEY to .env to enable.";
+                vm.AiHintLevel = "info";
+                vm.AiHint = "Smart search is using the local parser.";
+                return;
+            }
+
+            if (intentExtracted && !aiWasCalled)
+            {
+                vm.AiHintLevel = "success";
+                vm.AiHint = "Parsed locally without spending AI tokens.";
                 return;
             }
 
@@ -280,7 +298,9 @@ namespace EventsApp.Controllers
 
             var hasStructuredFilters =
                 !string.IsNullOrWhiteSpace(intent.City) ||
+                intent.Cities.Length > 0 ||
                 intent.Genre.HasValue ||
+                intent.Genres.Length > 0 ||
                 intent.DateFrom.HasValue ||
                 intent.DateTo.HasValue ||
                 intent.NearMe ||
@@ -289,6 +309,82 @@ namespace EventsApp.Controllers
                 intent.Longitude.HasValue;
 
             return hasStructuredFilters ? null : rawQuery;
+        }
+
+        private static IReadOnlyList<string> GetCityFilters(AiSearchIntent? intent)
+        {
+            if (intent == null) return Array.Empty<string>();
+            var cities = intent.Cities.Length > 0
+                ? intent.Cities
+                : (string.IsNullOrWhiteSpace(intent.City) ? Array.Empty<string>() : new[] { intent.City });
+
+            return cities
+                .SelectMany(CityCoordinates.GetEquivalentNames)
+                .Where(city => !string.IsNullOrWhiteSpace(city))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+        }
+
+        private static IReadOnlyList<EventGenre> GetGenreFilters(AiSearchIntent? intent)
+        {
+            if (intent == null) return Array.Empty<EventGenre>();
+            var genres = intent.Genres.Length > 0
+                ? intent.Genres
+                : (intent.Genre.HasValue ? new[] { intent.Genre.Value } : Array.Empty<EventGenre>());
+
+            return genres.Distinct().ToArray();
+        }
+
+        private static IReadOnlyList<string> BuildKeywordTerms(string? keyword, AiSearchIntent? intent)
+        {
+            var terms = new List<string>();
+            if (!string.IsNullOrWhiteSpace(keyword)) terms.Add(keyword.Trim());
+            if (intent?.Keywords is { Length: > 0 })
+            {
+                terms.AddRange(intent.Keywords.Where(k => !string.IsNullOrWhiteSpace(k)).Select(k => k.Trim()));
+            }
+
+            return terms
+                .SelectMany(term => term.Split(new[] { ' ', ',', ';', '\t', '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                .Where(term => term.Length >= 2)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Take(8)
+                .ToArray();
+        }
+
+        private static IQueryable<Event> ApplyGenreSearch(IQueryable<Event> query, IReadOnlyList<EventGenre> genres)
+        {
+            var enumMatches = query.Where(e => genres.Contains(e.Genre));
+            var tagMatches = query.Where(_ => false);
+
+            foreach (var genre in genres)
+            {
+                var token = EventGenreTags.Token(genre);
+                tagMatches = tagMatches.Concat(query.Where(e => e.GenreTags != null && e.GenreTags.Contains(token)));
+            }
+
+            return enumMatches.Concat(tagMatches).Distinct();
+        }
+
+        private static IQueryable<Event> ApplyKeywordSearch(IQueryable<Event> query, IReadOnlyList<string> terms)
+        {
+            var filtered = query.Where(_ => false);
+            foreach (var term in terms)
+            {
+                var pattern = "%" + EscapeLike(term) + "%";
+                filtered = filtered.Concat(query.Where(e =>
+                    EF.Functions.ILike(e.Title, pattern) ||
+                    (e.Description != null && EF.Functions.ILike(e.Description, pattern)) ||
+                    EF.Functions.ILike(e.Address, pattern) ||
+                    EF.Functions.ILike(e.City, pattern)));
+            }
+
+            return filtered.Distinct();
+        }
+
+        private static string EscapeLike(string value)
+        {
+            return value.Replace("\\", "\\\\").Replace("%", "\\%").Replace("_", "\\_");
         }
 
         private static IReadOnlyList<EventMapMarkerViewModel> BuildMarkers(IReadOnlyList<EventCardViewModel> events)

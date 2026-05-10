@@ -10,7 +10,7 @@ namespace EventsApp.Controllers.Api
     [Route("api/search")]
     public class SearchApiController : ControllerBase
     {
-        private const int MaxSmartQueryLength = 240;
+        private const int MaxSmartQueryLength = 180;
 
         private readonly IAiSearchService _ai;
         private readonly ILogger<SearchApiController> _logger;
@@ -53,45 +53,43 @@ namespace EventsApp.Controllers.Api
                 return Ok(result);
             }
 
-            if (!_ai.IsEnabled)
+            var local = LocalEventSearchInterpreter.Parse(query, DateTime.UtcNow);
+            AiSearchIntent? intent = local.Intent;
+            var usedAi = false;
+
+            if (!_ai.IsEnabled || local.HasStrongIntent || !local.ShouldAskAi)
             {
-                ApplyCityFallback(result, query);
+                ApplyIntent(result, intent);
                 ApplyKeywordFallback(result, query);
                 result.AiUsed = false;
-                result.AiStatus = "Disabled";
-                result.AiStatusDetail = "AI search is not configured. Add OPENAI_API_KEY or AI_API_KEY to .env or user-secrets.";
+                result.AiStatus = _ai.IsEnabled ? "Local" : "Disabled";
+                result.AiStatusDetail = _ai.IsEnabled
+                    ? "Parsed locally without spending AI tokens."
+                    : "AI search is not configured. Local smart search was used.";
                 return Ok(result);
             }
 
-            AiSearchIntent? intent = null;
             try
             {
-                intent = await _ai.InterpretAsync(query, ct);
+                var aiIntent = await _ai.InterpretAsync(query, ct);
+                if (aiIntent != null)
+                {
+                    intent = LocalEventSearchInterpreter.Merge(intent, aiIntent);
+                    usedAi = true;
+                }
             }
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "Smart search AI call threw");
             }
 
-            if (intent != null)
-            {
-                result.City = intent.City;
-                result.Genre = intent.Genre?.ToString();
-                result.Keyword = intent.Keyword ?? result.Keyword;
-                result.DateIntent = intent.DateIntent;
-                result.NearMe = intent.NearMe;
-                result.Latitude = intent.Latitude;
-                result.Longitude = intent.Longitude;
-                result.Keywords = intent.Keywords ?? Array.Empty<string>();
-                result.AiUsed = true;
-            }
-            else
-            {
-                result.AiUsed = false;
-            }
+            ApplyIntent(result, intent);
+            result.AiUsed = usedAi;
 
             result.AiStatus = _ai.LastStatus.ToString();
-            result.AiStatusDetail = _ai.LastStatusDetail;
+            result.AiStatusDetail = usedAi
+                ? _ai.LastStatusDetail
+                : (_ai.LastStatusDetail ?? "AI did not improve the local parse; local smart search was used.");
 
             ApplyCityFallback(result, query);
             ApplyKeywordFallback(result, query);
@@ -103,7 +101,7 @@ namespace EventsApp.Controllers.Api
         {
             if (result.Latitude.HasValue && result.Longitude.HasValue) return;
 
-            string? cityName = result.City;
+            string? cityName = result.Cities.FirstOrDefault() ?? result.City;
             if (string.IsNullOrWhiteSpace(cityName))
             {
                 foreach (var token in query.Split(new[] { ' ', ',', ';', '\t' }, StringSplitOptions.RemoveEmptyEntries))
@@ -122,7 +120,28 @@ namespace EventsApp.Controllers.Api
                 result.Latitude ??= lat;
                 result.Longitude ??= lng;
                 result.City ??= cityName;
+                if (result.Cities.Length == 0) result.Cities = new[] { cityName };
             }
+        }
+
+        private static void ApplyIntent(AiSearchResult result, AiSearchIntent? intent)
+        {
+            if (intent == null) return;
+
+            result.City = intent.City;
+            result.Cities = intent.Cities.Length > 0
+                ? intent.Cities
+                : (string.IsNullOrWhiteSpace(intent.City) ? Array.Empty<string>() : new[] { intent.City });
+            result.Genre = intent.Genre?.ToString();
+            result.Genres = intent.Genres.Length > 0
+                ? intent.Genres.Select(g => g.ToString()).ToArray()
+                : (intent.Genre.HasValue ? new[] { intent.Genre.Value.ToString() } : Array.Empty<string>());
+            result.Keyword = intent.Keyword ?? result.Keyword;
+            result.DateIntent = intent.DateIntent;
+            result.NearMe = intent.NearMe;
+            result.Latitude = intent.Latitude;
+            result.Longitude = intent.Longitude;
+            result.Keywords = intent.Keywords ?? Array.Empty<string>();
         }
 
         private static void ApplyKeywordFallback(AiSearchResult result, string query)
@@ -135,7 +154,9 @@ namespace EventsApp.Controllers.Api
 
             var hasStructuredFilters =
                 !string.IsNullOrWhiteSpace(result.City) ||
+                result.Cities.Length > 0 ||
                 !string.IsNullOrWhiteSpace(result.Genre) ||
+                result.Genres.Length > 0 ||
                 !string.IsNullOrWhiteSpace(result.DateIntent) ||
                 result.NearMe ||
                 result.Latitude.HasValue ||

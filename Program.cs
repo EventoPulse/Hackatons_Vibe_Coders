@@ -121,6 +121,7 @@ builder.Services.Configure<FormOptions>(options =>
 });
 
 builder.Services.AddLocalization();
+builder.Services.AddMemoryCache();
 builder.Services.AddControllersWithViews();
 builder.Services.AddSignalR();
 builder.Services.AddAntiforgery(opts =>
@@ -181,7 +182,7 @@ builder.Services.AddRateLimiter(options =>
     options.AddPolicy("ai-light", context =>
         RateLimitPartition.GetFixedWindowLimiter("ai-light:" + GetRateLimitKey(context), _ => new FixedWindowRateLimiterOptions
         {
-            PermitLimit = 20,
+            PermitLimit = 10,
             Window = TimeSpan.FromMinutes(1),
             QueueLimit = 0,
             QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
@@ -191,7 +192,7 @@ builder.Services.AddRateLimiter(options =>
     options.AddPolicy("ai-heavy", context =>
         RateLimitPartition.GetFixedWindowLimiter("ai-heavy:" + GetRateLimitKey(context), _ => new FixedWindowRateLimiterOptions
         {
-            PermitLimit = 4,
+            PermitLimit = 2,
             Window = TimeSpan.FromMinutes(10),
             QueueLimit = 0,
             QueueProcessingOrder = QueueProcessingOrder.OldestFirst,

@@ -77,26 +77,34 @@
     function eventMatchesFilter(ev, filter) {
         if (!filter) return true;
 
-        if (filter.city) {
-            var fcity = normalize(filter.city);
-            var fc = lookupCityCoords(filter.city);
+        var filterCities = (filter.cities && filter.cities.length) ? filter.cities.slice() : [];
+        if (filter.city) filterCities.push(filter.city);
+        filterCities = filterCities.map(normalize).filter(Boolean);
+
+        if (filterCities.length) {
             var ec = lookupCityCoords(ev.city);
-            var byName = normalize(ev.city) === fcity ||
-                normalize(ev.city).indexOf(fcity) !== -1 ||
-                fcity.indexOf(normalize(ev.city)) !== -1;
-            var byCoords = !!(fc && ec && fc[0] === ec[0] && fc[1] === ec[1]);
-            if (!byName && !byCoords) return false;
+            var cityMatched = filterCities.some(function (city) {
+                var fc = lookupCityCoords(city);
+                var evCity = normalize(ev.city);
+                var byName = evCity === city || evCity.indexOf(city) !== -1 || city.indexOf(evCity) !== -1;
+                var byCoords = !!(fc && ec && fc[0] === ec[0] && fc[1] === ec[1]);
+                return byName || byCoords;
+            });
+            if (!cityMatched) return false;
         }
 
-        if (filter.genre && normalize(ev.genre) !== normalize(filter.genre)) return false;
+        var filterGenres = (filter.genres && filter.genres.length) ? filter.genres.slice() : [];
+        if (filter.genre) filterGenres.push(filter.genre);
+        filterGenres = filterGenres.map(normalize).filter(Boolean);
+        if (filterGenres.length && filterGenres.indexOf(normalize(ev.genre)) === -1) return false;
 
         var terms = (filter.keywords && filter.keywords.length) ? filter.keywords.slice() : [];
         if (filter.keyword) terms.push(filter.keyword);
         terms = terms.map(normalize)
             .filter(function (t) { return t && t.length >= 2; })
             .filter(function (t) {
-                if (filter.city && t === normalize(filter.city)) return false;
-                if (filter.genre && t === normalize(filter.genre)) return false;
+                if (filterCities.indexOf(t) !== -1) return false;
+                if (filterGenres.indexOf(t) !== -1) return false;
                 return true;
             });
         if (terms.length === 0) return true;
@@ -104,9 +112,9 @@
         var haystack = [ev.title, ev.description, ev.venueName, ev.city, ev.address, ev.genre]
             .map(normalize).join(' ');
         for (var i = 0; i < terms.length; i++) {
-            if (haystack.indexOf(terms[i]) === -1) return false;
+            if (haystack.indexOf(terms[i]) !== -1) return true;
         }
-        return true;
+        return false;
     }
 
     function popupHtml(m) {
@@ -252,14 +260,24 @@
         function localFallback(query) {
             var q = normalize(query);
             var foundCity = null;
+            var cities = [];
+            var genres = [];
             for (var key in CITY_FALLBACK) {
                 if (Object.prototype.hasOwnProperty.call(CITY_FALLBACK, key) && q.indexOf(key) !== -1) {
                     foundCity = key; break;
                 }
             }
+            if (q.indexOf('sea') !== -1 || q.indexOf('beach') !== -1 || q.indexOf('coast') !== -1 ||
+                q.indexOf('море') !== -1 || q.indexOf('плаж') !== -1) {
+                cities = ['varna', 'burgas', 'dobrich'];
+            }
+            if (q.indexOf('party') !== -1 || q.indexOf('club') !== -1 || q.indexOf('парти') !== -1 || q.indexOf('клуб') !== -1) {
+                genres = ['Nightlife', 'Electronic', 'House', 'Techno', 'Pop'];
+            }
             var coords = foundCity ? CITY_FALLBACK[foundCity] : null;
             return {
-                rawQuery: query, city: foundCity, genre: null, keyword: query,
+                rawQuery: query, city: foundCity, cities: cities, genre: null, genres: genres,
+                keyword: (!foundCity && !cities.length && !genres.length) ? query : null,
                 keywords: query.split(/\s+/).filter(function (t) { return t.length >= 2; }),
                 latitude: coords ? coords[0] : null, longitude: coords ? coords[1] : null,
                 nearMe: false, aiUsed: false, aiStatus: 'LocalFallback'
@@ -269,8 +287,10 @@
         function describeFilter(f) {
             var parts = [];
             if (f.aiUsed) parts.push('AI:');
-            if (f.city) parts.push('city=' + f.city);
-            if (f.genre) parts.push('genre=' + f.genre);
+            var cities = (f.cities && f.cities.length) ? f.cities : (f.city ? [f.city] : []);
+            var genres = (f.genres && f.genres.length) ? f.genres : (f.genre ? [f.genre] : []);
+            if (cities.length) parts.push('city=' + cities.join('/'));
+            if (genres.length) parts.push('genre=' + genres.slice(0, 3).join('/'));
             if (f.dateIntent) parts.push('when=' + f.dateIntent);
             if (f.keyword && !f.city && !f.genre) parts.push('keyword=' + f.keyword);
             if (f.nearMe) parts.push('near me');
@@ -293,7 +313,8 @@
             }).then(function (data) {
                 var filter = {
                     rawQuery: data.rawQuery || query,
-                    city: data.city || null, genre: data.genre || null,
+                    city: data.city || null, cities: data.cities || [],
+                    genre: data.genre || null, genres: data.genres || [],
                     keyword: data.keyword || null, keywords: data.keywords || [],
                     dateIntent: data.dateIntent || null,
                     latitude: data.latitude == null ? null : data.latitude,
