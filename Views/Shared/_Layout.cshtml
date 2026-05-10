@@ -57,23 +57,28 @@
 
     <script>
         (function () {
-            var lang = localStorage.getItem('appLang') || 'bg';
+            function applyLangCookies(lang) {
+                var exp = 'expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+                if (lang === 'en') {
+                    document.cookie = 'googtrans=/bg/en; path=/;';
+                    document.cookie = 'googtrans=/bg/en; path=/; domain=.' + location.hostname;
+                } else {
+                    document.cookie = 'googtrans=; ' + exp;
+                    document.cookie = 'googtrans=; ' + exp + ' domain=' + location.hostname + ';';
+                    document.cookie = 'googtrans=; ' + exp + ' domain=.' + location.hostname + ';';
+                }
+            }
+
+            var storedLang = localStorage.getItem('appLang');
+            var lang = storedLang === 'en' ? 'en' : 'bg';
+            window.__eventoApplyLangCookies = applyLangCookies;
             document.documentElement.lang = lang;
             var meta = document.querySelector('meta[name="x-app-lang"]');
             if (meta) meta.setAttribute('content', lang);
-            var exp = 'expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-            if (lang === 'en') {
-                document.cookie = 'googtrans=/bg/en; path=/;';
-                document.cookie = 'googtrans=/bg/en; path=/; domain=.' + location.hostname;
-            } else {
-                document.cookie = 'googtrans=; ' + exp;
-                document.cookie = 'googtrans=; ' + exp + ' domain=' + location.hostname + ';';
-                document.cookie = 'googtrans=; ' + exp + ' domain=.' + location.hostname + ';';
-            }
+            applyLangCookies(lang);
             // Set button label immediately (no flash)
             document.addEventListener('DOMContentLoaded', function () {
                 var btn = document.getElementById('app-lang-btn');
-                if (btn) btn.textContent = lang === 'en' ? '🇧🇬 BG' : '🇬🇧 EN';
                 if (btn) btn.textContent = lang === 'en' ? 'BG' : 'EN';
                 // groove-translate-btn visibility is handled by i18n.js
             });
@@ -252,15 +257,7 @@
             var current = localStorage.getItem('appLang') || 'bg';
             var next = current === 'en' ? 'bg' : 'en';
             localStorage.setItem('appLang', next);
-            var exp = 'expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-            if (next === 'en') {
-                document.cookie = 'googtrans=/bg/en; path=/;';
-                document.cookie = 'googtrans=/bg/en; path=/; domain=.' + location.hostname;
-            } else {
-                document.cookie = 'googtrans=; ' + exp;
-                document.cookie = 'googtrans=; ' + exp + ' domain=' + location.hostname + ';';
-                document.cookie = 'googtrans=; ' + exp + ' domain=.' + location.hostname + ';';
-            }
+            if (window.__eventoApplyLangCookies) window.__eventoApplyLangCookies(next);
             location.reload();
         }
 

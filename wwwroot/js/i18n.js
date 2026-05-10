@@ -642,6 +642,11 @@
         'Управление': 'Manage',
         'Изчисти': 'Clear',
         'Филтър': 'Filter',
+        'Разгледай': 'Explore',
+        'Разгледай събития': 'Explore Events',
+        'Следвани': 'Following',
+        'Препоръчани': 'Recommended',
+        'Преведи': 'Translate',
 
         // EVENTS
         'Събитие': 'Event',
@@ -789,8 +794,13 @@
         'година': 'year',
         'години': 'years',
         'този месец': 'this month',
-        'going': 'going',
-        'saved': 'saved',
+        'Отивам': 'going',
+        'запазени': 'saved',
+        'Активност около събитията.': 'Event-first activity.',
+        'Споделени събития': 'Shared Events',
+        'Отивам / Билети': 'Going / Tickets',
+        'Събитията, които искаш да запазиш близо.': 'Events you want to keep close.',
+        'Редактирай предпочитания': 'Edit preferences',
 
         // TICKETS PAGE
         'Локация': 'Location',
@@ -986,10 +996,81 @@
     }
 
     var SKIP_TAGS = { SCRIPT: 1, STYLE: 1, NOSCRIPT: 1, TEXTAREA: 1, CODE: 1, PRE: 1, INPUT: 1, SELECT: 1 };
+    var CP1252_BYTES = {
+        0x20AC: 0x80, 0x201A: 0x82, 0x0192: 0x83, 0x201E: 0x84, 0x2026: 0x85, 0x2020: 0x86, 0x2021: 0x87,
+        0x02C6: 0x88, 0x2030: 0x89, 0x0160: 0x8A, 0x2039: 0x8B, 0x0152: 0x8C, 0x017D: 0x8E,
+        0x2018: 0x91, 0x2019: 0x92, 0x201C: 0x93, 0x201D: 0x94, 0x2022: 0x95, 0x2013: 0x96, 0x2014: 0x97,
+        0x02DC: 0x98, 0x2122: 0x99, 0x0161: 0x9A, 0x203A: 0x9B, 0x0153: 0x9C, 0x017E: 0x9E, 0x0178: 0x9F
+    };
 
     function shouldSkipElement(el) {
-        return !el || SKIP_TAGS[el.tagName] || !!(el.closest && el.closest('[data-no-i18n], .gm-style'));
+        return !el
+            || SKIP_TAGS[el.tagName]
+            || !!(el.closest && el.closest('[data-no-i18n], .notranslate, [translate="no"], .gm-style'));
     }
+
+    function hasMojibake(value) {
+        return /[ÐÑÂÃâ]/.test(value || '');
+    }
+
+    function repairMojibake(value) {
+        if (!value || !hasMojibake(value)) return value;
+        try {
+            var bytes = [];
+            for (var i = 0; i < value.length; i += 1) {
+                var code = value.charCodeAt(i);
+                if (code <= 0xFF) {
+                    bytes.push(code);
+                } else if (CP1252_BYTES[code] !== undefined) {
+                    bytes.push(CP1252_BYTES[code]);
+                } else {
+                    return value;
+                }
+            }
+
+            var encoded = bytes.map(function (b) {
+                return '%' + b.toString(16).padStart(2, '0');
+            }).join('');
+            return decodeURIComponent(encoded);
+        } catch (_) {
+            return value;
+        }
+    }
+
+    function getOriginal(el, name, current) {
+        var attr = 'data-i18n-original-' + name;
+        if (!el.hasAttribute(attr)) {
+            el.setAttribute(attr, current || '');
+        }
+        return el.getAttribute(attr) || '';
+    }
+
+    function pickTranslation(entry, lang, fallback) {
+        if (!entry) return fallback;
+        var value = entry[lang];
+        if (value === undefined || value === null) return fallback;
+        return repairMojibake(String(value));
+    }
+
+    function buildBgDictionary() {
+        var dict = {};
+        Object.keys(EN).forEach(function (bgText) {
+            var enText = EN[bgText];
+            if (enText && !dict[enText]) {
+                dict[enText] = repairMojibake(bgText);
+            }
+        });
+
+        Object.keys(KEYED).forEach(function (translationKey) {
+            var entry = KEYED[translationKey];
+            if (!entry || !entry.en || !entry.bg || dict[entry.en]) return;
+            dict[entry.en] = repairMojibake(String(entry.bg));
+        });
+
+        return dict;
+    }
+
+    var BG = buildBgDictionary();
 
     function translateTextNode(node, dict) {
         var original = node.textContent;
@@ -1032,32 +1113,37 @@
 
         var key = el.getAttribute('data-i18n');
         var entry = key ? KEYED[key] : null;
-        if (entry && entry[lang] !== undefined) {
-            el.textContent = entry[lang];
+        if (key) {
+            var originalText = getOriginal(el, 'text', el.textContent);
+            el.textContent = pickTranslation(entry, lang, originalText);
         }
 
         key = el.getAttribute('data-i18n-html');
         entry = key ? KEYED[key] : null;
-        if (entry && entry[lang] !== undefined) {
-            el.innerHTML = entry[lang];
+        if (key) {
+            var originalHtml = getOriginal(el, 'html', el.innerHTML);
+            el.innerHTML = pickTranslation(entry, lang, originalHtml);
         }
 
         key = el.getAttribute('data-i18n-placeholder');
         entry = key ? KEYED[key] : null;
-        if (entry && entry[lang] !== undefined) {
-            el.setAttribute('placeholder', entry[lang]);
+        if (key) {
+            var originalPlaceholder = getOriginal(el, 'placeholder', el.getAttribute('placeholder') || '');
+            el.setAttribute('placeholder', pickTranslation(entry, lang, originalPlaceholder));
         }
 
         key = el.getAttribute('data-i18n-title');
         entry = key ? KEYED[key] : null;
-        if (entry && entry[lang] !== undefined) {
-            el.setAttribute('title', entry[lang]);
+        if (key) {
+            var originalTitle = getOriginal(el, 'title', el.getAttribute('title') || '');
+            el.setAttribute('title', pickTranslation(entry, lang, originalTitle));
         }
 
         key = el.getAttribute('data-i18n-aria-label');
         entry = key ? KEYED[key] : null;
-        if (entry && entry[lang] !== undefined) {
-            el.setAttribute('aria-label', entry[lang]);
+        if (key) {
+            var originalAria = getOriginal(el, 'aria-label', el.getAttribute('aria-label') || '');
+            el.setAttribute('aria-label', pickTranslation(entry, lang, originalAria));
         }
     }
 
@@ -1077,11 +1163,9 @@
         // Always apply keyed translations (works for both bg and en)
         translateKeyed(lang);
 
-        // Only run text-node replacement when switching to English
-        if (lang !== 'bg') {
-            walkAndTranslate(document.body, EN);
-            translateAttributes(document.body, EN);
-        }
+        var dict = lang === 'bg' ? BG : EN;
+        walkAndTranslate(document.body, dict);
+        translateAttributes(document.body, dict);
     }
 
     // ── Boot ───────────────────────────────────────────────────────────────────
@@ -1154,7 +1238,10 @@
                         if (node.nodeType !== 1) return;
                         if (shouldSkipElement(node)) return;
                         translateKeyed(lang, node);
-                        if (lang !== 'bg') {
+                        if (lang === 'bg') {
+                            walkAndTranslate(node, BG);
+                            translateAttributes(node, BG);
+                        } else {
                             walkAndTranslate(node, EN);
                             translateAttributes(node, EN);
                             showTranslateBtns(node);
