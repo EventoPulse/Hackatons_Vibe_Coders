@@ -334,6 +334,55 @@ namespace EventsApp.Controllers.Api
             return Ok(rows);
         }
 
+        [HttpPost("validators")]
+        public async Task<IActionResult> AddValidator([FromBody] ValidatorRequest request)
+        {
+            if (!IsOrganizer) return Forbid();
+            if (string.IsNullOrWhiteSpace(request.Email)) return BadRequest(new { error = "Имейлът е задължителен." });
+
+            var user = await _userManager.FindByEmailAsync(request.Email.Trim());
+            if (user == null) return NotFound(new { error = "Няма потребител с този имейл." });
+
+            if (!await _userManager.IsInRoleAsync(user, GlobalConstants.Roles.Validator))
+                await _userManager.AddToRoleAsync(user, GlobalConstants.Roles.Validator);
+
+            var existing = await _db.OrganizerValidatorAssignments
+                .FirstOrDefaultAsync(a => a.OrganizerId == UserId && a.ValidatorUserId == user.Id && a.OrganizerProfileId == request.OrganizerProfileId);
+
+            if (existing == null)
+            {
+                _db.OrganizerValidatorAssignments.Add(new OrganizerValidatorAssignment
+                {
+                    OrganizerId = UserId,
+                    ValidatorUserId = user.Id,
+                    OrganizerProfileId = request.OrganizerProfileId,
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow,
+                });
+            }
+            else
+            {
+                existing.IsActive = true;
+                existing.UpdatedAt = DateTime.UtcNow;
+            }
+
+            await _db.SaveChangesAsync();
+            return Ok(new { saved = true });
+        }
+
+        [HttpDelete("validators/{id:int}")]
+        public async Task<IActionResult> RemoveValidator(int id)
+        {
+            if (!IsOrganizer) return Forbid();
+            var assignment = await _db.OrganizerValidatorAssignments.FirstOrDefaultAsync(a => a.Id == id && a.OrganizerId == UserId);
+            if (assignment == null) return NotFound();
+            assignment.IsActive = false;
+            assignment.UpdatedAt = DateTime.UtcNow;
+            await _db.SaveChangesAsync();
+            return Ok(new { removed = true });
+        }
+
         [HttpGet("workspaces")]
         public async Task<IActionResult> Workspaces()
         {
@@ -498,3 +547,5 @@ public record WorkspaceRequest(
     string? City,
     string? Country,
     bool IsDefault);
+
+public record ValidatorRequest(string Email, int? OrganizerProfileId);

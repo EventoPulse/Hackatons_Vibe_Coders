@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
 
 namespace EventsApp.Controllers.Api
 {
@@ -249,6 +250,60 @@ namespace EventsApp.Controllers.Api
             return Ok(new { isApproved = ev.IsApproved });
         }
 
+        [HttpGet("event-changes")]
+        public async Task<IActionResult> EventChanges()
+        {
+            if (!IsAdmin) return Forbid();
+            var rows = await _db.EventChangeRequests
+                .AsNoTracking()
+                .Where(r => r.Status == EventChangeRequestStatus.Pending)
+                .Include(r => r.Event)
+                .Include(r => r.Organizer)
+                .OrderBy(r => r.SubmittedAt)
+                .Select(r => new
+                {
+                    id = r.Id,
+                    eventId = r.EventId,
+                    eventTitle = r.Event.Title,
+                    organizerName = r.Organizer.UserName ?? string.Empty,
+                    submittedAt = r.SubmittedAt,
+                    changeJson = r.ChangeJson,
+                    status = r.Status.ToString(),
+                })
+                .ToListAsync();
+            return Ok(rows);
+        }
+
+        [HttpPost("event-changes/{id:int}/approve")]
+        public async Task<IActionResult> ApproveEventChange(int id)
+        {
+            if (!IsAdmin) return Forbid();
+            var req = await _db.EventChangeRequests.Include(r => r.Event).FirstOrDefaultAsync(r => r.Id == id);
+            if (req == null) return NotFound();
+            if (req.Status != EventChangeRequestStatus.Pending) return BadRequest(new { error = "Заявката вече е обработена." });
+            ApplyEventChange(req.Event, req.ChangeJson);
+            req.Status = EventChangeRequestStatus.Approved;
+            req.ReviewedAt = DateTime.UtcNow;
+            req.ReviewedByAdminId = _userManager.GetUserId(User);
+            req.Event.IsApproved = true;
+            await _db.SaveChangesAsync();
+            return Ok(new { approved = true });
+        }
+
+        [HttpPost("event-changes/{id:int}/reject")]
+        public async Task<IActionResult> RejectEventChange(int id)
+        {
+            if (!IsAdmin) return Forbid();
+            var req = await _db.EventChangeRequests.FirstOrDefaultAsync(r => r.Id == id);
+            if (req == null) return NotFound();
+            if (req.Status != EventChangeRequestStatus.Pending) return BadRequest(new { error = "Заявката вече е обработена." });
+            req.Status = EventChangeRequestStatus.Rejected;
+            req.ReviewedAt = DateTime.UtcNow;
+            req.ReviewedByAdminId = _userManager.GetUserId(User);
+            await _db.SaveChangesAsync();
+            return Ok(new { rejected = true });
+        }
+
         // GET /api/admin/users
         [HttpGet("users")]
         public async Task<IActionResult> Users()
@@ -331,6 +386,25 @@ namespace EventsApp.Controllers.Api
             await _db.SaveChangesAsync();
 
             return Ok(new { message = "Публикацията е изтрита." });
+        }
+        private static void ApplyEventChange(Event ev, string changeJson)
+        {
+            using var doc = JsonDocument.Parse(changeJson);
+            var root = doc.RootElement;
+            if (root.TryGetProperty("Title", out var title)) ev.Title = title.GetString() ?? ev.Title;
+            if (root.TryGetProperty("Description", out var description)) ev.Description = description.GetString();
+            if (root.TryGetProperty("City", out var city)) ev.City = city.GetString() ?? ev.City;
+            if (root.TryGetProperty("Address", out var address)) ev.Address = address.GetString() ?? ev.Address;
+            if (root.TryGetProperty("ImageUrl", out var imageUrl)) ev.ImageUrl = imageUrl.GetString();
+            if (root.TryGetProperty("OrganizerProfileId", out var profileId)) ev.OrganizerProfileId = profileId.ValueKind == JsonValueKind.Null ? null : profileId.GetInt32();
+            if (root.TryGetProperty("BusinessWorkspaceId", out var workspaceId)) ev.BusinessWorkspaceId = workspaceId.ValueKind == JsonValueKind.Null ? null : workspaceId.GetInt32();
+            if (root.TryGetProperty("Latitude", out var lat)) ev.Latitude = lat.ValueKind == JsonValueKind.Null ? null : lat.GetDouble();
+            if (root.TryGetProperty("Longitude", out var lng)) ev.Longitude = lng.ValueKind == JsonValueKind.Null ? null : lng.GetDouble();
+            if (root.TryGetProperty("StartTime", out var start) && start.TryGetDateTime(out var startTime)) ev.StartTime = startTime;
+            if (root.TryGetProperty("EndTime", out var end) && end.TryGetDateTime(out var endTime)) ev.EndTime = endTime;
+            if (root.TryGetProperty("Genre", out var genre) && Enum.TryParse<EventGenre>(genre.ToString(), true, out var parsedGenre)) ev.Genre = parsedGenre;
+            if (root.TryGetProperty("TicketingMode", out var ticketingMode) && Enum.TryParse<EventTicketingMode>(ticketingMode.ToString(), true, out var parsedMode)) ev.TicketingMode = parsedMode;
+            if (root.TryGetProperty("VenueLayoutId", out var layoutId)) ev.VenueLayoutId = layoutId.ValueKind == JsonValueKind.Null ? null : layoutId.GetInt32();
         }
     }
 }
