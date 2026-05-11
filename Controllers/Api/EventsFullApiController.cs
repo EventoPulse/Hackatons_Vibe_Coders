@@ -2,6 +2,7 @@ using EventsApp.Common;
 using EventsApp.Data;
 using EventsApp.Models;
 using EventsApp.Services;
+using EventsApp.Services.AI;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -22,19 +23,22 @@ namespace EventsApp.Controllers.Api
         private readonly IMediaUploadService _media;
         private readonly IEventDeletionService _eventDeletion;
         private readonly IRecurringEventService _recurringEvents;
+        private readonly IAiSearchService _ai;
 
         public EventsFullApiController(
             ApplicationDbContext db,
             UserManager<ApplicationUser> userManager,
             IMediaUploadService media,
             IEventDeletionService eventDeletion,
-            IRecurringEventService recurringEvents)
+            IRecurringEventService recurringEvents,
+            IAiSearchService ai)
         {
             _db = db;
             _userManager = userManager;
             _media = media;
             _eventDeletion = eventDeletion;
             _recurringEvents = recurringEvents;
+            _ai = ai;
         }
 
         private string? CurrentUserId => User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -370,6 +374,8 @@ namespace EventsApp.Controllers.Api
                 ImageUrl = request.ImageUrl?.Trim(),
                 Latitude = request.Latitude,
                 Longitude = request.Longitude,
+                TicketingMode = ParseTicketingMode(request.TicketingMode),
+                VenueLayoutId = ParseTicketingMode(request.TicketingMode) == EventTicketingMode.GeneralAdmission ? null : request.VenueLayoutId,
                 IsApproved = false,
             };
 
@@ -415,6 +421,8 @@ namespace EventsApp.Controllers.Api
             ev.BusinessWorkspaceId = request.BusinessWorkspaceId ?? profile.BusinessWorkspaceId;
             ev.Latitude = request.Latitude;
             ev.Longitude = request.Longitude;
+            ev.TicketingMode = ParseTicketingMode(request.TicketingMode);
+            ev.VenueLayoutId = ev.TicketingMode == EventTicketingMode.GeneralAdmission ? null : request.VenueLayoutId;
 
             if (!IsAdmin)
             {
@@ -424,6 +432,28 @@ namespace EventsApp.Controllers.Api
             await _db.SaveChangesAsync();
             await UpsertSeriesAsync(ev, request, userId);
             return Ok(new { id = ev.Id, title = ev.Title, isApproved = ev.IsApproved });
+        }
+
+        [HttpPost("generate-description")]
+        [Authorize(Policy = "ApiAuth")]
+        public async Task<IActionResult> GenerateDescription([FromBody] GenerateDescriptionRequest request, CancellationToken cancellationToken)
+        {
+            if (string.IsNullOrWhiteSpace(request.Title))
+                return BadRequest(new { ok = false, error = "Въведи заглавие първо." });
+            if (!_ai.IsEnabled)
+                return StatusCode(503, new { ok = false, error = "AI не е конфигуриран." });
+
+            var description = await _ai.GenerateEventDescriptionAsync(
+                request.Title,
+                request.City,
+                request.Genre,
+                request.Hints,
+                request.Lang,
+                cancellationToken);
+
+            return string.IsNullOrWhiteSpace(description)
+                ? StatusCode(503, new { ok = false, error = _ai.LastStatusDetail ?? "AI не върна текст." })
+                : Ok(new { ok = true, description });
         }
 
         [HttpDelete("{id:int}")]
@@ -611,6 +641,13 @@ namespace EventsApp.Controllers.Api
             return e.OrganizerProfile?.DisplayName ?? "";
         }
 
+        private static EventTicketingMode ParseTicketingMode(string? value)
+        {
+            return Enum.TryParse<EventTicketingMode>(value, true, out var mode)
+                ? mode
+                : EventTicketingMode.GeneralAdmission;
+        }
+
         private async Task UpsertSeriesAsync(Event ev, CreateEventRequest request, string userId)
         {
             if (!Enum.TryParse<EventRecurrenceType>(request.RecurrenceType, true, out var recurrenceType) ||
@@ -675,6 +712,8 @@ namespace EventsApp.Controllers.Api
             public string? ImageUrl { get; set; }
             public int? OrganizerProfileId { get; set; }
             public int? BusinessWorkspaceId { get; set; }
+            public string? TicketingMode { get; set; }
+            public int? VenueLayoutId { get; set; }
             public double? Latitude { get; set; }
             public double? Longitude { get; set; }
             public string? RecurrenceType { get; set; }
@@ -685,6 +724,15 @@ namespace EventsApp.Controllers.Api
             public TimeSpan? RecurrenceStartTime { get; set; }
             public TimeSpan? RecurrenceEndTime { get; set; }
             public string? TimeZone { get; set; }
+        }
+
+        public class GenerateDescriptionRequest
+        {
+            public string Title { get; set; } = "";
+            public string? City { get; set; }
+            public string? Genre { get; set; }
+            public string? Hints { get; set; }
+            public string? Lang { get; set; }
         }
     }
 }

@@ -22,37 +22,21 @@ namespace EventsApp.Controllers.Api
             _userManager = userManager;
         }
 
-        // GET /api/messages/conversations
         [HttpGet("conversations")]
         public async Task<IActionResult> Conversations()
         {
             var userId = _userManager.GetUserId(User)!;
-
             var convos = await _db.Conversations
                 .AsNoTracking()
                 .Where(c => c.ParticipantOneId == userId || c.ParticipantTwoId == userId)
                 .Include(c => c.ParticipantOne)
                 .Include(c => c.ParticipantTwo)
+                .Include(c => c.OrganizerProfile)
                 .Include(c => c.Messages.OrderByDescending(m => m.CreatedAt).Take(1))
                 .OrderByDescending(c => c.UpdatedAt)
                 .ToListAsync();
 
-            return Ok(convos.Select(c =>
-            {
-                var other = c.ParticipantOneId == userId ? c.ParticipantTwo : c.ParticipantOne;
-                var last = c.Messages.OrderByDescending(m => m.CreatedAt).FirstOrDefault();
-                return new
-                {
-                    token = c.Token.ToString(),
-                    otherUserId = other.Id,
-                    otherUserName = other.UserName,
-                    otherUserImageUrl = other.ProfileImageUrl,
-                    lastMessage = last?.Content,
-                    lastMessageAt = last?.CreatedAt,
-                    unreadCount = c.Messages.Count(m => m.SenderId != userId && m.SeenAt == null && !m.IsDeleted),
-                    status = c.Status.ToString(),
-                };
-            }));
+            return Ok(convos.Select(c => MapConversation(c, userId)));
         }
 
         [HttpPost("conversations")]
@@ -64,13 +48,13 @@ namespace EventsApp.Controllers.Api
             if (string.IsNullOrWhiteSpace(otherUserId) || otherUserId == userId)
                 return BadRequest(new { error = "Невалиден получател." });
 
-            var otherExists = await _db.Users.AnyAsync(u => u.Id == otherUserId);
-            if (!otherExists) return NotFound(new { error = "Потребителят не е намерен." });
+            if (!await _db.Users.AnyAsync(u => u.Id == otherUserId))
+                return NotFound(new { error = "Потребителят не е намерен." });
 
-            var convo = await _db.Conversations
-                .FirstOrDefaultAsync(c =>
-                    (c.ParticipantOneId == userId && c.ParticipantTwoId == otherUserId) ||
-                    (c.ParticipantOneId == otherUserId && c.ParticipantTwoId == userId));
+            var convo = await _db.Conversations.FirstOrDefaultAsync(c =>
+                c.OrganizerProfileId == null &&
+                ((c.ParticipantOneId == userId && c.ParticipantTwoId == otherUserId) ||
+                 (c.ParticipantOneId == otherUserId && c.ParticipantTwoId == userId)));
 
             if (convo == null)
             {
@@ -90,18 +74,59 @@ namespace EventsApp.Controllers.Api
             return Ok(new { token = convo.Token.ToString() });
         }
 
-        // GET /api/messages/conversations/{token}
+        [HttpPost("conversations/page")]
+        public async Task<IActionResult> FindOrCreatePageConversation([FromBody] StartPageConversationDto dto)
+        {
+            var userId = _userManager.GetUserId(User)!;
+            var page = await _db.OrganizerProfiles
+                .AsNoTracking()
+                .Include(p => p.BusinessWorkspace)
+                .FirstOrDefaultAsync(p => p.Id == dto.OrganizerProfileId && p.IsActive && p.IsApproved);
+
+            if (page == null) return NotFound(new { error = "Public page не е намерена." });
+            if (page.OwnerId == userId) return BadRequest(new { error = "Не можеш да пишеш на собствената си страница." });
+            if (page.BusinessWorkspace != null && page.BusinessWorkspace.Status != BusinessWorkspaceStatus.Active)
+                return BadRequest(new { error = "Тази страница не приема съобщения." });
+
+            var convo = await _db.Conversations.FirstOrDefaultAsync(c =>
+                c.OrganizerProfileId == page.Id &&
+                ((c.ParticipantOneId == userId && c.ParticipantTwoId == page.OwnerId) ||
+                 (c.ParticipantOneId == page.OwnerId && c.ParticipantTwoId == userId)));
+
+            if (convo == null)
+            {
+                convo = new Conversation
+                {
+                    ParticipantOneId = userId,
+                    ParticipantTwoId = page.OwnerId,
+                    OrganizerProfileId = page.Id,
+                    Status = ConversationStatus.Pending,
+                    RequestedByUserId = userId,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow,
+                };
+                _db.Conversations.Add(convo);
+                await _db.SaveChangesAsync();
+            }
+
+            return Ok(new { token = convo.Token.ToString() });
+        }
+
         [HttpGet("conversations/{token}")]
         public async Task<IActionResult> ConversationDetails(Guid token)
         {
             var userId = _userManager.GetUserId(User)!;
-
             var convo = await _db.Conversations
                 .Where(c => c.Token == token)
                 .Include(c => c.ParticipantOne)
                 .Include(c => c.ParticipantTwo)
-                .Include(c => c.Messages.OrderByDescending(m => m.CreatedAt).Take(50))
+                .Include(c => c.OrganizerProfile)
+                .Include(c => c.Messages.OrderByDescending(m => m.CreatedAt).Take(80))
                     .ThenInclude(m => m.Sender)
+                .Include(c => c.Messages.OrderByDescending(m => m.CreatedAt).Take(80))
+                    .ThenInclude(m => m.AuthorOrganizerProfile)
+                .Include(c => c.Messages.OrderByDescending(m => m.CreatedAt).Take(80))
+                    .ThenInclude(m => m.Likes)
                 .FirstOrDefaultAsync();
 
             if (convo == null) return NotFound();
@@ -113,78 +138,81 @@ namespace EventsApp.Controllers.Api
             }
             await _db.SaveChangesAsync();
 
-            var other = convo.ParticipantOneId == userId ? convo.ParticipantTwo : convo.ParticipantOne;
-
+            var summary = MapConversation(convo, userId);
             return Ok(new
             {
-                token = convo.Token.ToString(),
-                otherUserId = other.Id,
-                otherUserName = other.UserName,
-                otherUserImageUrl = other.ProfileImageUrl,
+                summary.token,
+                summary.otherUserId,
+                summary.otherUserName,
+                summary.otherUserImageUrl,
+                summary.organizerProfileId,
+                summary.pageName,
+                summary.pageImageUrl,
+                summary.currentUserOwnsPage,
+                summary.isPageConversation,
                 status = convo.Status.ToString(),
-                messages = convo.Messages
-                    .OrderBy(m => m.CreatedAt)
-                    .Select(m => new
-                    {
-                        id = m.Id,
-                        content = m.Content,
-                        senderId = m.SenderId,
-                        senderName = m.Sender?.UserName,
-                        createdAt = m.CreatedAt,
-                        editedAt = m.EditedAt,
-                        isDeleted = m.IsDeleted,
-                        canEdit = m.SenderId == userId && !m.IsDeleted,
-                        canDelete = m.SenderId == userId && !m.IsDeleted,
-                    }),
+                messages = convo.Messages.OrderBy(m => m.CreatedAt).Select(m => MapMessage(m, userId)),
             });
         }
 
         [HttpPost("conversations/{token}/approve")]
-        public async Task<IActionResult> Approve(Guid token)
-        {
-            return await SetStatus(token, ConversationStatus.Accepted);
-        }
+        public Task<IActionResult> Approve(Guid token) => SetStatus(token, ConversationStatus.Accepted);
 
         [HttpPost("conversations/{token}/decline")]
-        public async Task<IActionResult> Decline(Guid token)
-        {
-            return await SetStatus(token, ConversationStatus.Declined);
-        }
+        public Task<IActionResult> Decline(Guid token) => SetStatus(token, ConversationStatus.Declined);
 
-        // POST /api/messages/conversations/{token}
         [HttpPost("conversations/{token}")]
         public async Task<IActionResult> SendMessage(Guid token, [FromBody] SendMessageDto dto)
         {
             var userId = _userManager.GetUserId(User)!;
-
             var convo = await _db.Conversations
-                .Where(c => c.Token == token)
-                .FirstOrDefaultAsync();
+                .Include(c => c.OrganizerProfile)
+                .FirstOrDefaultAsync(c => c.Token == token);
 
             if (convo == null) return NotFound();
             if (convo.ParticipantOneId != userId && convo.ParticipantTwoId != userId) return Forbid();
             if (convo.Status == ConversationStatus.Declined) return BadRequest(new { error = "Разговорът е отказан." });
+            if (string.IsNullOrWhiteSpace(dto.Content)) return BadRequest(new { error = "Съобщението не може да е празно." });
+
+            var authorType = AuthorIdentityType.User;
+            int? authorProfileId = null;
+            int? workspaceId = null;
+            if (convo.OrganizerProfile != null && convo.OrganizerProfile.OwnerId == userId)
+            {
+                authorType = AuthorIdentityType.OrganizerPage;
+                authorProfileId = convo.OrganizerProfile.Id;
+                workspaceId = convo.OrganizerProfile.BusinessWorkspaceId;
+            }
 
             var message = new Message
             {
                 ConversationId = convo.Id,
                 SenderId = userId,
-                Content = dto.Content,
+                AuthorType = authorType,
+                AuthorOrganizerProfileId = authorProfileId,
+                BusinessWorkspaceId = workspaceId,
+                ReplyToMessageId = dto.ReplyToMessageId,
+                SharedEventId = dto.SharedEventId,
+                SharedPostId = dto.SharedPostId,
+                Content = dto.Content.Trim(),
                 CreatedAt = DateTime.UtcNow,
             };
 
             _db.Messages.Add(message);
             convo.UpdatedAt = DateTime.UtcNow;
+            if (convo.Status == ConversationStatus.Pending && convo.RequestedByUserId != userId)
+            {
+                convo.Status = ConversationStatus.Accepted;
+                convo.RespondedAt = DateTime.UtcNow;
+            }
             await _db.SaveChangesAsync();
 
-            return Ok(new
-            {
-                id = message.Id,
-                content = message.Content,
-                senderId = message.SenderId,
-                senderName = (await _userManager.FindByIdAsync(userId))?.UserName,
-                createdAt = message.CreatedAt,
-            });
+            message.Sender = (await _userManager.FindByIdAsync(userId))!;
+            message.AuthorOrganizerProfile = authorProfileId.HasValue
+                ? await _db.OrganizerProfiles.AsNoTracking().FirstOrDefaultAsync(p => p.Id == authorProfileId.Value)
+                : null;
+
+            return Ok(MapMessage(message, userId));
         }
 
         [HttpPut("messages/{id:int}")]
@@ -195,6 +223,7 @@ namespace EventsApp.Controllers.Api
             if (message == null) return NotFound();
             if (message.SenderId != userId) return Forbid();
             if (message.IsDeleted) return BadRequest(new { error = "Съобщението е изтрито." });
+            if (message.SharedEventId.HasValue || message.SharedPostId.HasValue) return BadRequest(new { error = "Споделените картички не се редактират." });
             if (string.IsNullOrWhiteSpace(dto.Content)) return BadRequest(new { error = "Съобщението не може да е празно." });
 
             message.Content = dto.Content.Trim();
@@ -211,10 +240,40 @@ namespace EventsApp.Controllers.Api
             if (message == null) return NotFound();
             if (message.SenderId != userId) return Forbid();
             message.Content = string.Empty;
+            message.SharedEventId = null;
+            message.SharedPostId = null;
             message.IsDeleted = true;
             message.DeletedAt = DateTime.UtcNow;
             await _db.SaveChangesAsync();
             return Ok(new { deleted = true });
+        }
+
+        [HttpPost("messages/{id:int}/like")]
+        public async Task<IActionResult> LikeMessage(int id)
+        {
+            var userId = _userManager.GetUserId(User)!;
+            var message = await _db.Messages.Include(m => m.Conversation).Include(m => m.Likes).FirstOrDefaultAsync(m => m.Id == id);
+            if (message == null) return NotFound();
+            if (message.Conversation.ParticipantOneId != userId && message.Conversation.ParticipantTwoId != userId) return Forbid();
+            if (!message.Likes.Any(l => l.UserId == userId))
+            {
+                message.Likes.Add(new MessageLike { MessageId = id, UserId = userId });
+                await _db.SaveChangesAsync();
+            }
+            return Ok(new { likesCount = message.Likes.Count, currentUserLiked = true });
+        }
+
+        [HttpDelete("messages/{id:int}/like")]
+        public async Task<IActionResult> UnlikeMessage(int id)
+        {
+            var userId = _userManager.GetUserId(User)!;
+            var like = await _db.MessageLikes.FirstOrDefaultAsync(l => l.MessageId == id && l.UserId == userId);
+            if (like != null)
+            {
+                _db.MessageLikes.Remove(like);
+                await _db.SaveChangesAsync();
+            }
+            return Ok(new { likesCount = await _db.MessageLikes.CountAsync(l => l.MessageId == id), currentUserLiked = false });
         }
 
         private async Task<IActionResult> SetStatus(Guid token, ConversationStatus status)
@@ -230,8 +289,63 @@ namespace EventsApp.Controllers.Api
             await _db.SaveChangesAsync();
             return Ok(new { status = convo.Status.ToString() });
         }
+
+        private static dynamic MapConversation(Conversation c, string userId)
+        {
+            var other = c.ParticipantOneId == userId ? c.ParticipantTwo : c.ParticipantOne;
+            var last = c.Messages.OrderByDescending(m => m.CreatedAt).FirstOrDefault();
+            var currentUserOwnsPage = c.OrganizerProfile?.OwnerId == userId;
+            var displayName = c.OrganizerProfileId.HasValue && !currentUserOwnsPage
+                ? c.OrganizerProfile?.DisplayName ?? other.UserName
+                : other.UserName;
+            var imageUrl = c.OrganizerProfileId.HasValue && !currentUserOwnsPage
+                ? c.OrganizerProfile?.AvatarImageUrl ?? other.ProfileImageUrl
+                : other.ProfileImageUrl;
+            var isIncomingRequest = c.Status == ConversationStatus.Pending && c.RequestedByUserId != userId;
+
+            return new
+            {
+                token = c.Token.ToString(),
+                otherUserId = other.Id,
+                otherUserName = displayName,
+                otherUserImageUrl = imageUrl,
+                organizerProfileId = c.OrganizerProfileId,
+                pageName = c.OrganizerProfile?.DisplayName,
+                pageImageUrl = c.OrganizerProfile?.AvatarImageUrl,
+                currentUserOwnsPage,
+                isPageConversation = c.OrganizerProfileId.HasValue,
+                isIncomingRequest,
+                listKey = isIncomingRequest ? "requests" : c.OrganizerProfileId.HasValue ? "page" : "personal",
+                lastMessage = last?.Content,
+                lastMessageAt = last?.CreatedAt,
+                unreadCount = c.Messages.Count(m => m.SenderId != userId && m.SeenAt == null && !m.IsDeleted),
+                status = c.Status.ToString(),
+            };
+        }
+
+        private static object MapMessage(Message m, string userId) => new
+        {
+            id = m.Id,
+            content = m.Content,
+            senderId = m.SenderId,
+            senderName = m.AuthorType == AuthorIdentityType.OrganizerPage && m.AuthorOrganizerProfile != null
+                ? m.AuthorOrganizerProfile.DisplayName
+                : m.Sender?.UserName,
+            senderImageUrl = m.AuthorType == AuthorIdentityType.OrganizerPage && m.AuthorOrganizerProfile != null
+                ? m.AuthorOrganizerProfile.AvatarImageUrl
+                : m.Sender?.ProfileImageUrl,
+            senderBadgeText = m.AuthorType == AuthorIdentityType.OrganizerPage ? "Page" : m.SenderId == userId ? "You" : "User",
+            createdAt = m.CreatedAt,
+            editedAt = m.EditedAt,
+            isDeleted = m.IsDeleted,
+            likesCount = m.Likes.Count,
+            currentUserLiked = m.Likes.Any(l => l.UserId == userId),
+            canEdit = m.SenderId == userId && !m.IsDeleted && !m.SharedEventId.HasValue && !m.SharedPostId.HasValue,
+            canDelete = m.SenderId == userId && !m.IsDeleted,
+        };
     }
 
     public record StartConversationDto(string? UserId);
-    public record SendMessageDto(string Content);
+    public record StartPageConversationDto(int OrganizerProfileId);
+    public record SendMessageDto(string Content, int? ReplyToMessageId, int? SharedEventId, int? SharedPostId);
 }
