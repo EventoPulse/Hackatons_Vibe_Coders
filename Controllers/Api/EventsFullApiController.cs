@@ -20,15 +20,18 @@ namespace EventsApp.Controllers.Api
         private readonly ApplicationDbContext _db;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly IMediaUploadService _media;
+        private readonly IEventDeletionService _eventDeletion;
 
         public EventsFullApiController(
             ApplicationDbContext db,
             UserManager<ApplicationUser> userManager,
-            IMediaUploadService media)
+            IMediaUploadService media,
+            IEventDeletionService eventDeletion)
         {
             _db = db;
             _userManager = userManager;
             _media = media;
+            _eventDeletion = eventDeletion;
         }
 
         private string? CurrentUserId => User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -350,6 +353,8 @@ namespace EventsApp.Controllers.Api
                 Address = request.Address.Trim(),
                 City = request.City.Trim(),
                 ImageUrl = request.ImageUrl?.Trim(),
+                Latitude = request.Latitude,
+                Longitude = request.Longitude,
                 IsApproved = false,
             };
 
@@ -357,6 +362,64 @@ namespace EventsApp.Controllers.Api
             await _db.SaveChangesAsync();
 
             return Ok(new { id = ev.Id, title = ev.Title, isApproved = ev.IsApproved });
+        }
+
+        [HttpPut("{id:int}")]
+        [Authorize(Policy = "ApiAuth")]
+        [EnableRateLimiting("content-write")]
+        public async Task<IActionResult> Update(int id, [FromBody] CreateEventRequest request)
+        {
+            var userId = CurrentUserId!;
+            var ev = await _db.Events.FirstOrDefaultAsync(e => e.Id == id);
+            if (ev == null) return NotFound();
+            if (!IsAdmin && ev.OrganizerId != userId) return Forbid();
+
+            if (string.IsNullOrWhiteSpace(request.Title) || string.IsNullOrWhiteSpace(request.Address) || string.IsNullOrWhiteSpace(request.City))
+                return BadRequest(new { error = "Попълни всички задължителни полета." });
+
+            if (!Enum.TryParse<EventGenre>(request.Genre, true, out var genre))
+                return BadRequest(new { error = "Невалиден жанр." });
+
+            if (request.StartTime >= request.EndTime)
+                return BadRequest(new { error = "Началото трябва да е преди края." });
+
+            ev.Title = request.Title.Trim();
+            ev.Description = request.Description?.Trim();
+            ev.StartTime = request.StartTime;
+            ev.EndTime = request.EndTime;
+            ev.Genre = genre;
+            ev.Address = request.Address.Trim();
+            ev.City = request.City.Trim();
+            ev.ImageUrl = request.ImageUrl?.Trim();
+            ev.OrganizerProfileId = request.OrganizerProfileId;
+            ev.Latitude = request.Latitude;
+            ev.Longitude = request.Longitude;
+
+            if (!IsAdmin)
+            {
+                ev.IsApproved = false;
+            }
+
+            await _db.SaveChangesAsync();
+            return Ok(new { id = ev.Id, title = ev.Title, isApproved = ev.IsApproved });
+        }
+
+        [HttpDelete("{id:int}")]
+        [Authorize(Policy = "ApiAuth")]
+        [EnableRateLimiting("content-write")]
+        public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken)
+        {
+            var userId = CurrentUserId!;
+            var ev = await _db.Events.AsNoTracking().FirstOrDefaultAsync(e => e.Id == id, cancellationToken);
+            if (ev == null) return NotFound();
+            if (!IsAdmin && ev.OrganizerId != userId) return Forbid();
+
+            var result = await _eventDeletion.DeleteEventAsync(id, preservePaidTickets: true, cancellationToken);
+            if (result.Deleted) return Ok(new { deleted = true });
+            if (result.SkippedReason == "paid_tickets")
+                return Conflict(new { error = "Събитието има платени билети и не може да бъде изтрито." });
+
+            return NotFound();
         }
 
         // ── GET /api/events/{id}/comments ────────────────────────────────────────
@@ -548,6 +611,8 @@ namespace EventsApp.Controllers.Api
             public string City { get; set; } = "";
             public string? ImageUrl { get; set; }
             public int? OrganizerProfileId { get; set; }
+            public double? Latitude { get; set; }
+            public double? Longitude { get; set; }
         }
     }
 }

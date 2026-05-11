@@ -1,3 +1,4 @@
+using EventsApp.Common;
 using EventsApp.Data;
 using EventsApp.Models;
 using EventsApp.Services;
@@ -54,6 +55,160 @@ namespace EventsApp.Controllers.Api
                 isUsed = ut.IsUsed,
                 purchasedAt = ut.CreatedAt,
             }));
+        }
+
+        [HttpGet("event/{eventId:int}")]
+        public async Task<IActionResult> ForEvent(int eventId)
+        {
+            var userId = _userManager.GetUserId(User)!;
+            var ev = await _db.Events.AsNoTracking().FirstOrDefaultAsync(e => e.Id == eventId);
+            if (ev == null) return NotFound();
+            if (!CanManageEvent(userId, ev)) return Forbid();
+
+            var tickets = await _db.Tickets
+                .AsNoTracking()
+                .Where(t => t.EventId == eventId)
+                .OrderBy(t => t.CreatedAt)
+                .Select(t => new
+                {
+                    id = t.Id,
+                    eventId = t.EventId,
+                    name = t.Name,
+                    description = t.Description,
+                    price = t.Price,
+                    quantityTotal = t.QuantityTotal,
+                    quantityRemaining = t.QuantityRemaining,
+                    soldCount = t.QuantityTotal - t.QuantityRemaining,
+                    imageUrl = t.ImageUrl,
+                    isActive = t.IsActive,
+                    requiresAttendeeNames = t.RequiresAttendeeNames,
+                    createdAt = t.CreatedAt,
+                })
+                .ToListAsync();
+
+            return Ok(new { eventId = ev.Id, eventTitle = ev.Title, tickets });
+        }
+
+        [HttpPost("event/{eventId:int}")]
+        public async Task<IActionResult> CreateForEvent(int eventId, [FromBody] TicketRequest request)
+        {
+            var userId = _userManager.GetUserId(User)!;
+            var ev = await _db.Events.FirstOrDefaultAsync(e => e.Id == eventId);
+            if (ev == null) return NotFound();
+            if (!CanManageEvent(userId, ev)) return Forbid();
+
+            if (string.IsNullOrWhiteSpace(request.Name))
+                return BadRequest(new { error = "Името на билета е задължително." });
+            if (request.Price < 0 || request.QuantityTotal < 0)
+                return BadRequest(new { error = "Цената и количеството не могат да бъдат отрицателни." });
+
+            var ticket = new Ticket
+            {
+                EventId = eventId,
+                Name = request.Name.Trim(),
+                Description = request.Description?.Trim(),
+                Price = request.Price,
+                QuantityTotal = request.QuantityTotal,
+                QuantityRemaining = request.QuantityTotal,
+                ImageUrl = request.ImageUrl?.Trim(),
+                IsActive = request.IsActive,
+                RequiresAttendeeNames = request.RequiresAttendeeNames,
+            };
+
+            _db.Tickets.Add(ticket);
+            await _db.SaveChangesAsync();
+
+            return Ok(new { id = ticket.Id, eventId = ticket.EventId, name = ticket.Name });
+        }
+
+        [HttpPut("{id:guid}")]
+        public async Task<IActionResult> UpdateTicket(Guid id, [FromBody] TicketRequest request)
+        {
+            var userId = _userManager.GetUserId(User)!;
+            var ticket = await _db.Tickets.Include(t => t.Event).FirstOrDefaultAsync(t => t.Id == id);
+            if (ticket == null) return NotFound();
+            if (!CanManageEvent(userId, ticket.Event)) return Forbid();
+
+            if (string.IsNullOrWhiteSpace(request.Name))
+                return BadRequest(new { error = "Името на билета е задължително." });
+            if (request.Price < 0 || request.QuantityTotal < 0)
+                return BadRequest(new { error = "Цената и количеството не могат да бъдат отрицателни." });
+
+            var sold = await _db.UserTickets.CountAsync(ut => ut.TicketId == id);
+            if (request.QuantityTotal < sold)
+                return BadRequest(new { error = "Общото количество не може да е по-малко от вече продадените билети." });
+
+            ticket.Name = request.Name.Trim();
+            ticket.Description = request.Description?.Trim();
+            ticket.Price = request.Price;
+            ticket.QuantityTotal = request.QuantityTotal;
+            ticket.QuantityRemaining = Math.Max(0, request.QuantityTotal - sold);
+            ticket.ImageUrl = request.ImageUrl?.Trim();
+            ticket.IsActive = request.IsActive;
+            ticket.RequiresAttendeeNames = request.RequiresAttendeeNames;
+
+            await _db.SaveChangesAsync();
+            return Ok(new { id = ticket.Id, eventId = ticket.EventId, name = ticket.Name });
+        }
+
+        [HttpDelete("{id:guid}")]
+        public async Task<IActionResult> DeleteTicket(Guid id)
+        {
+            var userId = _userManager.GetUserId(User)!;
+            var ticket = await _db.Tickets.Include(t => t.Event).FirstOrDefaultAsync(t => t.Id == id);
+            if (ticket == null) return NotFound();
+            if (!CanManageEvent(userId, ticket.Event)) return Forbid();
+
+            if (await _db.UserTickets.AnyAsync(ut => ut.TicketId == id))
+                return Conflict(new { error = "Билетът вече има покупки и не може да бъде изтрит." });
+
+            _db.Tickets.Remove(ticket);
+            await _db.SaveChangesAsync();
+            return Ok(new { deleted = true });
+        }
+
+        [HttpPost("{id:guid}/buy")]
+        public async Task<IActionResult> Buy(Guid id, [FromBody] BuyTicketRequest request)
+        {
+            var userId = _userManager.GetUserId(User)!;
+            var quantity = Math.Clamp(request.Quantity, 1, 10);
+            var ticket = await _db.Tickets
+                .Include(t => t.Event)
+                .FirstOrDefaultAsync(t => t.Id == id && t.IsActive);
+
+            if (ticket == null) return NotFound();
+            if (ticket.QuantityRemaining < quantity)
+                return BadRequest(new { error = "Няма достатъчно налични билети." });
+
+            await using var tx = await _db.Database.BeginTransactionAsync();
+
+            ticket.QuantityRemaining -= quantity;
+            var transaction = new Transaction
+            {
+                UserId = userId,
+                TotalAmount = ticket.Price * quantity,
+                Status = GlobalConstants.TransactionStatuses.Paid,
+            };
+            _db.Transactions.Add(transaction);
+
+            var groupId = Guid.NewGuid();
+            for (var i = 0; i < quantity; i++)
+            {
+                _db.UserTickets.Add(new UserTicket
+                {
+                    TicketId = ticket.Id,
+                    TransactionId = transaction.Id,
+                    PricePaid = ticket.Price,
+                    QrCode = $"EVT-{Guid.NewGuid():N}",
+                    PurchaseGroupId = groupId,
+                    IsPrimaryInPurchase = i == 0,
+                });
+            }
+
+            await _db.SaveChangesAsync();
+            await tx.CommitAsync();
+
+            return Ok(new { transactionId = transaction.Id, ticketsCount = quantity });
         }
 
         // GET /api/tickets/{id}
@@ -245,7 +400,19 @@ namespace EventsApp.Controllers.Api
 
         private static string GetSeatLabel(Seat seat)
             => string.IsNullOrWhiteSpace(seat.Label) ? seat.Row + seat.Number : seat.Label;
+
+        private bool CanManageEvent(string userId, Event ev)
+            => User.IsInRole(GlobalConstants.Roles.Admin) || ev.OrganizerId == userId;
     }
 }
 
 public record ValidateTicketDto(string? QrCode, bool Confirm);
+public record TicketRequest(
+    string Name,
+    string? Description,
+    decimal Price,
+    int QuantityTotal,
+    string? ImageUrl,
+    bool IsActive,
+    bool RequiresAttendeeNames);
+public record BuyTicketRequest(int Quantity);
