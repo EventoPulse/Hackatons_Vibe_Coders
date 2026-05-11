@@ -55,6 +55,40 @@ namespace EventsApp.Controllers.Api
             }));
         }
 
+        [HttpPost("conversations")]
+        public async Task<IActionResult> FindOrCreateConversation([FromBody] StartConversationDto dto)
+        {
+            var userId = _userManager.GetUserId(User)!;
+            var otherUserId = (dto.UserId ?? string.Empty).Trim();
+
+            if (string.IsNullOrWhiteSpace(otherUserId) || otherUserId == userId)
+                return BadRequest(new { error = "Невалиден получател." });
+
+            var otherExists = await _db.Users.AnyAsync(u => u.Id == otherUserId);
+            if (!otherExists) return NotFound(new { error = "Потребителят не е намерен." });
+
+            var convo = await _db.Conversations
+                .FirstOrDefaultAsync(c =>
+                    (c.ParticipantOneId == userId && c.ParticipantTwoId == otherUserId) ||
+                    (c.ParticipantOneId == otherUserId && c.ParticipantTwoId == userId));
+
+            if (convo == null)
+            {
+                convo = new Conversation
+                {
+                    ParticipantOneId = userId,
+                    ParticipantTwoId = otherUserId,
+                    Status = ConversationStatus.Accepted,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow,
+                };
+                _db.Conversations.Add(convo);
+                await _db.SaveChangesAsync();
+            }
+
+            return Ok(new { token = convo.Token.ToString() });
+        }
+
         // GET /api/messages/conversations/{token}
         [HttpGet("conversations/{token}")]
         public async Task<IActionResult> ConversationDetails(Guid token)
@@ -131,5 +165,6 @@ namespace EventsApp.Controllers.Api
         }
     }
 
+    public record StartConversationDto(string? UserId);
     public record SendMessageDto(string Content);
 }
