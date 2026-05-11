@@ -181,6 +181,8 @@ namespace EventsApp.Controllers.Api
                     avatarImageUrl = p.AvatarImageUrl,
                     coverImageUrl = p.CoverImageUrl,
                     website = p.Website,
+                    businessWorkspaceId = p.BusinessWorkspaceId,
+                    workspaceName = p.BusinessWorkspace != null ? p.BusinessWorkspace.DisplayName : null,
                     isDefault = p.IsDefault,
                     isApproved = p.IsApproved,
                     eventsCount = p.Events.Count,
@@ -215,6 +217,7 @@ namespace EventsApp.Controllers.Api
                 profile.FacebookUrl,
                 profile.TikTokUrl,
                 profile.BrandColor,
+                profile.BusinessWorkspaceId,
                 profile.IsDefault,
                 profile.IsApproved,
             });
@@ -245,6 +248,7 @@ namespace EventsApp.Controllers.Api
                 FacebookUrl = request.FacebookUrl?.Trim(),
                 TikTokUrl = request.TikTokUrl?.Trim(),
                 BrandColor = request.BrandColor?.Trim(),
+                BusinessWorkspaceId = request.BusinessWorkspaceId,
                 IsDefault = request.IsDefault || !hasDefault,
                 IsApproved = User.IsInRole(GlobalConstants.Roles.Admin),
             };
@@ -284,6 +288,7 @@ namespace EventsApp.Controllers.Api
             profile.FacebookUrl = request.FacebookUrl?.Trim();
             profile.TikTokUrl = request.TikTokUrl?.Trim();
             profile.BrandColor = request.BrandColor?.Trim();
+            profile.BusinessWorkspaceId = request.BusinessWorkspaceId;
             profile.IsDefault = request.IsDefault;
             profile.IsApproved = User.IsInRole(GlobalConstants.Roles.Admin) ? profile.IsApproved : false;
 
@@ -363,6 +368,84 @@ namespace EventsApp.Controllers.Api
             return Ok(rows);
         }
 
+        [HttpGet("workspaces/{id:int}")]
+        public async Task<IActionResult> WorkspaceDetails(int id)
+        {
+            if (!IsOrganizer) return Forbid();
+            var workspace = await _db.BusinessWorkspaces
+                .AsNoTracking()
+                .FirstOrDefaultAsync(w => w.Id == id && w.OwnerId == UserId);
+            if (workspace == null) return NotFound();
+            return Ok(workspace);
+        }
+
+        [HttpPost("workspaces")]
+        public async Task<IActionResult> CreateWorkspace([FromBody] WorkspaceRequest request)
+        {
+            if (!IsOrganizer) return Forbid();
+            if (string.IsNullOrWhiteSpace(request.DisplayName) || string.IsNullOrWhiteSpace(request.LegalName))
+                return BadRequest(new { error = "Име и юридическо име са задължителни." });
+
+            var userId = UserId;
+            var hasDefault = await _db.BusinessWorkspaces.AnyAsync(w => w.OwnerId == userId && w.IsDefault);
+            var workspace = new BusinessWorkspace
+            {
+                OwnerId = userId,
+                DisplayName = request.DisplayName.Trim(),
+                LegalName = request.LegalName.Trim(),
+                CompanyNumber = request.CompanyNumber?.Trim(),
+                BillingEmail = request.BillingEmail?.Trim(),
+                PhoneNumber = request.PhoneNumber?.Trim(),
+                Address = request.Address?.Trim(),
+                City = request.City?.Trim(),
+                Country = request.Country?.Trim(),
+                IsDefault = request.IsDefault || !hasDefault,
+            };
+
+            if (workspace.IsDefault)
+            {
+                await _db.BusinessWorkspaces
+                    .Where(w => w.OwnerId == userId && w.IsDefault)
+                    .ExecuteUpdateAsync(setters => setters.SetProperty(w => w.IsDefault, false));
+            }
+
+            _db.BusinessWorkspaces.Add(workspace);
+            await _db.SaveChangesAsync();
+            return Ok(new { id = workspace.Id });
+        }
+
+        [HttpPut("workspaces/{id:int}")]
+        public async Task<IActionResult> UpdateWorkspace(int id, [FromBody] WorkspaceRequest request)
+        {
+            if (!IsOrganizer) return Forbid();
+            if (string.IsNullOrWhiteSpace(request.DisplayName) || string.IsNullOrWhiteSpace(request.LegalName))
+                return BadRequest(new { error = "Име и юридическо име са задължителни." });
+
+            var workspace = await _db.BusinessWorkspaces.FirstOrDefaultAsync(w => w.Id == id && w.OwnerId == UserId);
+            if (workspace == null) return NotFound();
+
+            workspace.DisplayName = request.DisplayName.Trim();
+            workspace.LegalName = request.LegalName.Trim();
+            workspace.CompanyNumber = request.CompanyNumber?.Trim();
+            workspace.BillingEmail = request.BillingEmail?.Trim();
+            workspace.PhoneNumber = request.PhoneNumber?.Trim();
+            workspace.Address = request.Address?.Trim();
+            workspace.City = request.City?.Trim();
+            workspace.Country = request.Country?.Trim();
+            workspace.IsDefault = request.IsDefault;
+            workspace.UpdatedAt = DateTime.UtcNow;
+
+            if (workspace.IsDefault)
+            {
+                await _db.BusinessWorkspaces
+                    .Where(w => w.OwnerId == UserId && w.Id != id && w.IsDefault)
+                    .ExecuteUpdateAsync(setters => setters.SetProperty(w => w.IsDefault, false));
+            }
+
+            await _db.SaveChangesAsync();
+            return Ok(new { id = workspace.Id });
+        }
+
         // POST /api/organizer/boost/{eventId}
         [HttpPost("boost/{eventId:int}")]
         public async Task<IActionResult> BoostEvent(int eventId)
@@ -402,4 +485,16 @@ public record OrganizerProfileRequest(
     string? FacebookUrl,
     string? TikTokUrl,
     string? BrandColor,
+    int? BusinessWorkspaceId,
+    bool IsDefault);
+
+public record WorkspaceRequest(
+    string DisplayName,
+    string LegalName,
+    string? CompanyNumber,
+    string? BillingEmail,
+    string? PhoneNumber,
+    string? Address,
+    string? City,
+    string? Country,
     bool IsDefault);

@@ -214,6 +214,7 @@ namespace EventsApp.Controllers.Api
             var transaction = new Transaction
             {
                 UserId = userId,
+                BusinessWorkspaceId = ticket.Event.BusinessWorkspaceId,
                 TotalAmount = ticket.Price * quantity,
                 Status = GlobalConstants.TransactionStatuses.Paid,
             };

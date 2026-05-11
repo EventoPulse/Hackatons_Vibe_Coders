@@ -161,6 +161,7 @@ namespace EventsApp.Controllers.Api
                 longitude = ev.Longitude,
                 organizerId = ev.OrganizerId,
                 organizerProfileId = ev.OrganizerProfileId,
+                businessWorkspaceId = ev.BusinessWorkspaceId,
                 organizerName = OrganizerDisplayName(ev),
                 imageUrls = ev.Images.Select(i => i.ImageUrl).ToArray(),
                 likesCount = ev.Likes.Count,
@@ -345,6 +346,7 @@ namespace EventsApp.Controllers.Api
             {
                 OrganizerId = userId,
                 OrganizerProfileId = request.OrganizerProfileId,
+                BusinessWorkspaceId = request.BusinessWorkspaceId,
                 Title = request.Title.Trim(),
                 Description = request.Description?.Trim(),
                 StartTime = request.StartTime,
@@ -392,6 +394,7 @@ namespace EventsApp.Controllers.Api
             ev.City = request.City.Trim();
             ev.ImageUrl = request.ImageUrl?.Trim();
             ev.OrganizerProfileId = request.OrganizerProfileId;
+            ev.BusinessWorkspaceId = request.BusinessWorkspaceId;
             ev.Latitude = request.Latitude;
             ev.Longitude = request.Longitude;
 
@@ -611,6 +614,7 @@ namespace EventsApp.Controllers.Api
             public string City { get; set; } = "";
             public string? ImageUrl { get; set; }
             public int? OrganizerProfileId { get; set; }
+            public int? BusinessWorkspaceId { get; set; }
             public double? Latitude { get; set; }
             public double? Longitude { get; set; }
         }

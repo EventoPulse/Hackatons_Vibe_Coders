@@ -49,7 +49,7 @@ namespace EventsApp.Controllers.Api
                     otherUserImageUrl = other.ProfileImageUrl,
                     lastMessage = last?.Content,
                     lastMessageAt = last?.CreatedAt,
-                    unreadCount = 0,
+                    unreadCount = c.Messages.Count(m => m.SenderId != userId && m.SeenAt == null && !m.IsDeleted),
                     status = c.Status.ToString(),
                 };
             }));
@@ -78,7 +78,8 @@ namespace EventsApp.Controllers.Api
                 {
                     ParticipantOneId = userId,
                     ParticipantTwoId = otherUserId,
-                    Status = ConversationStatus.Accepted,
+                    Status = ConversationStatus.Pending,
+                    RequestedByUserId = userId,
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow,
                 };
@@ -96,7 +97,6 @@ namespace EventsApp.Controllers.Api
             var userId = _userManager.GetUserId(User)!;
 
             var convo = await _db.Conversations
-                .AsNoTracking()
                 .Where(c => c.Token == token)
                 .Include(c => c.ParticipantOne)
                 .Include(c => c.ParticipantTwo)
@@ -106,6 +106,12 @@ namespace EventsApp.Controllers.Api
 
             if (convo == null) return NotFound();
             if (convo.ParticipantOneId != userId && convo.ParticipantTwoId != userId) return Forbid();
+
+            foreach (var message in convo.Messages.Where(m => m.SenderId != userId && m.SeenAt == null))
+            {
+                message.SeenAt = DateTime.UtcNow;
+            }
+            await _db.SaveChangesAsync();
 
             var other = convo.ParticipantOneId == userId ? convo.ParticipantTwo : convo.ParticipantOne;
 
@@ -125,8 +131,24 @@ namespace EventsApp.Controllers.Api
                         senderId = m.SenderId,
                         senderName = m.Sender?.UserName,
                         createdAt = m.CreatedAt,
+                        editedAt = m.EditedAt,
+                        isDeleted = m.IsDeleted,
+                        canEdit = m.SenderId == userId && !m.IsDeleted,
+                        canDelete = m.SenderId == userId && !m.IsDeleted,
                     }),
             });
+        }
+
+        [HttpPost("conversations/{token}/approve")]
+        public async Task<IActionResult> Approve(Guid token)
+        {
+            return await SetStatus(token, ConversationStatus.Accepted);
+        }
+
+        [HttpPost("conversations/{token}/decline")]
+        public async Task<IActionResult> Decline(Guid token)
+        {
+            return await SetStatus(token, ConversationStatus.Declined);
         }
 
         // POST /api/messages/conversations/{token}
@@ -141,6 +163,7 @@ namespace EventsApp.Controllers.Api
 
             if (convo == null) return NotFound();
             if (convo.ParticipantOneId != userId && convo.ParticipantTwoId != userId) return Forbid();
+            if (convo.Status == ConversationStatus.Declined) return BadRequest(new { error = "Разговорът е отказан." });
 
             var message = new Message
             {
@@ -162,6 +185,50 @@ namespace EventsApp.Controllers.Api
                 senderName = (await _userManager.FindByIdAsync(userId))?.UserName,
                 createdAt = message.CreatedAt,
             });
+        }
+
+        [HttpPut("messages/{id:int}")]
+        public async Task<IActionResult> EditMessage(int id, [FromBody] SendMessageDto dto)
+        {
+            var userId = _userManager.GetUserId(User)!;
+            var message = await _db.Messages.FirstOrDefaultAsync(m => m.Id == id);
+            if (message == null) return NotFound();
+            if (message.SenderId != userId) return Forbid();
+            if (message.IsDeleted) return BadRequest(new { error = "Съобщението е изтрито." });
+            if (string.IsNullOrWhiteSpace(dto.Content)) return BadRequest(new { error = "Съобщението не може да е празно." });
+
+            message.Content = dto.Content.Trim();
+            message.EditedAt = DateTime.UtcNow;
+            await _db.SaveChangesAsync();
+            return Ok(new { id = message.Id, content = message.Content, editedAt = message.EditedAt });
+        }
+
+        [HttpDelete("messages/{id:int}")]
+        public async Task<IActionResult> DeleteMessage(int id)
+        {
+            var userId = _userManager.GetUserId(User)!;
+            var message = await _db.Messages.FirstOrDefaultAsync(m => m.Id == id);
+            if (message == null) return NotFound();
+            if (message.SenderId != userId) return Forbid();
+            message.Content = string.Empty;
+            message.IsDeleted = true;
+            message.DeletedAt = DateTime.UtcNow;
+            await _db.SaveChangesAsync();
+            return Ok(new { deleted = true });
+        }
+
+        private async Task<IActionResult> SetStatus(Guid token, ConversationStatus status)
+        {
+            var userId = _userManager.GetUserId(User)!;
+            var convo = await _db.Conversations.FirstOrDefaultAsync(c => c.Token == token);
+            if (convo == null) return NotFound();
+            if (convo.ParticipantOneId != userId && convo.ParticipantTwoId != userId) return Forbid();
+            if (convo.RequestedByUserId == userId && !User.IsInRole("Admin")) return Forbid();
+            convo.Status = status;
+            convo.RespondedAt = DateTime.UtcNow;
+            convo.UpdatedAt = DateTime.UtcNow;
+            await _db.SaveChangesAsync();
+            return Ok(new { status = convo.Status.ToString() });
         }
     }
 
