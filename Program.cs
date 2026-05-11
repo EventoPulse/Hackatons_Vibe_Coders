@@ -6,6 +6,7 @@ using EventsApp.Services;
 using EventsApp.Services.AI;
 using EventsApp.Services.Email;
 using EventsApp.Services.Geocoding;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Identity;
@@ -14,7 +15,9 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.IdentityModel.Tokens;
 using System.Security.Claims;
+using System.Text;
 using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -122,7 +125,8 @@ builder.Services.Configure<FormOptions>(options =>
 
 builder.Services.AddLocalization();
 builder.Services.AddMemoryCache();
-builder.Services.AddControllersWithViews();
+builder.Services.AddControllers();
+builder.Services.AddRazorPages(); // for Identity forgot/reset password pages
 builder.Services.AddSignalR();
 builder.Services.AddAntiforgery(opts =>
 {
@@ -132,6 +136,74 @@ builder.Services.AddAntiforgery(opts =>
     opts.Cookie.SameSite = SameSiteMode.Strict;
     opts.Cookie.SecurePolicy = isDevelopment ? CookieSecurePolicy.SameAsRequest : CookieSecurePolicy.Always;
 });
+// CORS for Next.js frontend
+var allowedOrigins = new List<string> { "http://localhost:3000", "https://localhost:3000" };
+var frontendBaseUrl = builder.Configuration["Frontend:BaseUrl"];
+if (!string.IsNullOrWhiteSpace(frontendBaseUrl) && frontendBaseUrl != "http://localhost:3000")
+    allowedOrigins.Add(frontendBaseUrl);
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("NextJsFrontend", policy =>
+    {
+        policy
+            .WithOrigins(allowedOrigins.ToArray())
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials();
+    });
+});
+
+// JWT Authentication (additional scheme alongside cookie auth)
+var jwtSecret = builder.Configuration["Jwt:Secret"]
+    ?? throw new InvalidOperationException("Jwt:Secret is required in configuration.");
+var jwtKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret));
+
+builder.Services.AddAuthentication()
+    .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidIssuer = "Evento",
+            ValidateAudience = true,
+            ValidAudience = "EventoUsers",
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = jwtKey,
+            ClockSkew = TimeSpan.FromMinutes(1),
+        };
+        // Allow JWT from query string for SignalR WebSocket connections
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                var accessToken = context.Request.Query["access_token"];
+                if (!string.IsNullOrEmpty(accessToken) &&
+                    context.HttpContext.Request.Path.StartsWithSegments("/hubs"))
+                {
+                    context.Token = accessToken;
+                }
+                return Task.CompletedTask;
+            }
+        };
+    });
+
+// Authorization policy that accepts both cookie and JWT bearer
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("ApiAuth", policy =>
+    {
+        policy.AddAuthenticationSchemes(
+            IdentityConstants.ApplicationScheme,
+            JwtBearerDefaults.AuthenticationScheme);
+        policy.RequireAuthenticatedUser();
+    });
+});
+
+// Expose JwtKey as singleton for use in AuthApiController
+builder.Services.AddSingleton(jwtKey);
+
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
@@ -287,7 +359,12 @@ if (app.Environment.IsDevelopment())
 }
 else
 {
-    app.UseExceptionHandler("/Home/Error");
+    app.UseExceptionHandler(errorApp => errorApp.Run(async ctx =>
+    {
+        ctx.Response.StatusCode = 500;
+        ctx.Response.ContentType = "application/json";
+        await ctx.Response.WriteAsync("{\"error\":\"internal_server_error\"}");
+    }));
     app.UseHsts();
 }
 
@@ -323,215 +400,32 @@ app.UseRequestLocalization(new RequestLocalizationOptions()
 
 app.UseRouting();
 
+app.UseCors("NextJsFrontend");
+
 app.UseAuthentication();
 app.UseRateLimiter();
 app.UseAuthorization();
 
-// Public aliases keep MVC controller names out of visible URLs while old routes still work.
-app.MapControllerRoute(
-    name: "email-confirm-request",
-    pattern: "email/confirm/{requestId}",
-    defaults: new { controller = "EmailConfirmation", action = "FromRequest" });
+// Email confirmation — custom controller routes (no Views needed, returns redirects)
+app.MapControllerRoute("email-confirm-request", "email/confirm/{requestId}",
+    new { controller = "EmailConfirmation", action = "FromRequest" });
+app.MapControllerRoute("email-confirm", "email/confirm",
+    new { controller = "EmailConfirmation", action = "Index" });
+app.MapControllerRoute("confirm-email-html", "confirm-email.html",
+    new { controller = "EmailConfirmation", action = "RedirectToCanonical" });
+app.MapControllerRoute("confirm-email", "confirm-email",
+    new { controller = "EmailConfirmation", action = "RedirectToCanonical" });
+app.MapControllerRoute("confirm-email-legacy", "account/confirm-email",
+    new { controller = "EmailConfirmation", action = "RedirectToCanonical" });
+app.MapControllerRoute("confirm-email-identity-legacy", "Identity/Account/ConfirmEmail",
+    new { controller = "EmailConfirmation", action = "RedirectToCanonical" });
+app.MapControllerRoute("confirm-email-account-legacy", "Account/ConfirmEmail",
+    new { controller = "EmailConfirmation", action = "RedirectToCanonical" });
 
-app.MapControllerRoute(
-    name: "email-confirm",
-    pattern: "email/confirm",
-    defaults: new { controller = "EmailConfirmation", action = "Index" });
+// Media proxy (serves S3-signed URLs for uploaded files)
+app.MapControllers();
 
-app.MapControllerRoute(
-    name: "confirm-email-html",
-    pattern: "confirm-email.html",
-    defaults: new { controller = "EmailConfirmation", action = "RedirectToCanonical" });
-
-app.MapControllerRoute(
-    name: "confirm-email",
-    pattern: "confirm-email",
-    defaults: new { controller = "EmailConfirmation", action = "RedirectToCanonical" });
-
-app.MapControllerRoute(
-    name: "confirm-email-legacy",
-    pattern: "account/confirm-email",
-    defaults: new { controller = "EmailConfirmation", action = "RedirectToCanonical" });
-
-app.MapControllerRoute(
-    name: "confirm-email-identity-legacy",
-    pattern: "Identity/Account/ConfirmEmail",
-    defaults: new { controller = "EmailConfirmation", action = "RedirectToCanonical" });
-
-app.MapControllerRoute(
-    name: "confirm-email-account-legacy",
-    pattern: "Account/ConfirmEmail",
-    defaults: new { controller = "EmailConfirmation", action = "RedirectToCanonical" });
-
-app.MapControllerRoute(
-    name: "flow-create",
-    pattern: "flow/new",
-    defaults: new { controller = "Posts", action = "Create" });
-
-app.MapControllerRoute(
-    name: "flow-details",
-    pattern: "flow/p/{id:int}",
-    defaults: new { controller = "Posts", action = "Details" });
-
-app.MapControllerRoute(
-    name: "flow-edit",
-    pattern: "flow/p/{id:int}/edit",
-    defaults: new { controller = "Posts", action = "Edit" });
-
-app.MapControllerRoute(
-    name: "flow-delete",
-    pattern: "flow/p/{id:int}/delete",
-    defaults: new { controller = "Posts", action = "Delete" });
-
-app.MapControllerRoute(
-    name: "flow-delete-confirmed",
-    pattern: "flow/p/{id:int}/delete-confirmed",
-    defaults: new { controller = "Posts", action = "DeleteConfirmed" });
-
-app.MapControllerRoute(
-    name: "flow-like",
-    pattern: "flow/p/{id:int}/like",
-    defaults: new { controller = "Posts", action = "Like" });
-
-app.MapControllerRoute(
-    name: "flow-unlike",
-    pattern: "flow/p/{id:int}/unlike",
-    defaults: new { controller = "Posts", action = "Unlike" });
-
-app.MapControllerRoute(
-    name: "flow-save",
-    pattern: "flow/p/{id:int}/save",
-    defaults: new { controller = "Posts", action = "Save" });
-
-app.MapControllerRoute(
-    name: "flow-unsave",
-    pattern: "flow/p/{id:int}/unsave",
-    defaults: new { controller = "Posts", action = "Unsave" });
-
-app.MapControllerRoute(
-    name: "flow-comments",
-    pattern: "flow/p/{id:int}/comments",
-    defaults: new { controller = "Posts", action = "AddComment" });
-
-app.MapControllerRoute(
-    name: "flow",
-    pattern: "flow/{action=Index}/{id?}",
-    defaults: new { controller = "Posts" });
-
-app.MapControllerRoute(
-    name: "inbox-details",
-    pattern: "inbox/{token:guid}",
-    defaults: new { controller = "Messages", action = "Details" });
-
-app.MapControllerRoute(
-    name: "inbox-poll",
-    pattern: "inbox/poll/{token:guid}",
-    defaults: new { controller = "Messages", action = "Poll" });
-
-app.MapControllerRoute(
-    name: "inbox-send",
-    pattern: "inbox/send/{token:guid}",
-    defaults: new { controller = "Messages", action = "Send" });
-
-app.MapControllerRoute(
-    name: "inbox-approve",
-    pattern: "inbox/{token:guid}/approve",
-    defaults: new { controller = "Messages", action = "Approve" });
-
-app.MapControllerRoute(
-    name: "inbox-decline",
-    pattern: "inbox/{token:guid}/decline",
-    defaults: new { controller = "Messages", action = "Decline" });
-
-app.MapControllerRoute(
-    name: "inbox-share-event",
-    pattern: "inbox/share/event/{id:int}",
-    defaults: new { controller = "Messages", action = "ShareEvent" });
-
-app.MapControllerRoute(
-    name: "inbox-share-post",
-    pattern: "inbox/share/post/{id:int}",
-    defaults: new { controller = "Messages", action = "SharePost" });
-
-app.MapControllerRoute(
-    name: "inbox",
-    pattern: "inbox/{action=Index}/{id?}",
-    defaults: new { controller = "Messages" });
-
-app.MapControllerRoute(
-    name: "event-details",
-    pattern: "e/{id:int}",
-    defaults: new { controller = "Events", action = "Details" });
-
-app.MapControllerRoute(
-    name: "event-create",
-    pattern: "events/new",
-    defaults: new { controller = "Events", action = "Create" });
-
-app.MapControllerRoute(
-    name: "event-edit",
-    pattern: "events/{id:int}/edit",
-    defaults: new { controller = "Events", action = "Edit" });
-
-app.MapControllerRoute(
-    name: "event-delete",
-    pattern: "events/{id:int}/delete",
-    defaults: new { controller = "Events", action = "Delete" });
-
-app.MapControllerRoute(
-    name: "events",
-    pattern: "events/{action=Index}/{id?}",
-    defaults: new { controller = "Events" });
-
-app.MapControllerRoute(
-    name: "ticket-details",
-    pattern: "ticket/{id:guid}",
-    defaults: new { controller = "Tickets", action = "Details" });
-
-app.MapControllerRoute(
-    name: "ticket-pdf",
-    pattern: "ticket/{id:guid}/pdf",
-    defaults: new { controller = "Tickets", action = "DownloadPdf" });
-
-app.MapControllerRoute(
-    name: "ticket-qr",
-    pattern: "ticket/{id:guid}/qr",
-    defaults: new { controller = "Tickets", action = "Qr" });
-
-app.MapControllerRoute(
-    name: "tickets-mine",
-    pattern: "tickets/mine",
-    defaults: new { controller = "Tickets", action = "MyTickets" });
-
-app.MapControllerRoute(
-    name: "tickets-scan",
-    pattern: "tickets/scan",
-    defaults: new { controller = "Tickets", action = "Validate" });
-
-app.MapControllerRoute(
-    name: "tickets",
-    pattern: "tickets/{action=Manage}/{id?}",
-    defaults: new { controller = "Tickets" });
-
-app.MapControllerRoute(
-    name: "profile-page",
-    pattern: "profile/page/{id:int}",
-    defaults: new { controller = "Profiles", action = "Page" });
-
-app.MapControllerRoute(
-    name: "profile-details",
-    pattern: "profile/{id}",
-    defaults: new { controller = "Profiles", action = "Details" });
-
-app.MapControllerRoute(
-    name: "profiles",
-    pattern: "profile/{action}/{id?}",
-    defaults: new { controller = "Profiles" });
-
-app.MapControllerRoute(
-    name: "default",
-    pattern: "{controller=Home}/{action=Index}/{id?}");
-
+// Identity Razor pages — only for forgot/reset password (no other pages needed)
 app.MapRazorPages()
     .Add(builder =>
     {
@@ -539,15 +433,14 @@ app.MapRazorPages()
             && route.RoutePattern.RawText is string pattern
             && (pattern.Contains("Account/ForgotPassword", StringComparison.OrdinalIgnoreCase)
                 || pattern.Contains("Account/ResetPassword", StringComparison.OrdinalIgnoreCase)
-                || pattern.Contains("Account/ConfirmEmail", StringComparison.OrdinalIgnoreCase)
-                || pattern.Contains("forgot-password", StringComparison.OrdinalIgnoreCase)
-                || pattern.Contains("reset-password", StringComparison.OrdinalIgnoreCase)
-                || pattern.Contains("confirm-email", StringComparison.OrdinalIgnoreCase)
                 || pattern.Contains("Account/ResendEmailConfirmation", StringComparison.OrdinalIgnoreCase)))
         {
             builder.Metadata.Add(new EnableRateLimitingAttribute("auth"));
         }
     });
+
+// Root endpoint — API info
+app.MapGet("/", () => Results.Json(new { api = "Evento API", version = "1.0", docs = "/api/events" }));
 
 // SignalR hubs
 app.MapHub<EventsApp.Hubs.ChatHub>("/hubs/chat");
