@@ -323,6 +323,7 @@ namespace EventsApp.Controllers.Api
                     validatorUserId = a.ValidatorUserId,
                     validatorUserName = a.ValidatorUser.UserName ?? string.Empty,
                     validatorEmail = a.ValidatorUser.Email ?? string.Empty,
+                    validatorPhoneNumber = a.ValidatorUser.PhoneNumber,
                     organizerProfileId = a.OrganizerProfileId,
                     organizerProfileName = a.OrganizerProfile != null ? a.OrganizerProfile.DisplayName : null,
                     isActive = a.IsActive,
@@ -334,7 +335,7 @@ namespace EventsApp.Controllers.Api
             return Ok(rows);
         }
 
-        [HttpPost("validators")]
+        [HttpPost("validators-legacy")]
         public async Task<IActionResult> AddValidator([FromBody] ValidatorRequest request)
         {
             if (!IsOrganizer) return Forbid();
@@ -371,6 +372,82 @@ namespace EventsApp.Controllers.Api
             return Ok(new { saved = true });
         }
 
+        [HttpPost("validators")]
+        public async Task<IActionResult> AddValidatorV2([FromBody] ValidatorRequest request)
+        {
+            if (!IsOrganizer) return Forbid();
+
+            var lookup = request.UserLookup ?? request.Email;
+            if (string.IsNullOrWhiteSpace(lookup)) return BadRequest(new { error = "Имейл, потребителско име или телефон са задължителни." });
+
+            var profileId = await GetOwnedProfileIdAsync(UserId, request.OrganizerProfileId);
+            if (!profileId.HasValue) return BadRequest(new { error = "Избери публична организаторска страница." });
+
+            var user = await FindValidatorUserAsync(lookup);
+            if (user == null) return NotFound(new { error = "Няма потребител с този имейл, потребителско име или телефон." });
+            if (user.Id == UserId) return BadRequest(new { error = "Не можеш да добавиш себе си като валидатор." });
+
+            var existing = await _db.OrganizerValidatorAssignments
+                .FirstOrDefaultAsync(a => a.OrganizerId == UserId && a.ValidatorUserId == user.Id);
+
+            if ((existing == null || !existing.IsActive || existing.OrganizerProfileId != profileId.Value)
+                && await CountActiveValidatorsAsync(UserId, profileId.Value, existing?.Id) >= 3)
+            {
+                return BadRequest(new { error = "Тази публична страница вече има максималните 3 активни валидатора." });
+            }
+
+            if (!await _userManager.IsInRoleAsync(user, GlobalConstants.Roles.Validator))
+                await _userManager.AddToRoleAsync(user, GlobalConstants.Roles.Validator);
+
+            if (existing == null)
+            {
+                _db.OrganizerValidatorAssignments.Add(new OrganizerValidatorAssignment
+                {
+                    OrganizerId = UserId,
+                    ValidatorUserId = user.Id,
+                    OrganizerProfileId = profileId.Value,
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow,
+                });
+            }
+            else
+            {
+                existing.OrganizerProfileId = profileId.Value;
+                existing.IsActive = true;
+                existing.UpdatedAt = DateTime.UtcNow;
+            }
+
+            await _db.SaveChangesAsync();
+            return Ok(new { saved = true });
+        }
+
+        [HttpPut("validators/{id:int}")]
+        public async Task<IActionResult> UpdateValidatorPage(int id, [FromBody] ValidatorRequest request)
+        {
+            if (!IsOrganizer) return Forbid();
+            var profileId = await GetOwnedProfileIdAsync(UserId, request.OrganizerProfileId);
+            if (!profileId.HasValue) return BadRequest(new { error = "Избери публична организаторска страница." });
+
+            var assignment = await _db.OrganizerValidatorAssignments
+                .FirstOrDefaultAsync(a => a.Id == id && a.OrganizerId == UserId);
+            if (assignment == null) return NotFound();
+
+            if (await CountActiveValidatorsAsync(UserId, profileId.Value, assignment.Id) >= 3)
+                return BadRequest(new { error = "Тази публична страница вече има максималните 3 активни валидатора." });
+
+            assignment.OrganizerProfileId = profileId.Value;
+            assignment.IsActive = true;
+            assignment.UpdatedAt = DateTime.UtcNow;
+
+            var user = await _userManager.FindByIdAsync(assignment.ValidatorUserId);
+            if (user != null && !await _userManager.IsInRoleAsync(user, GlobalConstants.Roles.Validator))
+                await _userManager.AddToRoleAsync(user, GlobalConstants.Roles.Validator);
+
+            await _db.SaveChangesAsync();
+            return Ok(new { saved = true });
+        }
+
         [HttpDelete("validators/{id:int}")]
         public async Task<IActionResult> RemoveValidator(int id)
         {
@@ -380,7 +457,52 @@ namespace EventsApp.Controllers.Api
             assignment.IsActive = false;
             assignment.UpdatedAt = DateTime.UtcNow;
             await _db.SaveChangesAsync();
+
+            var hasOtherActiveAssignments = await _db.OrganizerValidatorAssignments
+                .AsNoTracking()
+                .AnyAsync(a => a.ValidatorUserId == assignment.ValidatorUserId && a.IsActive);
+            if (!hasOtherActiveAssignments)
+            {
+                var validator = await _userManager.FindByIdAsync(assignment.ValidatorUserId);
+                if (validator != null && await _userManager.IsInRoleAsync(validator, GlobalConstants.Roles.Validator))
+                    await _userManager.RemoveFromRoleAsync(validator, GlobalConstants.Roles.Validator);
+            }
+
             return Ok(new { removed = true });
+        }
+
+        private async Task<ApplicationUser?> FindValidatorUserAsync(string lookup)
+        {
+            var value = lookup.Trim();
+            var user = await _userManager.FindByEmailAsync(value);
+            if (user != null) return user;
+
+            user = await _userManager.FindByNameAsync(value);
+            if (user != null) return user;
+
+            return await _db.Users.FirstOrDefaultAsync(u => u.PhoneNumber == value);
+        }
+
+        private async Task<int?> GetOwnedProfileIdAsync(string organizerId, int? organizerProfileId)
+        {
+            if (!organizerProfileId.HasValue || organizerProfileId.Value <= 0) return null;
+
+            var exists = await _db.OrganizerProfiles
+                .AsNoTracking()
+                .AnyAsync(p => p.Id == organizerProfileId.Value && p.OwnerId == organizerId && p.IsActive);
+
+            return exists ? organizerProfileId.Value : null;
+        }
+
+        private Task<int> CountActiveValidatorsAsync(string organizerId, int organizerProfileId, int? excludeAssignmentId = null)
+        {
+            return _db.OrganizerValidatorAssignments
+                .AsNoTracking()
+                .Where(a => a.OrganizerId == organizerId
+                    && a.OrganizerProfileId == organizerProfileId
+                    && a.IsActive
+                    && (!excludeAssignmentId.HasValue || a.Id != excludeAssignmentId.Value))
+                .CountAsync();
         }
 
         [HttpGet("workspaces")]
@@ -548,4 +670,4 @@ public record WorkspaceRequest(
     string? Country,
     bool IsDefault);
 
-public record ValidatorRequest(string Email, int? OrganizerProfileId);
+public record ValidatorRequest(string? Email, string? UserLookup, int? OrganizerProfileId);
