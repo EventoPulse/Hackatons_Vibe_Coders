@@ -221,6 +221,40 @@ namespace EventsApp.Controllers.Api
             return Ok(rows);
         }
 
+        [HttpGet("workspaces")]
+        public async Task<IActionResult> Workspaces()
+        {
+            if (!IsOrganizer) return Forbid();
+            var userId = UserId;
+
+            var rows = await _db.BusinessWorkspaces
+                .AsNoTracking()
+                .Where(w => w.OwnerId == userId)
+                .OrderByDescending(w => w.IsDefault)
+                .ThenBy(w => w.DisplayName)
+                .Select(w => new
+                {
+                    id = w.Id,
+                    displayName = w.DisplayName,
+                    legalName = w.LegalName,
+                    city = w.City,
+                    billingEmail = w.BillingEmail,
+                    status = w.Status.ToString(),
+                    isDefault = w.IsDefault,
+                    paymentProvider = w.PaymentProvider.ToString(),
+                    stripeOnboardingStatus = w.StripeOnboardingStatus.ToString(),
+                    payoutsEnabled = w.PayoutsEnabled,
+                    chargesEnabled = w.ChargesEnabled,
+                    profilesCount = w.OrganizerProfiles.Count,
+                    eventsCount = w.Events.Count,
+                    transactionsCount = w.Transactions.Count,
+                    createdAt = w.CreatedAt,
+                })
+                .ToListAsync();
+
+            return Ok(rows);
+        }
+
         // POST /api/organizer/boost/{eventId}
         [HttpPost("boost/{eventId:int}")]
         public async Task<IActionResult> BoostEvent(int eventId)
