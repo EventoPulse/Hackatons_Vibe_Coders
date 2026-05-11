@@ -335,8 +335,8 @@ namespace EventsApp.Controllers.Api
             return Ok(rows);
         }
 
-        [HttpPost("validators-legacy")]
-        public async Task<IActionResult> AddValidator([FromBody] ValidatorRequest request)
+        [NonAction]
+        public async Task<IActionResult> AddValidatorLegacy([FromBody] ValidatorRequest request)
         {
             if (!IsOrganizer) return Forbid();
             if (string.IsNullOrWhiteSpace(request.Email)) return BadRequest(new { error = "Имейлът е задължителен." });
@@ -373,7 +373,7 @@ namespace EventsApp.Controllers.Api
         }
 
         [HttpPost("validators")]
-        public async Task<IActionResult> AddValidatorV2([FromBody] ValidatorRequest request)
+        public async Task<IActionResult> AddValidator([FromBody] ValidatorRequest request)
         {
             if (!IsOrganizer) return Forbid();
 
