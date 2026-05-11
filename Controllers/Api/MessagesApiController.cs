@@ -1,8 +1,10 @@
 using EventsApp.Data;
+using EventsApp.Hubs;
 using EventsApp.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 
 namespace EventsApp.Controllers.Api
@@ -15,11 +17,13 @@ namespace EventsApp.Controllers.Api
     {
         private readonly ApplicationDbContext _db;
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly IHubContext<ChatHub> _hub;
 
-        public MessagesApiController(ApplicationDbContext db, UserManager<ApplicationUser> userManager)
+        public MessagesApiController(ApplicationDbContext db, UserManager<ApplicationUser> userManager, IHubContext<ChatHub> hub)
         {
             _db = db;
             _userManager = userManager;
+            _hub = hub;
         }
 
         [HttpGet("conversations")]
@@ -212,7 +216,10 @@ namespace EventsApp.Controllers.Api
                 ? await _db.OrganizerProfiles.AsNoTracking().FirstOrDefaultAsync(p => p.Id == authorProfileId.Value)
                 : null;
 
-            return Ok(MapMessage(message, userId));
+            var mapped = MapMessage(message, userId);
+            await _hub.Clients.Group(token.ToString()).SendAsync("ReceiveMessage", mapped);
+
+            return Ok(mapped);
         }
 
         [HttpPut("messages/{id:int}")]
