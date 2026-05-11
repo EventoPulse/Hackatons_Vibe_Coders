@@ -143,6 +143,7 @@ foreach (var frontendBaseUrl in new[]
     builder.Configuration["Frontend:BaseUrl"],
     builder.Configuration["FRONTEND_BASE_URL"],
     builder.Configuration["NEXTAUTH_URL"],
+    builder.Configuration["APP_PUBLIC_URL"],
 })
 {
     if (!string.IsNullOrWhiteSpace(frontendBaseUrl) && frontendBaseUrl != "http://localhost:3000")
