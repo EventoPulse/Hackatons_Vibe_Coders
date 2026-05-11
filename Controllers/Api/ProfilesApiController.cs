@@ -1,5 +1,6 @@
 using EventsApp.Data;
 using EventsApp.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -59,6 +60,39 @@ namespace EventsApp.Controllers.Api
             var userId = _userManager.GetUserId(User);
             if (userId == null) return Unauthorized();
             return await Details(userId);
+        }
+
+        [HttpPost("{id}/follow")]
+        [Authorize(Policy = "ApiAuth")]
+        public async Task<IActionResult> Follow(string id)
+        {
+            var userId = _userManager.GetUserId(User)!;
+            if (id == userId) return BadRequest(new { error = "Не можеш да следваш себе си." });
+            if (!await _db.Users.AnyAsync(u => u.Id == id)) return NotFound();
+
+            var exists = await _db.Follows.AnyAsync(f => f.FollowerId == userId && f.FollowingId == id);
+            if (!exists)
+            {
+                _db.Follows.Add(new Follow { FollowerId = userId, FollowingId = id, CreatedAt = DateTime.UtcNow });
+                await _db.SaveChangesAsync();
+            }
+
+            return Ok(new { isFollowing = true, followerCount = await _db.Follows.CountAsync(f => f.FollowingId == id) });
+        }
+
+        [HttpDelete("{id}/follow")]
+        [Authorize(Policy = "ApiAuth")]
+        public async Task<IActionResult> Unfollow(string id)
+        {
+            var userId = _userManager.GetUserId(User)!;
+            var follow = await _db.Follows.FirstOrDefaultAsync(f => f.FollowerId == userId && f.FollowingId == id);
+            if (follow != null)
+            {
+                _db.Follows.Remove(follow);
+                await _db.SaveChangesAsync();
+            }
+
+            return Ok(new { isFollowing = false, followerCount = await _db.Follows.CountAsync(f => f.FollowingId == id) });
         }
     }
 }

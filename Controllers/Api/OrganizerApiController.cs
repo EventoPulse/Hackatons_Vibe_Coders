@@ -190,6 +190,114 @@ namespace EventsApp.Controllers.Api
             return Ok(profiles);
         }
 
+        [HttpGet("profiles/{id:int}")]
+        public async Task<IActionResult> ProfileDetails(int id)
+        {
+            if (!IsOrganizer) return Forbid();
+            var profile = await _db.OrganizerProfiles
+                .AsNoTracking()
+                .FirstOrDefaultAsync(p => p.Id == id && p.OwnerId == UserId && p.IsActive);
+            if (profile == null) return NotFound();
+
+            return Ok(new
+            {
+                profile.Id,
+                profile.DisplayName,
+                profile.Tagline,
+                profile.Description,
+                profile.City,
+                profile.AvatarImageUrl,
+                profile.CoverImageUrl,
+                profile.Website,
+                profile.PhoneNumber,
+                profile.ContactEmail,
+                profile.InstagramUrl,
+                profile.FacebookUrl,
+                profile.TikTokUrl,
+                profile.BrandColor,
+                profile.IsDefault,
+                profile.IsApproved,
+            });
+        }
+
+        [HttpPost("profiles")]
+        public async Task<IActionResult> CreateProfile([FromBody] OrganizerProfileRequest request)
+        {
+            if (!IsOrganizer) return Forbid();
+            if (string.IsNullOrWhiteSpace(request.DisplayName))
+                return BadRequest(new { error = "Името на страницата е задължително." });
+
+            var userId = UserId;
+            var hasDefault = await _db.OrganizerProfiles.AnyAsync(p => p.OwnerId == userId && p.IsDefault && p.IsActive);
+            var profile = new OrganizerProfile
+            {
+                OwnerId = userId,
+                DisplayName = request.DisplayName.Trim(),
+                Tagline = request.Tagline?.Trim(),
+                Description = request.Description?.Trim(),
+                City = request.City?.Trim(),
+                AvatarImageUrl = request.AvatarImageUrl?.Trim(),
+                CoverImageUrl = request.CoverImageUrl?.Trim(),
+                Website = request.Website?.Trim(),
+                PhoneNumber = request.PhoneNumber?.Trim(),
+                ContactEmail = request.ContactEmail?.Trim(),
+                InstagramUrl = request.InstagramUrl?.Trim(),
+                FacebookUrl = request.FacebookUrl?.Trim(),
+                TikTokUrl = request.TikTokUrl?.Trim(),
+                BrandColor = request.BrandColor?.Trim(),
+                IsDefault = request.IsDefault || !hasDefault,
+                IsApproved = User.IsInRole(GlobalConstants.Roles.Admin),
+            };
+
+            if (profile.IsDefault)
+            {
+                await _db.OrganizerProfiles
+                    .Where(p => p.OwnerId == userId && p.IsDefault)
+                    .ExecuteUpdateAsync(setters => setters.SetProperty(p => p.IsDefault, false));
+            }
+
+            _db.OrganizerProfiles.Add(profile);
+            await _db.SaveChangesAsync();
+            return Ok(new { id = profile.Id });
+        }
+
+        [HttpPut("profiles/{id:int}")]
+        public async Task<IActionResult> UpdateProfile(int id, [FromBody] OrganizerProfileRequest request)
+        {
+            if (!IsOrganizer) return Forbid();
+            if (string.IsNullOrWhiteSpace(request.DisplayName))
+                return BadRequest(new { error = "Името на страницата е задължително." });
+
+            var profile = await _db.OrganizerProfiles.FirstOrDefaultAsync(p => p.Id == id && p.OwnerId == UserId && p.IsActive);
+            if (profile == null) return NotFound();
+
+            profile.DisplayName = request.DisplayName.Trim();
+            profile.Tagline = request.Tagline?.Trim();
+            profile.Description = request.Description?.Trim();
+            profile.City = request.City?.Trim();
+            profile.AvatarImageUrl = request.AvatarImageUrl?.Trim();
+            profile.CoverImageUrl = request.CoverImageUrl?.Trim();
+            profile.Website = request.Website?.Trim();
+            profile.PhoneNumber = request.PhoneNumber?.Trim();
+            profile.ContactEmail = request.ContactEmail?.Trim();
+            profile.InstagramUrl = request.InstagramUrl?.Trim();
+            profile.FacebookUrl = request.FacebookUrl?.Trim();
+            profile.TikTokUrl = request.TikTokUrl?.Trim();
+            profile.BrandColor = request.BrandColor?.Trim();
+            profile.IsDefault = request.IsDefault;
+            profile.IsApproved = User.IsInRole(GlobalConstants.Roles.Admin) ? profile.IsApproved : false;
+
+            if (profile.IsDefault)
+            {
+                await _db.OrganizerProfiles
+                    .Where(p => p.OwnerId == UserId && p.Id != id && p.IsDefault)
+                    .ExecuteUpdateAsync(setters => setters.SetProperty(p => p.IsDefault, false));
+            }
+
+            await _db.SaveChangesAsync();
+            return Ok(new { id = profile.Id });
+        }
+
         // GET /api/organizer/validators
         [HttpGet("validators")]
         public async Task<IActionResult> Validators()
@@ -279,3 +387,19 @@ namespace EventsApp.Controllers.Api
         }
     }
 }
+
+public record OrganizerProfileRequest(
+    string DisplayName,
+    string? Tagline,
+    string? Description,
+    string? City,
+    string? AvatarImageUrl,
+    string? CoverImageUrl,
+    string? Website,
+    string? PhoneNumber,
+    string? ContactEmail,
+    string? InstagramUrl,
+    string? FacebookUrl,
+    string? TikTokUrl,
+    string? BrandColor,
+    bool IsDefault);

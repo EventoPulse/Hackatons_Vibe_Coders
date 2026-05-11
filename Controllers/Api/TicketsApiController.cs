@@ -151,6 +151,34 @@ namespace EventsApp.Controllers.Api
             return Ok(new { id = ticket.Id, eventId = ticket.EventId, name = ticket.Name });
         }
 
+        [HttpGet("manage/{id:guid}")]
+        public async Task<IActionResult> ManageDetails(Guid id)
+        {
+            var userId = _userManager.GetUserId(User)!;
+            var ticket = await _db.Tickets
+                .AsNoTracking()
+                .Include(t => t.Event)
+                .FirstOrDefaultAsync(t => t.Id == id);
+            if (ticket == null) return NotFound();
+            if (!CanManageEvent(userId, ticket.Event)) return Forbid();
+
+            return Ok(new
+            {
+                id = ticket.Id,
+                eventId = ticket.EventId,
+                eventTitle = ticket.Event.Title,
+                name = ticket.Name,
+                description = ticket.Description,
+                price = ticket.Price,
+                quantityTotal = ticket.QuantityTotal,
+                quantityRemaining = ticket.QuantityRemaining,
+                soldCount = ticket.QuantityTotal - ticket.QuantityRemaining,
+                imageUrl = ticket.ImageUrl,
+                isActive = ticket.IsActive,
+                requiresAttendeeNames = ticket.RequiresAttendeeNames,
+            });
+        }
+
         [HttpDelete("{id:guid}")]
         public async Task<IActionResult> DeleteTicket(Guid id)
         {

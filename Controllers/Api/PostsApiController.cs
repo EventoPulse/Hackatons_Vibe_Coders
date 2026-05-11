@@ -270,6 +270,54 @@ namespace EventsApp.Controllers.Api
             return Ok(new { savesCount = count });
         }
 
+        [HttpPost("{id:int}/comments")]
+        [Authorize(Policy = "ApiAuth")]
+        public async Task<IActionResult> AddComment(int id, [FromBody] PostCommentDto dto)
+        {
+            var userId = _userManager.GetUserId(User)!;
+            if (string.IsNullOrWhiteSpace(dto.Content))
+                return BadRequest(new { error = "Коментарът не може да е празен." });
+            if (!await _db.Posts.AnyAsync(p => p.Id == id)) return NotFound();
+
+            var comment = new PostComment
+            {
+                PostId = id,
+                UserId = userId,
+                Content = dto.Content.Trim(),
+                ParentCommentId = dto.ParentCommentId,
+            };
+            _db.PostComments.Add(comment);
+            await _db.SaveChangesAsync();
+            var user = await _userManager.FindByIdAsync(userId);
+
+            return Ok(new
+            {
+                id = comment.Id,
+                userId,
+                userName = user?.UserName ?? string.Empty,
+                authorImageUrl = user?.ProfileImageUrl,
+                content = comment.Content,
+                createdAt = comment.CreatedAt,
+                likesCount = 0,
+                currentUserLiked = false,
+                canDelete = true,
+                replies = Array.Empty<object>(),
+            });
+        }
+
+        [HttpDelete("{id:int}/comments/{commentId:int}")]
+        [Authorize(Policy = "ApiAuth")]
+        public async Task<IActionResult> DeleteComment(int id, int commentId)
+        {
+            var userId = _userManager.GetUserId(User)!;
+            var comment = await _db.PostComments.FirstOrDefaultAsync(c => c.Id == commentId && c.PostId == id);
+            if (comment == null) return NotFound();
+            if (comment.UserId != userId && !User.IsInRole("Admin")) return Forbid();
+            _db.PostComments.Remove(comment);
+            await _db.SaveChangesAsync();
+            return Ok(new { deleted = true });
+        }
+
         private static object MapToCard(Post p, string? userId) => new
         {
             id = p.Id,
@@ -292,3 +340,4 @@ namespace EventsApp.Controllers.Api
 }
 
 public record CreatePostDto(string Content);
+public record PostCommentDto(string Content, int? ParentCommentId);
