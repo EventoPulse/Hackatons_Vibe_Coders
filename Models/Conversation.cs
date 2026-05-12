@@ -52,5 +52,9 @@ namespace EventsApp.Models
         public DateTime? RespondedAt { get; set; }
 
         public ICollection<Message> Messages { get; set; }
+
+        // Soft-archive per participant (each user can hide the conversation independently)
+        public DateTime? ArchivedByP1At { get; set; }
+        public DateTime? ArchivedByP2At { get; set; }
     }
 }

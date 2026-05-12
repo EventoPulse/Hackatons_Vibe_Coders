@@ -119,6 +119,110 @@ namespace EventsApp.Controllers.Api
             });
         }
 
+        // ── GET /api/events/recommended ─────────────────────────────────────────
+        [HttpGet("recommended")]
+        [EnableRateLimiting("public-read")]
+        public async Task<IActionResult> Recommended([FromQuery] int pageSize = 12)
+        {
+            var userId = CurrentUserId;
+            var now = DateTime.UtcNow;
+            pageSize = Math.Clamp(pageSize, 1, 24);
+
+            List<object> results;
+
+            if (userId != null)
+            {
+                // Collect user's genre preferences from interactions
+                var likedGenres = await _db.EventLikes
+                    .Where(l => l.UserId == userId)
+                    .Join(_db.Events, l => l.EventId, e => e.Id, (l, e) => e.Genre)
+                    .ToListAsync();
+
+                var savedGenres = await _db.EventSaves
+                    .Where(s => s.UserId == userId)
+                    .Join(_db.Events, s => s.EventId, e => e.Id, (s, e) => e.Genre)
+                    .ToListAsync();
+
+                var attendedGenres = await _db.EventAttendances
+                    .Where(a => a.UserId == userId)
+                    .Join(_db.Events, a => a.EventId, e => e.Id, (a, e) => e.Genre)
+                    .ToListAsync();
+
+                // Score genres: attendance=3, save=2, like=1
+                var genreScores = new Dictionary<EventGenre, int>();
+                foreach (var g in attendedGenres) genreScores[g] = genreScores.GetValueOrDefault(g) + 3;
+                foreach (var g in savedGenres)   genreScores[g] = genreScores.GetValueOrDefault(g) + 2;
+                foreach (var g in likedGenres)   genreScores[g] = genreScores.GetValueOrDefault(g) + 1;
+
+                // Collect already-seen event IDs
+                var seenEventIds = new HashSet<int>(
+                    likedGenres.Select((_, __) => 0) // placeholder — fetched below
+                );
+                var likedEventIds   = await _db.EventLikes.Where(l => l.UserId == userId).Select(l => l.EventId).ToListAsync();
+                var savedEventIds   = await _db.EventSaves.Where(s => s.UserId == userId).Select(s => s.EventId).ToListAsync();
+                var attendedEventIds = await _db.EventAttendances.Where(a => a.UserId == userId).Select(a => a.EventId).ToListAsync();
+                seenEventIds = new HashSet<int>(likedEventIds.Concat(savedEventIds).Concat(attendedEventIds));
+
+                if (genreScores.Count > 0)
+                {
+                    var preferredGenres = genreScores.OrderByDescending(kv => kv.Value).Select(kv => kv.Key).Take(3).ToList();
+
+                    var recommended = await _db.Events
+                        .AsNoTracking()
+                        .Where(e => e.IsApproved && e.StartTime > now && preferredGenres.Contains(e.Genre) && !seenEventIds.Contains(e.Id))
+                        .Include(e => e.Likes)
+                        .Include(e => e.Saves)
+                        .Include(e => e.Attendances)
+                        .Include(e => e.OrganizerProfile)
+                        .Include(e => e.Organizer)
+                        .OrderByDescending(e => e.Likes.Count * 1 + e.Attendances.Count(a => a.Status == EventAttendanceStatus.Going) * 3)
+                        .ThenBy(e => e.StartTime)
+                        .Take(pageSize)
+                        .ToListAsync();
+
+                    if (recommended.Count >= 4)
+                    {
+                        results = recommended.Select(e => MapToCard(e, userId)).ToList();
+                        return Ok(new { items = results, isPersonalized = true });
+                    }
+
+                    // Not enough — fill with popular unseen events
+                    var existingIds = recommended.Select(e => e.Id).ToHashSet();
+                    var filler = await _db.Events
+                        .AsNoTracking()
+                        .Where(e => e.IsApproved && e.StartTime > now && !seenEventIds.Contains(e.Id) && !existingIds.Contains(e.Id))
+                        .Include(e => e.Likes)
+                        .Include(e => e.Saves)
+                        .Include(e => e.Attendances)
+                        .Include(e => e.OrganizerProfile)
+                        .Include(e => e.Organizer)
+                        .OrderByDescending(e => e.Likes.Count + e.Attendances.Count(a => a.Status == EventAttendanceStatus.Going) * 2)
+                        .Take(pageSize - recommended.Count)
+                        .ToListAsync();
+
+                    results = recommended.Concat(filler).Select(e => MapToCard(e, userId)).ToList();
+                    return Ok(new { items = results, isPersonalized = results.Count > 0 });
+                }
+            }
+
+            // Fallback: popular upcoming events
+            var popular = await _db.Events
+                .AsNoTracking()
+                .Where(e => e.IsApproved && e.StartTime > now)
+                .Include(e => e.Likes)
+                .Include(e => e.Saves)
+                .Include(e => e.Attendances)
+                .Include(e => e.OrganizerProfile)
+                .Include(e => e.Organizer)
+                .OrderByDescending(e => e.Likes.Count + e.Attendances.Count(a => a.Status == EventAttendanceStatus.Going) * 2)
+                .ThenBy(e => e.StartTime)
+                .Take(pageSize)
+                .ToListAsync();
+
+            results = popular.Select(e => MapToCard(e, userId)).ToList();
+            return Ok(new { items = results, isPersonalized = false });
+        }
+
         // ── GET /api/events/{id} ─────────────────────────────────────────────────
         [HttpGet("{id:int}")]
         [EnableRateLimiting("public-read")]

@@ -32,7 +32,8 @@ namespace EventsApp.Controllers.Api
             var userId = _userManager.GetUserId(User)!;
             var convos = await _db.Conversations
                 .AsNoTracking()
-                .Where(c => c.ParticipantOneId == userId || c.ParticipantTwoId == userId)
+                .Where(c => (c.ParticipantOneId == userId && c.ArchivedByP1At == null) ||
+                            (c.ParticipantTwoId == userId && c.ArchivedByP2At == null))
                 .Include(c => c.ParticipantOne)
                 .Include(c => c.ParticipantTwo)
                 .Include(c => c.OrganizerProfile)
@@ -41,6 +42,22 @@ namespace EventsApp.Controllers.Api
                 .ToListAsync();
 
             return Ok(convos.Select(c => MapConversation(c, userId)));
+        }
+
+        [HttpDelete("conversations/{token}")]
+        public async Task<IActionResult> ArchiveConversation(Guid token)
+        {
+            var userId = _userManager.GetUserId(User)!;
+            var convo = await _db.Conversations.AsTracking()
+                .FirstOrDefaultAsync(c => c.Token == token &&
+                    (c.ParticipantOneId == userId || c.ParticipantTwoId == userId));
+            if (convo == null) return NotFound();
+
+            if (convo.ParticipantOneId == userId) convo.ArchivedByP1At = DateTime.UtcNow;
+            else convo.ArchivedByP2At = DateTime.UtcNow;
+
+            await _db.SaveChangesAsync();
+            return Ok(new { archived = true });
         }
 
         [HttpPost("conversations")]
