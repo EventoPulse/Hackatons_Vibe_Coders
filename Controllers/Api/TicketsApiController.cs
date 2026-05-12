@@ -1,3 +1,4 @@
+using System.Text.Encodings.Web;
 using EventsApp.Common;
 using EventsApp.Data;
 using EventsApp.Models;
@@ -5,6 +6,7 @@ using EventsApp.Services;
 using EventsApp.ViewModels.Tickets;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -19,12 +21,14 @@ namespace EventsApp.Controllers.Api
         private readonly ApplicationDbContext _db;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly ITicketDocumentService _docs;
+        private readonly IEmailSender _email;
 
-        public TicketsApiController(ApplicationDbContext db, UserManager<ApplicationUser> userManager, ITicketDocumentService docs)
+        public TicketsApiController(ApplicationDbContext db, UserManager<ApplicationUser> userManager, ITicketDocumentService docs, IEmailSender email)
         {
             _db = db;
             _userManager = userManager;
             _docs = docs;
+            _email = email;
         }
 
         // GET /api/tickets/mine
@@ -237,6 +241,9 @@ namespace EventsApp.Controllers.Api
             await _db.SaveChangesAsync();
             await tx.CommitAsync();
 
+            // Send purchase confirmation email (fire-and-forget — don't block the response)
+            _ = SendTicketConfirmationAsync(userId, ticket, quantity, transaction.Id.ToString("N")[..8].ToUpper());
+
             return Ok(new { transactionId = transaction.Id, ticketsCount = quantity });
         }
 
@@ -432,6 +439,73 @@ namespace EventsApp.Controllers.Api
 
         private bool CanManageEvent(string userId, Event ev)
             => User.IsInRole(GlobalConstants.Roles.Admin) || ev.OrganizerId == userId;
+
+        private async Task SendTicketConfirmationAsync(string userId, Ticket ticket, int quantity, string transactionId)
+        {
+            try
+            {
+                var user = await _userManager.FindByIdAsync(userId);
+                if (user == null || string.IsNullOrWhiteSpace(user.Email)) return;
+
+                var ev = ticket.Event;
+                var dateStr = ev.StartTime.ToString("dd.MM.yyyy HH:mm");
+                var totalAmount = (ticket.Price * quantity).ToString("F2");
+                var encodedEvent = HtmlEncoder.Default.Encode(ev.Title);
+                var encodedTicket = HtmlEncoder.Default.Encode(ticket.Name);
+                var encodedDate = HtmlEncoder.Default.Encode(dateStr);
+                var encodedCity = HtmlEncoder.Default.Encode(ev.City ?? "");
+                var encodedTotal = HtmlEncoder.Default.Encode(totalAmount);
+                var ticketsUrl = HtmlEncoder.Default.Encode($"https://evento.business/tickets");
+
+                var html = $"""
+                    <div style="margin:0;padding:0;background:#f2f5ff">
+                        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#f2f5ff;border-collapse:collapse">
+                            <tr>
+                                <td align="center" style="padding:28px 14px">
+                                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:560px;background:#ffffff;border-collapse:collapse;border-radius:18px;overflow:hidden">
+                                        <tr>
+                                            <td style="background:#4f46e5;color:#ffffff;padding:28px 30px;font-family:Arial,sans-serif">
+                                                <div style="font-size:12px;font-weight:800;letter-spacing:1px;text-transform:uppercase">Evento</div>
+                                                <h1 style="margin:14px 0 0;font-size:26px;line-height:1.15;color:#ffffff">Билетите ти са готови!</h1>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td style="padding:28px 30px;font-family:Arial,sans-serif;color:#111827;font-size:15px;line-height:1.55">
+                                                <p style="margin:0 0 18px">Успешно закупи <strong>{quantity} {(quantity == 1 ? "билет" : "билета")}</strong> за:</p>
+                                                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border-collapse:collapse;background:#f8f7ff;border-radius:12px;margin:0 0 20px">
+                                                    <tr><td style="padding:16px 20px">
+                                                        <div style="font-size:18px;font-weight:800;color:#4f46e5;margin-bottom:8px">{encodedEvent}</div>
+                                                        <div style="color:#475569;margin-bottom:4px">📅 {encodedDate}</div>
+                                                        <div style="color:#475569;margin-bottom:4px">📍 {encodedCity}</div>
+                                                        <div style="color:#475569">🎫 {encodedTicket} &times; {quantity}</div>
+                                                    </td></tr>
+                                                </table>
+                                                <p style="margin:0 0 8px;font-size:16px;font-weight:700">Платена сума: {encodedTotal} лв</p>
+                                                <p style="margin:0 0 20px;color:#475569;font-size:14px">Транзакция #{transactionId}</p>
+                                                <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="border-collapse:collapse">
+                                                    <tr>
+                                                        <td bgcolor="#4f46e5" style="border-radius:10px">
+                                                            <a href="{ticketsUrl}" target="_blank" rel="noopener" style="display:inline-block;padding:12px 22px;font-family:Arial,sans-serif;font-size:15px;font-weight:800;color:#ffffff;text-decoration:none;border-radius:10px">Виж билетите ми</a>
+                                                        </td>
+                                                    </tr>
+                                                </table>
+                                                <p style="margin:20px 0 0;color:#6b7280;font-size:13px">Покажи QR кода на входа. Поздрави от екипа на Evento!</p>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                    """;
+
+                await _email.SendEmailAsync(user.Email, $"Билети за {ev.Title} - Evento", html);
+            }
+            catch
+            {
+                // Email is non-critical — don't fail the purchase
+            }
+        }
     }
 }
 
