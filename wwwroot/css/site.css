@@ -22314,3 +22314,94 @@ html[data-theme="dark"] .profile-page .profile-tabs {
     .profile-page .profile-posts-grid { gap: 2px; }
     .profile-page .profile-events-grid { grid-template-columns: 1fr; }
 }
+
+/* === Message grouping (consecutive messages from same sender) === */
+.social-message-bubble.is-grouped-prev {
+    /* tightens spacing — handled inline via marginTop */
+}
+.social-message-bubble.is-grouped-prev .social-message-bubble__menu {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s;
+}
+.social-message-bubble.is-grouped-prev:hover .social-message-bubble__menu {
+    opacity: 1;
+    pointer-events: auto;
+}
+@media (hover: none) {
+    .social-message-bubble__menu { opacity: 1; pointer-events: auto; }
+}
+
+/* Smooth corners between grouped bubbles for cohesion */
+.social-message-bubble.is-grouped-prev:not(.is-mine) > div > div > div:first-of-type {
+    border-top-left-radius: 6px !important;
+}
+.social-message-bubble.is-grouped-next:not(.is-mine) > div > div > div:first-of-type {
+    border-bottom-left-radius: 6px !important;
+}
+.social-message-bubble.is-grouped-prev.is-mine > div > div > div:first-of-type {
+    border-top-right-radius: 6px !important;
+}
+.social-message-bubble.is-grouped-next.is-mine > div > div > div:first-of-type {
+    border-bottom-right-radius: 6px !important;
+}
+
+/* === Navbar — organizer pages row in dropdown === */
+.nav-org-page-row {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    width: 100%;
+}
+.nav-org-page-row__view {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.nav-org-page-row__edit {
+    width: 34px;
+    height: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: transparent;
+    color: #64748b;
+    text-decoration: none;
+    cursor: pointer;
+    margin-right: 8px;
+    border-radius: 8px;
+    transition: background 0.12s, color 0.12s;
+}
+.nav-org-page-row__edit:hover {
+    background: rgba(108, 92, 231, 0.10);
+    color: #6c5ce7;
+}
+html[data-theme="dark"] .nav-org-page-row__edit { color: #94a3b8; }
+html[data-theme="dark"] .nav-org-page-row__edit:hover { background: rgba(108, 92, 231, 0.20); color: #a99df8; }
+
+/* === Mobile message gestures (visual feedback) === */
+@media (hover: none) {
+    .social-message-bubble {
+        position: relative;
+    }
+    /* Show a faint reply icon while swiping */
+    .social-message-bubble::before {
+        content: '\f405'; /* bi-reply */
+        font-family: 'bootstrap-icons';
+        position: absolute;
+        top: 50%;
+        left: -34px;
+        transform: translateY(-50%);
+        color: var(--evt-accent, #6c5ce7);
+        opacity: 0;
+        transition: opacity 0.15s;
+        font-size: 1.1rem;
+    }
+    .social-message-bubble.is-mine::before {
+        left: auto;
+        right: -34px;
+    }
+}
