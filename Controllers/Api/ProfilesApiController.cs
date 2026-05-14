@@ -236,6 +236,11 @@ namespace EventsApp.Controllers.Api
                 .Where(s => !string.IsNullOrWhiteSpace(s)));
             if (string.IsNullOrWhiteSpace(displayName)) displayName = user.UserName ?? "Профил";
 
+            var preferences = await _db.UserPreferences
+                .AsNoTracking()
+                .FirstOrDefaultAsync(p => p.UserId == user.Id);
+            var vibeTags = preferences?.PreferredGenres.Select(g => g.ToString()).ToArray() ?? Array.Empty<string>();
+
             // Attendance-based counts (cheap aggregates only — no event payloads here).
             var attendedCount = await _db.EventAttendances
                 .CountAsync(a => a.UserId == user.Id && a.Status == EventAttendanceStatus.Going);
@@ -353,6 +358,27 @@ namespace EventsApp.Controllers.Api
                     .FirstOrDefaultAsync()
                 : null;
 
+            var followingProfiles = await _db.Follows
+                .AsNoTracking()
+                .Where(f => f.FollowerId == user.Id)
+                .OrderByDescending(f => f.CreatedAt)
+                .Select(f => f.Following!)
+                .Take(12)
+                .Select(u => new
+                {
+                    id = u.Id,
+                    userName = u.UserName,
+                    displayName = ((u.FirstName ?? "") + " " + (u.LastName ?? "")).Trim() == ""
+                        ? u.UserName
+                        : ((u.FirstName ?? "") + " " + (u.LastName ?? "")).Trim(),
+                    profileImageUrl = u.ProfileImageUrl,
+                    followersCount = _db.Follows.Count(f => f.FollowingId == u.Id),
+                    postsCount = _db.Posts.Count(p => p.OrganizerId == u.Id),
+                    currentUserFollows = currentUserId != null
+                        && _db.Follows.Any(f => f.FollowerId == currentUserId && f.FollowingId == u.Id),
+                })
+                .ToListAsync();
+
             return Ok(new
             {
                 id = user.Id,
@@ -381,7 +407,10 @@ namespace EventsApp.Controllers.Api
                 currentUserFollows = isFollowing,
                 isOwnProfile = isOwn,
                 isCurrentUser = isOwn,
+                canStartConversation = !isOwn,
                 isOrganizer,
+                vibeTags,
+                favouriteGenre = vibeTags.FirstOrDefault(),
 
                 // Event payloads consumed by the rich personal profile UI.
                 attendedEvents,
@@ -389,6 +418,7 @@ namespace EventsApp.Controllers.Api
                 plannedEvents = goingEvents,
                 savedEvents,
                 pinnedEvent,
+                followingProfiles,
 
                 roles,
             });
