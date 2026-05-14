@@ -24,13 +24,20 @@ namespace EventsApp.Controllers.Api
             _userManager = userManager;
         }
 
-        private bool IsAdmin => User.IsInRole(GlobalConstants.Roles.Admin);
+        private async Task<bool> IsCurrentAdminAsync()
+        {
+            var userId = _userManager.GetUserId(User);
+            if (string.IsNullOrWhiteSpace(userId)) return false;
+
+            var user = await _userManager.FindByIdAsync(userId);
+            return user != null && await _userManager.IsInRoleAsync(user, GlobalConstants.Roles.Admin);
+        }
 
         // GET /api/admin/dashboard
         [HttpGet("dashboard")]
         public async Task<IActionResult> Dashboard()
         {
-            if (!IsAdmin) return Forbid();
+            if (!await IsCurrentAdminAsync()) return Forbid();
 
             return Ok(new
             {
@@ -48,7 +55,7 @@ namespace EventsApp.Controllers.Api
         [HttpGet("organizers")]
         public async Task<IActionResult> Organizers()
         {
-            if (!IsAdmin) return Forbid();
+            if (!await IsCurrentAdminAsync()) return Forbid();
 
             var rows = await _db.OrganizerData
                 .AsNoTracking()
@@ -78,7 +85,7 @@ namespace EventsApp.Controllers.Api
         [HttpGet("posts")]
         public async Task<IActionResult> Posts()
         {
-            if (!IsAdmin) return Forbid();
+            if (!await IsCurrentAdminAsync()) return Forbid();
 
             var rows = await _db.Posts
                 .AsNoTracking()
@@ -107,7 +114,7 @@ namespace EventsApp.Controllers.Api
         [HttpGet("transactions")]
         public async Task<IActionResult> Transactions()
         {
-            if (!IsAdmin) return Forbid();
+            if (!await IsCurrentAdminAsync()) return Forbid();
 
             var rows = await _db.Transactions
                 .AsNoTracking()
@@ -137,7 +144,7 @@ namespace EventsApp.Controllers.Api
         [HttpGet("tickets")]
         public async Task<IActionResult> Tickets()
         {
-            if (!IsAdmin) return Forbid();
+            if (!await IsCurrentAdminAsync()) return Forbid();
 
             var rows = await _db.UserTickets
                 .AsNoTracking()
@@ -167,7 +174,7 @@ namespace EventsApp.Controllers.Api
         [HttpPost("organizers/{id}/approve")]
         public async Task<IActionResult> ApproveOrganizer(string id)
         {
-            if (!IsAdmin) return Forbid();
+            if (!await IsCurrentAdminAsync()) return Forbid();
 
             var org = await _db.OrganizerData.FirstOrDefaultAsync(o => o.OrganizerId == id);
             if (org == null) return NotFound();
@@ -200,6 +207,7 @@ namespace EventsApp.Controllers.Api
                 if (!await _userManager.IsInRoleAsync(user, GlobalConstants.Roles.User))
                     await _userManager.AddToRoleAsync(user, GlobalConstants.Roles.User);
             }
+            await _userManager.UpdateSecurityStampAsync(user);
 
             return Ok(new { approved = org.Approved });
         }
@@ -208,7 +216,7 @@ namespace EventsApp.Controllers.Api
         [HttpGet("events")]
         public async Task<IActionResult> Events([FromQuery] bool? pending)
         {
-            if (!IsAdmin) return Forbid();
+            if (!await IsCurrentAdminAsync()) return Forbid();
 
             var q = _db.Events.AsNoTracking().AsQueryable();
             if (pending == true)
@@ -239,7 +247,7 @@ namespace EventsApp.Controllers.Api
         [HttpPost("events/{id:int}/approve")]
         public async Task<IActionResult> ApproveEvent(int id)
         {
-            if (!IsAdmin) return Forbid();
+            if (!await IsCurrentAdminAsync()) return Forbid();
 
             var ev = await _db.Events.FirstOrDefaultAsync(e => e.Id == id);
             if (ev == null) return NotFound();
@@ -253,7 +261,7 @@ namespace EventsApp.Controllers.Api
         [HttpGet("event-changes")]
         public async Task<IActionResult> EventChanges()
         {
-            if (!IsAdmin) return Forbid();
+            if (!await IsCurrentAdminAsync()) return Forbid();
             var rows = await _db.EventChangeRequests
                 .AsNoTracking()
                 .Where(r => r.Status == EventChangeRequestStatus.Pending)
@@ -277,7 +285,7 @@ namespace EventsApp.Controllers.Api
         [HttpPost("event-changes/{id:int}/approve")]
         public async Task<IActionResult> ApproveEventChange(int id)
         {
-            if (!IsAdmin) return Forbid();
+            if (!await IsCurrentAdminAsync()) return Forbid();
             var req = await _db.EventChangeRequests.Include(r => r.Event).FirstOrDefaultAsync(r => r.Id == id);
             if (req == null) return NotFound();
             if (req.Status != EventChangeRequestStatus.Pending) return BadRequest(new { error = "Заявката вече е обработена." });
@@ -293,7 +301,7 @@ namespace EventsApp.Controllers.Api
         [HttpPost("event-changes/{id:int}/reject")]
         public async Task<IActionResult> RejectEventChange(int id)
         {
-            if (!IsAdmin) return Forbid();
+            if (!await IsCurrentAdminAsync()) return Forbid();
             var req = await _db.EventChangeRequests.FirstOrDefaultAsync(r => r.Id == id);
             if (req == null) return NotFound();
             if (req.Status != EventChangeRequestStatus.Pending) return BadRequest(new { error = "Заявката вече е обработена." });
@@ -308,7 +316,7 @@ namespace EventsApp.Controllers.Api
         [HttpGet("users")]
         public async Task<IActionResult> Users()
         {
-            if (!IsAdmin) return Forbid();
+            if (!await IsCurrentAdminAsync()) return Forbid();
 
             var users = await _db.Users.AsNoTracking().OrderBy(u => u.UserName).ToListAsync();
             var result = new List<object>();
@@ -334,7 +342,7 @@ namespace EventsApp.Controllers.Api
         [HttpPost("users/{id}/role")]
         public async Task<IActionResult> SetRole(string id, [FromBody] SetRoleDto dto)
         {
-            if (!IsAdmin) return Forbid();
+            if (!await IsCurrentAdminAsync()) return Forbid();
 
             var user = await _userManager.FindByIdAsync(id);
             if (user == null) return NotFound();
@@ -343,8 +351,19 @@ namespace EventsApp.Controllers.Api
             if (!valid.Contains(dto.Role)) return BadRequest(new { error = "Невалидна роля." });
 
             var current = await _userManager.GetRolesAsync(user);
-            await _userManager.RemoveFromRolesAsync(user, current);
-            await _userManager.AddToRoleAsync(user, dto.Role);
+            if (current.Contains(GlobalConstants.Roles.Admin) && dto.Role != GlobalConstants.Roles.Admin)
+            {
+                var admins = await _userManager.GetUsersInRoleAsync(GlobalConstants.Roles.Admin);
+                if (admins.Count <= 1) return BadRequest(new { error = "Не можеш да махнеш последния администратор." });
+            }
+
+            var removeResult = await _userManager.RemoveFromRolesAsync(user, current);
+            if (!removeResult.Succeeded) return BadRequest(new { error = removeResult.Errors.FirstOrDefault()?.Description });
+
+            var addResult = await _userManager.AddToRoleAsync(user, dto.Role);
+            if (!addResult.Succeeded) return BadRequest(new { error = addResult.Errors.FirstOrDefault()?.Description });
+
+            await _userManager.UpdateSecurityStampAsync(user);
 
             return Ok(new { role = dto.Role });
         }
@@ -353,7 +372,7 @@ namespace EventsApp.Controllers.Api
         [HttpDelete("users/{id}")]
         public async Task<IActionResult> DeleteUser(string id)
         {
-            if (!IsAdmin) return Forbid();
+            if (!await IsCurrentAdminAsync()) return Forbid();
 
             var currentAdminId = _userManager.GetUserId(User);
             if (id == currentAdminId) return BadRequest(new { error = "Не можеш да изтриеш собствения си акаунт." });
@@ -377,7 +396,7 @@ namespace EventsApp.Controllers.Api
         [HttpDelete("posts/{id:int}")]
         public async Task<IActionResult> DeletePost(int id)
         {
-            if (!IsAdmin) return Forbid();
+            if (!await IsCurrentAdminAsync()) return Forbid();
 
             var post = await _db.Posts.FirstOrDefaultAsync(p => p.Id == id);
             if (post == null) return NotFound();

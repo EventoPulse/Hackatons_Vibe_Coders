@@ -195,6 +195,13 @@ builder.Services.AddAuthentication()
                     return;
                 }
 
+                var userId = principal?.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (string.IsNullOrWhiteSpace(userId))
+                {
+                    context.Fail("Token is missing user id.");
+                    return;
+                }
+
                 var db = context.HttpContext.RequestServices.GetRequiredService<ApplicationDbContext>();
                 var isRevoked = await db.RevokedJwtTokens
                     .AsNoTracking()
@@ -202,6 +209,34 @@ builder.Services.AddAuthentication()
                 if (isRevoked)
                 {
                     context.Fail("Token has been revoked.");
+                    return;
+                }
+
+                var userManager = context.HttpContext.RequestServices.GetRequiredService<UserManager<ApplicationUser>>();
+                var user = await userManager.FindByIdAsync(userId);
+                if (user == null)
+                {
+                    context.Fail("User no longer exists.");
+                    return;
+                }
+
+                if (principal?.Identity is ClaimsIdentity identity)
+                {
+                    foreach (var roleClaim in identity.FindAll(identity.RoleClaimType).ToList())
+                    {
+                        identity.RemoveClaim(roleClaim);
+                    }
+
+                    foreach (var roleClaim in identity.FindAll(ClaimTypes.Role).ToList())
+                    {
+                        identity.RemoveClaim(roleClaim);
+                    }
+
+                    var currentRoles = await userManager.GetRolesAsync(user);
+                    foreach (var role in currentRoles)
+                    {
+                        identity.AddClaim(new Claim(identity.RoleClaimType, role));
+                    }
                 }
             },
             OnMessageReceived = context =>
