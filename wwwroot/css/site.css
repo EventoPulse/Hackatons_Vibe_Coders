@@ -18143,15 +18143,24 @@ html[data-theme="dark"] .evento-footer__links a:hover {
 }
 
 html[data-theme="dark"] #app-theme-btn {
-    background: rgba(255, 255, 255, .18) !important;
-    color: #f8fafc !important;
-    border: 1.5px solid rgba(255, 255, 255, .38) !important;
+    background: rgba(255, 255, 255, .14) !important;
+    color: #ffffff !important;
+    border: 2px solid rgba(255, 255, 255, .65) !important;
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, .08), 0 4px 14px rgba(0, 0, 0, .25) !important;
+}
+
+html[data-theme="dark"] #app-theme-btn :where(i, span) {
+    color: #ffffff !important;
 }
 
 html[data-theme="dark"] #app-theme-btn:hover {
     background: #ffffff !important;
     color: #4a5fff !important;
     border-color: #ffffff !important;
+}
+
+html[data-theme="dark"] #app-theme-btn:hover :where(i, span) {
+    color: #4a5fff !important;
 }
 
 @media (max-width: 767.98px) {
@@ -20323,4 +20332,84 @@ html[data-theme="dark"] .msg-page {
 @media (max-width: 575.98px) {
     .msg-page { padding: 16px 8px 24px; }
     .msg-page-title { font-size: 1.5rem; }
+}
+
+
+/* === Floating "Филтри" FAB === */
+.filter-fab {
+    position: fixed;
+    right: 18px;
+    bottom: 92px; /* above mobile nav (~70px) on phones; comfortable on desktop too */
+    z-index: 1040;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 18px;
+    border: none;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #6c5ce7 0%, #5b4de8 100%);
+    color: #fff;
+    font-weight: 700;
+    font-size: 0.9rem;
+    cursor: pointer;
+    box-shadow: 0 8px 22px -8px rgba(91, 77, 232, 0.55), 0 4px 12px rgba(0, 0, 0, 0.18);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(8px) scale(0.96);
+    transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s;
+    pointer-events: none;
+}
+.filter-fab i { font-size: 1rem; line-height: 1; }
+.filter-fab.is-visible {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0) scale(1);
+    pointer-events: auto;
+}
+.filter-fab:hover {
+    background: linear-gradient(135deg, #5b4de8 0%, #4f43d1 100%);
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 12px 26px -8px rgba(91, 77, 232, 0.65), 0 6px 14px rgba(0, 0, 0, 0.22);
+}
+.filter-fab:focus-visible {
+    outline: 3px solid rgba(108, 92, 231, 0.45);
+    outline-offset: 2px;
+}
+
+@media (min-width: 768px) {
+    /* No bottom mobile nav on desktop, lower the FAB */
+    .filter-fab { bottom: 28px; right: 28px; }
+}
+
+html[data-theme="dark"] .filter-fab {
+    background: linear-gradient(135deg, #7c6ef0 0%, #5b4de8 100%);
+    box-shadow: 0 8px 22px -8px rgba(108, 92, 231, 0.65), 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+html[data-theme="dark"] .filter-fab:hover {
+    background: linear-gradient(135deg, #8b7ff5 0%, #6c5ce7 100%);
+}
+
+
+/* === Clickable comment author === */
+.comment-author-link {
+    cursor: pointer;
+    transition: opacity 0.15s, color 0.15s;
+    text-decoration: none;
+    color: inherit;
+}
+.comment-author-link:hover {
+    opacity: 0.8;
+    color: #6c5ce7 !important;
+    text-decoration: underline;
+}
+.comment-author-link .social-avatar-xs {
+    transition: transform 0.15s, box-shadow 0.15s;
+}
+.comment-author-link:hover .social-avatar-xs {
+    transform: scale(1.05);
+    box-shadow: 0 0 0 2px rgba(108, 92, 231, 0.35);
+}
+
+html[data-theme="dark"] .comment-author-link:hover {
+    color: #a99df8 !important;
 }
