@@ -1,6 +1,7 @@
 using EventsApp.Data;
 using EventsApp.Hubs;
 using EventsApp.Models;
+using EventsApp.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -18,12 +19,21 @@ namespace EventsApp.Controllers.Api
         private readonly ApplicationDbContext _db;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly IHubContext<ChatHub> _hub;
+        private readonly IPushNotificationService _pushNotifications;
+        private readonly ILogger<MessagesApiController> _logger;
 
-        public MessagesApiController(ApplicationDbContext db, UserManager<ApplicationUser> userManager, IHubContext<ChatHub> hub)
+        public MessagesApiController(
+            ApplicationDbContext db,
+            UserManager<ApplicationUser> userManager,
+            IHubContext<ChatHub> hub,
+            IPushNotificationService pushNotifications,
+            ILogger<MessagesApiController> logger)
         {
             _db = db;
             _userManager = userManager;
             _hub = hub;
+            _pushNotifications = pushNotifications;
+            _logger = logger;
         }
 
         [HttpGet("conversations")]
@@ -84,7 +94,7 @@ namespace EventsApp.Controllers.Api
                 {
                     ParticipantOneId = participantOneId,
                     ParticipantTwoId = participantTwoId,
-                    Status = ConversationStatus.Pending,
+                    Status = ConversationStatus.Accepted,
                     RequestedByUserId = userId,
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow,
@@ -102,6 +112,14 @@ namespace EventsApp.Controllers.Api
                     if (convo == null)
                         return StatusCode(StatusCodes.Status409Conflict, new { error = "Разговорът не можа да бъде създаден. Опитай отново." });
                 }
+            }
+
+            if (convo.Status != ConversationStatus.Accepted)
+            {
+                convo.Status = ConversationStatus.Accepted;
+                convo.RespondedAt = DateTime.UtcNow;
+                convo.UpdatedAt = DateTime.UtcNow;
+                await _db.SaveChangesAsync();
             }
 
             return Ok(new { token = convo.Token.ToString() });
@@ -140,7 +158,7 @@ namespace EventsApp.Controllers.Api
                     ParticipantOneId = participantOneId,
                     ParticipantTwoId = participantTwoId,
                     OrganizerProfileId = page.Id,
-                    Status = ConversationStatus.Pending,
+                    Status = ConversationStatus.Accepted,
                     RequestedByUserId = userId,
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow,
@@ -161,6 +179,14 @@ namespace EventsApp.Controllers.Api
                     if (convo == null)
                         return StatusCode(StatusCodes.Status409Conflict, new { error = "Разговорът не можа да бъде създаден. Опитай отново." });
                 }
+            }
+
+            if (convo.Status != ConversationStatus.Accepted)
+            {
+                convo.Status = ConversationStatus.Accepted;
+                convo.RespondedAt = DateTime.UtcNow;
+                convo.UpdatedAt = DateTime.UtcNow;
+                await _db.SaveChangesAsync();
             }
 
             return Ok(new { token = convo.Token.ToString() });
@@ -274,6 +300,7 @@ namespace EventsApp.Controllers.Api
 
             var mapped = MapMessage(message, userId);
             await _hub.Clients.Group(token.ToString()).SendAsync("ReceiveMessage", mapped);
+            await SendPushNotificationAsync(convo, message, userId, token);
 
             return Ok(mapped);
         }
@@ -371,6 +398,42 @@ namespace EventsApp.Controllers.Api
             => string.CompareOrdinal(firstUserId, secondUserId) <= 0
                 ? (firstUserId, secondUserId)
                 : (secondUserId, firstUserId);
+
+        private async Task SendPushNotificationAsync(Conversation convo, Message message, string senderUserId, Guid token)
+        {
+            var recipientUserId = convo.ParticipantOneId == senderUserId
+                ? convo.ParticipantTwoId
+                : convo.ParticipantOneId;
+
+            if (string.IsNullOrWhiteSpace(recipientUserId) || recipientUserId == senderUserId)
+            {
+                return;
+            }
+
+            var title = message.AuthorType == AuthorIdentityType.OrganizerPage && message.AuthorOrganizerProfile != null
+                ? message.AuthorOrganizerProfile.DisplayName
+                : message.Sender?.UserName ?? "Evento";
+
+            try
+            {
+                await _pushNotifications.SendMessageNotificationAsync(
+                    recipientUserId,
+                    title,
+                    BuildMessagePreview(message.Content),
+                    $"/inbox/{token}",
+                    cancellationToken: HttpContext.RequestAborted);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to queue push notification for conversation {ConversationToken}", token);
+            }
+        }
+
+        private static string BuildMessagePreview(string content)
+        {
+            var text = string.Join(' ', content.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+            return text.Length <= 120 ? text : $"{text[..117]}...";
+        }
 
         private static dynamic MapConversation(Conversation c, string userId)
         {
