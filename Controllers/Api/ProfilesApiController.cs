@@ -358,6 +358,11 @@ namespace EventsApp.Controllers.Api
                     .FirstOrDefaultAsync()
                 : null;
 
+            // Compute "mutual nights" — events that BOTH the viewer (currentUserId)
+            // AND the followed profile have Going attendance for.
+            // Only meaningful when the viewer is a different user from the profile owner.
+            var viewerForMutuals = currentUserId != null && currentUserId != user.Id ? currentUserId : null;
+
             var followingProfiles = await _db.Follows
                 .AsNoTracking()
                 .Where(f => f.FollowerId == user.Id)
@@ -376,6 +381,15 @@ namespace EventsApp.Controllers.Api
                     postsCount = _db.Posts.Count(p => p.OrganizerId == u.Id),
                     currentUserFollows = currentUserId != null
                         && _db.Follows.Any(f => f.FollowerId == currentUserId && f.FollowingId == u.Id),
+                    mutualEventsCount = viewerForMutuals == null
+                        ? 0
+                        : _db.EventAttendances.Count(a =>
+                            a.UserId == u.Id
+                            && a.Status == EventAttendanceStatus.Going
+                            && _db.EventAttendances.Any(a2 =>
+                                a2.EventId == a.EventId
+                                && a2.UserId == viewerForMutuals
+                                && a2.Status == EventAttendanceStatus.Going)),
                 })
                 .ToListAsync();
 
