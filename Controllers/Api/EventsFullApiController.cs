@@ -600,12 +600,17 @@ namespace EventsApp.Controllers.Api
                 {
                     var sectionIds = group.Select(s => s.SectionId).Distinct().OrderBy(id => id).ToList();
                     var names = group.Select(s => s.SectionName).Distinct().OrderBy(name => name).ToList();
+                    var isSingleDefaultSectionGroup = sectionIds.Count == 1 &&
+                        group.All(s => NormalizeColorHex(s.SectionColorHex, "#2456ff") == group.Key);
+                    var label = names.Count == 1
+                        ? (isSingleDefaultSectionGroup ? names[0] : $"{names[0]} · ценова група")
+                        : $"Ценова група · {names.Count} секции";
                     return new LayoutTicketSectionRequest
                     {
                         SectionId = sectionIds.First(),
                         SectionIds = sectionIds,
                         GroupKey = "color:" + group.Key,
-                        SectionName = names.Count == 1 ? names[0] : $"Цвят {group.Key} · {names.Count} секции",
+                        SectionName = label,
                         ColorHex = group.Key,
                         SeatsCount = group.Count(),
                         Price = 0m,
@@ -614,6 +619,16 @@ namespace EventsApp.Controllers.Api
                 })
                 .OrderBy(s => s.SectionName)
                 .ToList();
+
+            foreach (var duplicateGroup in sections.GroupBy(s => s.SectionName).Where(g => g.Count() > 1))
+            {
+                var index = 1;
+                foreach (var section in duplicateGroup.OrderBy(s => s.ColorHex))
+                {
+                    section.SectionName = $"{section.SectionName} {index}";
+                    index++;
+                }
+            }
 
             return Ok(sections);
         }
@@ -936,13 +951,13 @@ namespace EventsApp.Controllers.Api
 
                 var sectionNames = matchingSeats.Select(s => s.SectionName).Distinct().OrderBy(name => name).ToList();
                 var ticketName = string.IsNullOrWhiteSpace(section.SectionName)
-                    ? (sectionNames.Count() == 1 ? sectionNames[0] : $"Цвят {requestedColor}")
+                    ? (sectionNames.Count() == 1 ? $"{sectionNames[0]} · ценова група" : $"Ценова група · {sectionNames.Count} секции")
                     : section.SectionName.Trim();
                 var ticket = new Ticket
                 {
                     EventId = ev.Id,
                     Name = ticketName,
-                    Description = sectionNames.Count() == 1 ? $"Секция {sectionNames[0]}" : $"Ценова група {requestedColor}",
+                    Description = sectionNames.Count() == 1 ? $"Секция {sectionNames[0]}" : $"Ценова група: {string.Join(", ", sectionNames)}",
                     Price = section.Price,
                     QuantityTotal = matchingSeats.Count(),
                     QuantityRemaining = matchingSeats.Count(),
