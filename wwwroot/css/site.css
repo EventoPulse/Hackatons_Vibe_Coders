@@ -2999,7 +2999,10 @@ a.groove-stat-card:hover {
 
 .social-message-bubble__menu {
     position: relative;
-    margin-left: auto;
+    /* No 'margin-left: auto' — that was pushing the ⋯ trigger to the far
+       edge of the row on incoming messages, so the bubble looked
+       disconnected from its menu. The trigger now sits right next to the
+       bubble like a normal flex sibling. */
 }
 .social-message-bubble__menu-trigger {
     background: transparent;
