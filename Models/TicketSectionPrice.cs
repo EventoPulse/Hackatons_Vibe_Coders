@@ -20,6 +20,9 @@ namespace EventsApp.Models
 
         public LayoutSection Section { get; set; } = null!;
 
+        [MaxLength(16)]
+        public string? ColorHex { get; set; }
+
         [Required]
         [Range(0, 1_000_000)]
         [Column(TypeName = "numeric(18,2)")]

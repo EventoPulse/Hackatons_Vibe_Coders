@@ -50,6 +50,7 @@ namespace EventsApp.Controllers.Api
                     i.Seat.IsCapacityUnlimited,
                     Type = i.Seat.SeatType.ToString(),
                     Section = i.Seat.Section.Name,
+                    ColorHex = string.IsNullOrWhiteSpace(i.Seat.ColorHex) ? i.Seat.Section.ColorHex : i.Seat.ColorHex,
                     i.Seat.Section.PriceModifier,
                     Status = i.Status.ToString(),
                     i.ReservedUntil,

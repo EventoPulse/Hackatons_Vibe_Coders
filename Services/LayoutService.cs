@@ -117,6 +117,7 @@ namespace EventsApp.Services
                     Row = seat.Row,
                     Number = seat.Number,
                     Label = seat.Label,
+                    ColorHex = seat.ColorHex,
                     X = seat.X,
                     Y = seat.Y,
                     Radius = seat.Radius,

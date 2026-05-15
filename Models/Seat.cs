@@ -37,6 +37,9 @@ namespace EventsApp.Models
         [MaxLength(48)]
         public string? Label { get; set; }
 
+        [MaxLength(16)]
+        public string? ColorHex { get; set; }
+
         public double X { get; set; }
 
         public double Y { get; set; }

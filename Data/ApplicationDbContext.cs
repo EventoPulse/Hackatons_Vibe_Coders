@@ -710,6 +710,9 @@ namespace EventsApp.Data
 
             builder.Entity<TicketSectionPrice>(entity =>
             {
+                entity.Property(p => p.ColorHex)
+                      .HasMaxLength(16);
+
                 entity.Property(p => p.Price)
                       .HasColumnType("numeric(18,2)");
 
@@ -723,7 +726,7 @@ namespace EventsApp.Data
                       .HasForeignKey(p => p.SectionId)
                       .OnDelete(DeleteBehavior.Cascade);
 
-                entity.HasIndex(p => new { p.TicketId, p.SectionId }).IsUnique();
+                entity.HasIndex(p => new { p.TicketId, p.SectionId, p.ColorHex }).IsUnique();
             });
 
             builder.Entity<Transaction>(entity =>
@@ -809,6 +812,9 @@ namespace EventsApp.Data
             {
                 entity.Property(s => s.Label)
                       .HasMaxLength(48);
+
+                entity.Property(s => s.ColorHex)
+                      .HasMaxLength(16);
 
                 entity.Property(s => s.Radius)
                       .HasDefaultValue(16d);

@@ -582,21 +582,38 @@ namespace EventsApp.Controllers.Api
                 .AnyAsync(l => l.Id == layoutId && l.Status != VenueLayoutStatus.Archived && (IsAdmin || l.OrganizerId == userId));
             if (!layoutAvailable) return NotFound();
 
-            var sections = await _db.LayoutSections
+            var seats = await _db.Seats
                 .AsNoTracking()
-                .Where(s => s.VenueLayoutId == layoutId)
-                .Select(s => new LayoutTicketSectionRequest
+                .Where(s => s.VenueLayoutId == layoutId && s.Status == LayoutSeatStatus.Active)
+                .Select(s => new
                 {
-                    SectionId = s.Id,
-                    SectionName = s.Name,
-                    ColorHex = string.IsNullOrWhiteSpace(s.ColorHex) ? "#2456ff" : s.ColorHex,
-                    SeatsCount = s.Seats.Count(seat => seat.Status == LayoutSeatStatus.Active),
-                    Price = 0m,
-                    RequiresAttendeeNames = false,
+                    s.SectionId,
+                    SectionName = s.Section.Name,
+                    SectionColorHex = s.Section.ColorHex,
+                    SeatColorHex = s.ColorHex,
                 })
-                .Where(s => s.SeatsCount > 0)
-                .OrderBy(s => s.SectionName)
                 .ToListAsync();
+
+            var sections = seats
+                .GroupBy(s => NormalizeColorHex(s.SeatColorHex, NormalizeColorHex(s.SectionColorHex, "#2456ff")))
+                .Select(group =>
+                {
+                    var sectionIds = group.Select(s => s.SectionId).Distinct().OrderBy(id => id).ToList();
+                    var names = group.Select(s => s.SectionName).Distinct().OrderBy(name => name).ToList();
+                    return new LayoutTicketSectionRequest
+                    {
+                        SectionId = sectionIds.First(),
+                        SectionIds = sectionIds,
+                        GroupKey = "color:" + group.Key,
+                        SectionName = names.Count == 1 ? names[0] : $"Цвят {group.Key} · {names.Count} секции",
+                        ColorHex = group.Key,
+                        SeatsCount = group.Count(),
+                        Price = 0m,
+                        RequiresAttendeeNames = false,
+                    };
+                })
+                .OrderBy(s => s.SectionName)
+                .ToList();
 
             return Ok(sections);
         }
@@ -815,6 +832,14 @@ namespace EventsApp.Controllers.Api
                 : EventTicketingMode.GeneralAdmission;
         }
 
+        private static string NormalizeColorHex(string? value, string fallback)
+        {
+            if (string.IsNullOrWhiteSpace(value)) return fallback;
+            var color = value.Trim();
+            if (!color.StartsWith("#", StringComparison.Ordinal)) color = "#" + color;
+            return System.Text.RegularExpressions.Regex.IsMatch(color, "^#[0-9a-fA-F]{6}$") ? color.ToLowerInvariant() : fallback;
+        }
+
         private async Task UpsertSeriesAsync(Event ev, CreateEventRequest request, string userId)
         {
             if (!Enum.TryParse<EventRecurrenceType>(request.RecurrenceType, true, out var recurrenceType) ||
@@ -880,33 +905,54 @@ namespace EventsApp.Controllers.Api
             if (ev.VenueLayoutId == null || ev.TicketingMode == EventTicketingMode.GeneralAdmission || request.LayoutTicketSections == null || request.LayoutTicketSections.Count == 0)
                 return;
 
-            var sectionIds = request.LayoutTicketSections.Select(s => s.SectionId).ToHashSet();
-            var actualSections = await _db.LayoutSections
+            var requestedSectionIds = request.LayoutTicketSections
+                .SelectMany(s => s.SectionIds != null && s.SectionIds.Any() ? s.SectionIds : new List<int> { s.SectionId })
+                .ToHashSet();
+
+            var actualSeats = await _db.Seats
                 .AsNoTracking()
-                .Where(s => s.VenueLayoutId == ev.VenueLayoutId.Value && sectionIds.Contains(s.Id))
+                .Where(s => s.VenueLayoutId == ev.VenueLayoutId.Value && requestedSectionIds.Contains(s.SectionId) && s.Status == LayoutSeatStatus.Active)
                 .Select(s => new
                 {
-                    s.Id,
-                    s.Name,
-                    SeatsCount = s.Seats.Count(seat => seat.Status == LayoutSeatStatus.Active),
+                    s.SectionId,
+                    SectionName = s.Section.Name,
+                    SectionColorHex = s.Section.ColorHex,
+                    SeatColorHex = s.ColorHex,
                 })
-                .ToDictionaryAsync(s => s.Id);
+                .ToListAsync();
 
             foreach (var section in request.LayoutTicketSections)
             {
-                if (!actualSections.TryGetValue(section.SectionId, out var actual) || actual.SeatsCount <= 0 || section.Price < 0) continue;
+                if (section.Price < 0) continue;
+                var sectionIds = section.SectionIds != null && section.SectionIds.Any()
+                    ? section.SectionIds.ToHashSet()
+                    : new HashSet<int> { section.SectionId };
+                var requestedColor = NormalizeColorHex(section.ColorHex, "#2456ff");
+                var matchingSeats = actualSeats
+                    .Where(s => sectionIds.Contains(s.SectionId) &&
+                        NormalizeColorHex(s.SeatColorHex, NormalizeColorHex(s.SectionColorHex, "#2456ff")) == requestedColor)
+                    .ToList();
+                if (matchingSeats.Count() == 0) continue;
+
+                var sectionNames = matchingSeats.Select(s => s.SectionName).Distinct().OrderBy(name => name).ToList();
+                var ticketName = string.IsNullOrWhiteSpace(section.SectionName)
+                    ? (sectionNames.Count() == 1 ? sectionNames[0] : $"Цвят {requestedColor}")
+                    : section.SectionName.Trim();
                 var ticket = new Ticket
                 {
                     EventId = ev.Id,
-                    Name = string.IsNullOrWhiteSpace(section.SectionName) ? $"Сектор {actual.Name}" : section.SectionName.Trim(),
-                    Description = $"Сектор {actual.Name}",
+                    Name = ticketName,
+                    Description = sectionNames.Count() == 1 ? $"Секция {sectionNames[0]}" : $"Ценова група {requestedColor}",
                     Price = section.Price,
-                    QuantityTotal = actual.SeatsCount,
-                    QuantityRemaining = actual.SeatsCount,
+                    QuantityTotal = matchingSeats.Count(),
+                    QuantityRemaining = matchingSeats.Count(),
                     IsActive = true,
                     RequiresAttendeeNames = section.RequiresAttendeeNames,
                 };
-                ticket.SectionPrices.Add(new TicketSectionPrice { SectionId = section.SectionId, Price = section.Price });
+                foreach (var sectionId in matchingSeats.Select(s => s.SectionId).Distinct())
+                {
+                    ticket.SectionPrices.Add(new TicketSectionPrice { SectionId = sectionId, ColorHex = requestedColor, Price = section.Price });
+                }
                 _db.Tickets.Add(ticket);
             }
             await _db.SaveChangesAsync();
@@ -959,6 +1005,8 @@ namespace EventsApp.Controllers.Api
         public class LayoutTicketSectionRequest
         {
             public int SectionId { get; set; }
+            public List<int>? SectionIds { get; set; }
+            public string? GroupKey { get; set; }
             public string SectionName { get; set; } = "";
             public string ColorHex { get; set; } = "#2456ff";
             public int SeatsCount { get; set; }

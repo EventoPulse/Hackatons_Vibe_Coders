@@ -1633,6 +1633,10 @@ namespace EventsApp.Migrations
                         .HasMaxLength(48)
                         .HasColumnType("character varying(48)");
 
+                    b.Property<string>("ColorHex")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
                     b.Property<string>("Number")
                         .IsRequired()
                         .HasMaxLength(16)
@@ -1739,6 +1743,10 @@ namespace EventsApp.Migrations
                     b.Property<decimal>("Price")
                         .HasColumnType("numeric(18,2)");
 
+                    b.Property<string>("ColorHex")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
                     b.Property<int>("SectionId")
                         .HasColumnType("integer");
 
@@ -1749,7 +1757,7 @@ namespace EventsApp.Migrations
 
                     b.HasIndex("SectionId");
 
-                    b.HasIndex("TicketId", "SectionId")
+                    b.HasIndex("TicketId", "SectionId", "ColorHex")
                         .IsUnique();
 
                     b.ToTable("TicketSectionPrices");
