@@ -99,9 +99,13 @@ namespace EventsApp.Controllers.Api
                 {
                     eventId = e.Id,
                     eventTitle = e.Title,
+                    city = e.City,
+                    imageUrl = e.ImageUrl,
                     startTime = e.StartTime,
                     isApproved = e.IsApproved,
                     hasPendingChanges = e.ChangeRequests.Any(r => r.Status == EventChangeRequestStatus.Pending),
+                    hasActiveTickets = e.Tickets.Any(t => t.IsActive),
+                    capacity = e.Tickets.Where(t => t.IsActive).Sum(t => (int?)t.QuantityTotal) ?? 0,
                     sold = e.Tickets.SelectMany(t => t.UserTickets).Count(ut => ut.Transaction.Status == paid),
                     likes = e.Likes.Count,
                     views = e.UserActivities.Count(a => a.ActivityType == UserActivityType.EventViewed),
