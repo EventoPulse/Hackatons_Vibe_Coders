@@ -117,6 +117,11 @@ builder.Services.Configure<GoogleMapsOptions>(builder.Configuration.GetSection(G
 builder.Services.AddHttpClient<IAiSearchService, OpenAiService>();
 builder.Services.AddHttpClient<ILayoutAiService, OpenAiLayoutService>();
 builder.Services.AddHttpClient<IGeocodingService, NominatimGeocodingService>();
+builder.Services.AddHttpClient("link-preview", client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(4);
+    client.DefaultRequestHeaders.UserAgent.ParseAdd("EventoBot/1.0 (+https://evento.business)");
+});
 // Image generation removed — no additional HttpClient or image service registered.
 
 builder.Services.Configure<FormOptions>(options =>

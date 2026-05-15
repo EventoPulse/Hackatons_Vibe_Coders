@@ -57,6 +57,8 @@ namespace EventsApp.Data
 
         public DbSet<MessageLike> MessageLikes { get; set; } = null!;
 
+        public DbSet<MessageReaction> MessageReactions { get; set; } = null!;
+
         public DbSet<UserActivity> UserActivities { get; set; } = null!;
 
         public DbSet<Ticket> Tickets { get; set; } = null!;
@@ -518,6 +520,11 @@ namespace EventsApp.Data
                       .HasForeignKey(c => c.OrganizerProfileId)
                       .OnDelete(DeleteBehavior.NoAction);
 
+                entity.HasOne(c => c.PinnedMessage)
+                      .WithMany()
+                      .HasForeignKey(c => c.PinnedMessageId)
+                      .OnDelete(DeleteBehavior.SetNull);
+
                 entity.HasIndex(c => new { c.ParticipantOneId, c.ParticipantTwoId })
                       .IsUnique()
                       .HasFilter("\"OrganizerProfileId\" IS NULL");
@@ -585,6 +592,23 @@ namespace EventsApp.Data
                       .OnDelete(DeleteBehavior.Cascade);
 
                 entity.HasIndex(l => l.UserId);
+            });
+
+            builder.Entity<MessageReaction>(entity =>
+            {
+                entity.HasKey(r => new { r.MessageId, r.UserId, r.Emoji });
+
+                entity.HasOne(r => r.Message)
+                      .WithMany(m => m.Reactions)
+                      .HasForeignKey(r => r.MessageId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(r => r.User)
+                      .WithMany()
+                      .HasForeignKey(r => r.UserId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(r => r.UserId);
             });
 
             builder.Entity<UserActivity>(entity =>

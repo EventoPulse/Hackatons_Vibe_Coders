@@ -42,14 +42,25 @@ namespace EventsApp.Services
             ".mp4", ".webm", ".mov", ".m4v",
         };
 
+        private static readonly HashSet<string> FileExtensions = new(StringComparer.OrdinalIgnoreCase)
+        {
+            ".pdf", ".txt", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".zip",
+        };
+
         private static readonly HashSet<string> AllowedContentTypes = new(StringComparer.OrdinalIgnoreCase)
         {
             "image/jpeg", "image/png", "image/gif", "image/webp",
             "video/mp4", "video/webm", "video/quicktime", "video/x-m4v",
+            "application/pdf", "text/plain",
+            "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            "application/vnd.ms-excel", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "application/vnd.ms-powerpoint", "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+            "application/zip",
         };
 
         private const long MaxImageBytes = 5L * 1024 * 1024;
         private const long MaxVideoBytes = 100L * 1024 * 1024;
+        private const long MaxFileBytes = 20L * 1024 * 1024;
 
         private readonly IWebHostEnvironment _env;
         private readonly ILogger<MediaUploadService> _logger;
@@ -78,6 +89,11 @@ namespace EventsApp.Services
             {
                 mediaType = PostMediaType.Video;
                 maxBytes = MaxVideoBytes;
+            }
+            else if (FileExtensions.Contains(ext))
+            {
+                mediaType = PostMediaType.File;
+                maxBytes = MaxFileBytes;
             }
             else
             {
@@ -135,6 +151,11 @@ namespace EventsApp.Services
             {
                 mediaType = PostMediaType.Video;
                 if (data.Length > MaxVideoBytes) throw new InvalidOperationException($"File too large. Max for video is {MaxVideoBytes / (1024 * 1024)} MB.");
+            }
+            else if (FileExtensions.Contains(ext))
+            {
+                mediaType = PostMediaType.File;
+                if (data.Length > MaxFileBytes) throw new InvalidOperationException($"File too large. Max for file is {MaxFileBytes / (1024 * 1024)} MB.");
             }
             else
             {

@@ -18,14 +18,25 @@ namespace EventsApp.Services
             ".mp4", ".webm", ".mov", ".m4v",
         };
 
+        private static readonly HashSet<string> FileExtensions = new(StringComparer.OrdinalIgnoreCase)
+        {
+            ".pdf", ".txt", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".zip",
+        };
+
         private static readonly HashSet<string> AllowedContentTypes = new(StringComparer.OrdinalIgnoreCase)
         {
             "image/jpeg", "image/png", "image/gif", "image/webp",
             "video/mp4", "video/webm", "video/quicktime", "video/x-m4v",
+            "application/pdf", "text/plain",
+            "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            "application/vnd.ms-excel", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "application/vnd.ms-powerpoint", "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+            "application/zip",
         };
 
         private const long MaxImageBytes = 5L * 1024 * 1024;
         private const long MaxVideoBytes = 100L * 1024 * 1024;
+        private const long MaxFileBytes = 20L * 1024 * 1024;
 
         private readonly IAmazonS3 _client;
         private readonly ILogger<S3MediaUploadService> _logger;
@@ -181,6 +192,11 @@ namespace EventsApp.Services
                 mediaType = PostMediaType.Video;
                 maxBytes = MaxVideoBytes;
             }
+            else if (FileExtensions.Contains(ext))
+            {
+                mediaType = PostMediaType.File;
+                maxBytes = MaxFileBytes;
+            }
             else
             {
                 throw new InvalidOperationException($"Unsupported file type: {ext}");
@@ -212,7 +228,20 @@ namespace EventsApp.Services
                 ".webm" => "video/webm",
                 ".mov" => "video/quicktime",
                 ".m4v" => "video/x-m4v",
-                _ => mediaType == PostMediaType.Video ? "video/mp4" : "image/png",
+                ".pdf" => "application/pdf",
+                ".txt" => "text/plain",
+                ".doc" => "application/msword",
+                ".docx" => "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                ".xls" => "application/vnd.ms-excel",
+                ".xlsx" => "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                ".ppt" => "application/vnd.ms-powerpoint",
+                ".pptx" => "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                ".zip" => "application/zip",
+                _ => mediaType == PostMediaType.Video
+                    ? "video/mp4"
+                    : mediaType == PostMediaType.File
+                        ? "application/octet-stream"
+                        : "image/png",
             };
         }
 

@@ -57,10 +57,18 @@ namespace EventsApp.Models
 
         public ICollection<MessageLike> Likes { get; set; } = new HashSet<MessageLike>();
 
+        public ICollection<MessageReaction> Reactions { get; set; } = new HashSet<MessageReaction>();
+
         [Required]
         [MinLength(GlobalConstants.Social.MessageContentMinLength)]
         [MaxLength(GlobalConstants.Social.MessageContentMaxLength)]
         public string Content { get; set; } = null!;
+
+        public string? AttachmentUrl { get; set; }
+
+        public string? AttachmentName { get; set; }
+
+        public string? AttachmentMediaType { get; set; }
 
         [Required]
         public DateTime CreatedAt { get; set; }

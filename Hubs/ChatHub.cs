@@ -63,6 +63,7 @@ namespace EventsApp.Hubs
             var userId = Context.UserIdentifier;
             if (!string.IsNullOrWhiteSpace(userId))
             {
+                await Groups.AddToGroupAsync(Context.ConnectionId, UserGroup(userId));
                 var becameOnline = false;
                 UserConnections.AddOrUpdate(userId,
                     _ => { becameOnline = true; return new HashSet<string> { Context.ConnectionId }; },
@@ -162,6 +163,10 @@ namespace EventsApp.Hubs
                     seenAt = now,
                     seenByUserId = userId,
                 });
+                await Clients.Group(UserGroup(userId)).SendAsync("ConversationRead", new
+                {
+                    token,
+                });
             }
         }
 
@@ -194,5 +199,7 @@ namespace EventsApp.Hubs
         {
             return token.Trim().ToLowerInvariant();
         }
+
+        public static string UserGroup(string userId) => $"user:{userId}";
     }
 }

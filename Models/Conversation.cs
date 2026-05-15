@@ -56,5 +56,13 @@ namespace EventsApp.Models
         // Soft-archive per participant (each user can hide the conversation independently)
         public DateTime? ArchivedByP1At { get; set; }
         public DateTime? ArchivedByP2At { get; set; }
+
+        public DateTime? MutedByP1Until { get; set; }
+        public DateTime? MutedByP2Until { get; set; }
+
+        [ForeignKey(nameof(PinnedMessage))]
+        public int? PinnedMessageId { get; set; }
+
+        public Message? PinnedMessage { get; set; }
     }
 }
