@@ -81,6 +81,15 @@ namespace EventsApp.Hubs
             return Groups.RemoveFromGroupAsync(Context.ConnectionId, token);
         }
 
+        // Snapshot of a user's current online state. The presence-changed
+        // broadcasts only fire on transitions, so a client opening a chat to
+        // an already-online peer would never receive an event — they have to
+        // ask for the current state explicitly when joining.
+        public Task<bool> QueryPresence(string userId)
+        {
+            return Task.FromResult(IsUserOnline(userId));
+        }
+
         // Lightweight typing broadcast — no persistence. Fires to the other
         // participant(s) so they can render the "is typing…" bubble.
         public Task Typing(string token, bool isTyping)
