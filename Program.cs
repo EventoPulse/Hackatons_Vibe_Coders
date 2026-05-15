@@ -416,7 +416,9 @@ using (var scope = app.Services.CreateScope())
     await AdminSeeder.SeedAdminAsync(services, app.Configuration, app.Environment);
     await EventsSeeder.SeedAsync(services);
 
-    if (app.Environment.IsDevelopment() && app.Configuration.GetValue("SeedDemoData", false))
+    // Demo data seed runs whenever SeedDemoData=true (Development AND Production).
+    // The seeder is idempotent — re-running it only adds missing records.
+    if (app.Configuration.GetValue("SeedDemoData", false))
     {
         await DemoDataSeeder.SeedAsync(services);
     }
