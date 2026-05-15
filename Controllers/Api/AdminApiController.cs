@@ -332,7 +332,8 @@ namespace EventsApp.Controllers.Api
                     lastName = user.LastName,
                     profileImageUrl = user.ProfileImageUrl,
                     roles = roles.ToArray(),
-                    createdAt = user.LockoutEnd,
+                    createdAt = user.CreatedAt,
+                    lastLoginAt = user.LastLoginAt,
                 });
             }
             return Ok(result);

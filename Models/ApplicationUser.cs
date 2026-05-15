@@ -36,6 +36,8 @@ namespace EventsApp.Models
         [Required]
         public DateTime CreatedAt { get; set; }
 
+        public DateTime? LastLoginAt { get; set; }
+
         [MaxLength(GlobalConstants.User.FirstNameMaxLength)]
         public string? FirstName { get; set; }
 

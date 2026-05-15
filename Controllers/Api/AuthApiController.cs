@@ -78,6 +78,12 @@ namespace EventsApp.Controllers.Api
             if (!result.Succeeded)
                 return Unauthorized(new { error = "Грешен имейл или парола." });
 
+            var lastLoginAt = DateTime.UtcNow;
+            await _db.Users
+                .Where(u => u.Id == user.Id)
+                .ExecuteUpdateAsync(setters => setters.SetProperty(u => u.LastLoginAt, lastLoginAt));
+            user.LastLoginAt = lastLoginAt;
+
             var token = await GenerateJwtTokenAsync(user);
             var userDto = await BuildUserDtoAsync(user);
 
