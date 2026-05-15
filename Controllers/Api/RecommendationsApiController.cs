@@ -192,34 +192,44 @@ namespace EventsApp.Controllers.Api
             });
         }
 
-        private static object MapMatch(Event e, string? userId, int match, List<object> reasons, int friendsGoing) => new
+        private static object MapMatch(Event e, string? userId, int match, List<object> reasons, int friendsGoing)
         {
-            id = e.Id,
-            title = e.Title,
-            description = e.Description,
-            startTime = e.StartTime,
-            endTime = e.EndTime,
-            genre = e.Genre.ToString(),
-            imageUrl = e.ImageUrl,
-            address = e.Address,
-            city = e.City,
-            latitude = e.Latitude,
-            longitude = e.Longitude,
-            organizerName = e.OrganizerProfile?.DisplayName ?? "",
-            organizerProfileId = e.OrganizerProfileId,
-            likesCount = e.Likes.Count,
-            savesCount = e.Saves.Count,
-            goingCount = e.Attendances.Count(a => a.Status == EventAttendanceStatus.Going),
-            interestedCount = e.Attendances.Count(a => a.Status == EventAttendanceStatus.Interested),
-            isLiked = userId != null && e.Likes.Any(l => l.UserId == userId),
-            isSaved = userId != null && e.Saves.Any(s => s.UserId == userId),
-            userAttendanceStatus = userId != null
-                ? e.Attendances.FirstOrDefault(a => a.UserId == userId)?.Status.ToString()
-                : null,
-            match,
-            reasons,
-            friendsGoing,
-        };
+            decimal? minPrice = null;
+            if (e.Tickets != null && e.Tickets.Count > 0)
+            {
+                minPrice = e.Tickets.Min(t => t.Price);
+            }
+
+            return new
+            {
+                id = e.Id,
+                title = e.Title,
+                description = e.Description,
+                startTime = e.StartTime,
+                endTime = e.EndTime,
+                genre = e.Genre.ToString(),
+                imageUrl = e.ImageUrl,
+                address = e.Address,
+                city = e.City,
+                latitude = e.Latitude,
+                longitude = e.Longitude,
+                organizerName = e.OrganizerProfile?.DisplayName ?? "",
+                organizerProfileId = e.OrganizerProfileId,
+                likesCount = e.Likes.Count,
+                savesCount = e.Saves.Count,
+                goingCount = e.Attendances.Count(a => a.Status == EventAttendanceStatus.Going),
+                interestedCount = e.Attendances.Count(a => a.Status == EventAttendanceStatus.Interested),
+                isLiked = userId != null && e.Likes.Any(l => l.UserId == userId),
+                isSaved = userId != null && e.Saves.Any(s => s.UserId == userId),
+                userAttendanceStatus = userId != null
+                    ? e.Attendances.FirstOrDefault(a => a.UserId == userId)?.Status.ToString()
+                    : null,
+                match,
+                reasons,
+                friendsGoing,
+                minPrice,
+            };
+        }
     }
 
     public class RecPreviewRequest
