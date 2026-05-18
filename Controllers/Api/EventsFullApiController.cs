@@ -66,11 +66,66 @@ namespace EventsApp.Controllers.Api
             [FromQuery] string? keyword = null,
             [FromQuery] DateTime? dateFrom = null,
             [FromQuery] DateTime? dateTo = null,
-            [FromQuery] bool freeOnly = false)
+            [FromQuery] bool freeOnly = false,
+            // When the AI/structured search returns a ranked list of
+            // event IDs (e.g. "събития в Русе и околието" → ids in a
+            // 30 km radius), the home page forwards them here so the
+            // grid renders exactly those events in that order. All other
+            // filters are ignored when eventIds is present.
+            [FromQuery] string? eventIds = null)
         {
             page = Math.Max(1, page);
             pageSize = Math.Clamp(pageSize, 1, 50);
             var userId = CurrentUserId;
+
+            // Pinned-ID path: short-circuit the normal filter pipeline.
+            if (!string.IsNullOrWhiteSpace(eventIds))
+            {
+                var requestedIds = eventIds
+                    .Split(new[] { ',', ' ' }, StringSplitOptions.RemoveEmptyEntries)
+                    .Select(s => int.TryParse(s, out var n) ? n : 0)
+                    .Where(n => n > 0)
+                    .Distinct()
+                    .Take(100)
+                    .ToArray();
+
+                if (requestedIds.Length == 0)
+                {
+                    return Ok(new { items = Array.Empty<object>(), totalCount = 0, page = 1, pageSize, hasMore = false });
+                }
+
+                var pinned = await _db.Events
+                    .AsNoTracking()
+                    .Where(e => e.IsApproved && e.OrganizerProfileId != null && requestedIds.Contains(e.Id))
+                    .Include(e => e.Organizer)
+                    .Include(e => e.OrganizerProfile)
+                    .Include(e => e.Likes)
+                    .Include(e => e.Saves)
+                    .Include(e => e.Attendances)
+                    .ToListAsync();
+
+                // Preserve the caller's order (BM25 rank from search).
+                var indexById = requestedIds
+                    .Select((id, idx) => (id, idx))
+                    .ToDictionary(t => t.id, t => t.idx);
+                var orderedPinned = pinned
+                    .OrderBy(e => indexById.TryGetValue(e.Id, out var i) ? i : int.MaxValue)
+                    .ToList();
+
+                var skip = (page - 1) * pageSize;
+                var pageItems = orderedPinned.Skip(skip).Take(pageSize)
+                    .Select(e => MapToCard(e, userId))
+                    .ToList();
+
+                return Ok(new
+                {
+                    items = pageItems,
+                    totalCount = orderedPinned.Count,
+                    page,
+                    pageSize,
+                    hasMore = skip + pageItems.Count < orderedPinned.Count,
+                });
+            }
 
             var q = _db.Events
                 .AsNoTracking()
@@ -96,8 +151,16 @@ namespace EventsApp.Controllers.Api
 
             if (!string.IsNullOrWhiteSpace(city))
             {
-                var cityPattern = "%" + EscapeLikePattern(city) + "%";
-                q = q.Where(e => EF.Functions.ILike(e.City, cityPattern));
+                // Events are stored with whatever spelling the organizer
+                // typed in: most are Cyrillic ("Русе"), some are Latin
+                // ("Ruse"). A user (or the AI parser) might request
+                // either spelling. Expand to every equivalent name and
+                // match against any of them with ILIKE.
+                var equivalents = EventsApp.Common.CityCoordinates.GetEquivalentNames(city.Trim());
+                var cityNeedles = equivalents.Count > 0
+                    ? equivalents.Select(n => "%" + EscapeLikePattern(n) + "%").ToArray()
+                    : new[] { "%" + EscapeLikePattern(city) + "%" };
+                q = q.Where(e => cityNeedles.Any(p => EF.Functions.ILike(e.City, p)));
             }
 
             if (!string.IsNullOrWhiteSpace(genre) && Enum.TryParse<EventGenre>(genre, true, out var genreEnum))
