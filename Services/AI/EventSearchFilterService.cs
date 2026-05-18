@@ -53,6 +53,13 @@ namespace EventsApp.Services.AI
             // applied in memory after a tight bounding-box pre-filter,
             // because EF cannot translate Haversine or DST-aware time
             // arithmetic. ===
+            // Track whether any structured filter was applied — when the
+            // user typed e.g. "малката виена" and we didn't manage to
+            // resolve it to a city, the rest of the search must NOT
+            // silently return random upcoming events. Better to return
+            // empty so the UI can show a proper "не намерих" empty
+            // state.
+            var hasStructuredFilter = false;
             IQueryable<Event> q = _db.Events
                 .AsNoTracking()
                 .Where(e => e.IsApproved && e.OrganizerProfileId != null && e.StartTime >= nowUtc);
@@ -67,6 +74,7 @@ namespace EventsApp.Services.AI
                 var fromUtc = ToUtcDayStart(from, sofia);
                 var toUtc = ToUtcDayStart(to.AddDays(1), sofia); // exclusive upper bound
                 q = q.Where(e => e.StartTime >= fromUtc && e.StartTime < toUtc);
+                hasStructuredFilter = true;
             }
 
             // City filter — compare against the normalized City column.
@@ -80,6 +88,7 @@ namespace EventsApp.Services.AI
                 // SQL: e.City IN (var1, var2, ...) case-insensitive.
                 var lowered = cityVariants.Select(c => c.ToLower()).ToArray();
                 q = q.Where(e => lowered.Contains(e.City.ToLower()));
+                hasStructuredFilter = true;
             }
 
             // Genre filter — accepts either the single .Genre or any of
@@ -90,6 +99,7 @@ namespace EventsApp.Services.AI
             if (genres.Length > 0)
             {
                 q = q.Where(e => genres.Contains(e.Genre));
+                hasStructuredFilter = true;
             }
 
             // Radius pre-filter: bounding box in SQL, refined in memory.
@@ -117,6 +127,7 @@ namespace EventsApp.Services.AI
                     q = q.Where(e => e.Latitude != null && e.Longitude != null
                         && e.Latitude >= minLat && e.Latitude <= maxLat
                         && e.Longitude >= minLng && e.Longitude <= maxLng);
+                    hasStructuredFilter = true;
                 }
             }
 
@@ -176,10 +187,24 @@ namespace EventsApp.Services.AI
                 try
                 {
                     var ranked = await _semantic.SearchAsync(keywordQuery, Math.Max(topK * 4, 100), cancellationToken);
+                    // When the keyword is the *only* signal we have
+                    // (no city, no genre, no date, no radius) and BM25
+                    // returns nothing, we explicitly return empty
+                    // instead of padding random upcoming events with a
+                    // 0.05 baseline score. The previous behavior was
+                    // misleading: a query like "малката виена" with no
+                    // matches showed 30 unrelated events as if the
+                    // search had succeeded.
+                    if (ranked.Count == 0 && !hasStructuredFilter)
+                    {
+                        return Array.Empty<int>();
+                    }
+
                     var scoreById = ranked.ToDictionary(r => r.EventId, r => r.Score);
-                    // Combine: pure BM25 score boosts events that match
-                    // the free-text portion; +0.05 baseline keeps events
-                    // without a keyword hit eligible.
+                    // If we have BOTH structured filters AND a keyword,
+                    // events without a BM25 hit can still surface (they
+                    // already passed the structured filter) — but with
+                    // a tiny baseline so keyword hits float to the top.
                     return preliminary
                         .Select(e => new
                         {
@@ -197,6 +222,16 @@ namespace EventsApp.Services.AI
                 {
                     _logger.LogDebug(ex, "BM25 reranking failed; falling back to date sort");
                 }
+            }
+
+            // No keyword at all → no need to rerank. Just return what
+            // the structured filters picked, sorted by soonest first.
+            // If there were ALSO no structured filters, return empty —
+            // showing the whole upcoming-events corpus for an empty
+            // intent is not what a search should do.
+            if (!hasStructuredFilter)
+            {
+                return Array.Empty<int>();
             }
 
             return preliminary

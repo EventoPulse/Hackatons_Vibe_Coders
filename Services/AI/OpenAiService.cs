@@ -51,6 +51,17 @@ Cities (always return canonical English spelling, or null if not present):
 Казанлък → Kazanlak, Кюстендил → Kyustendil, Монтана → Montana, Търговище → Targovishte,
 Разград → Razgrad, Силистра → Silistra.
 
+Bulgarian colloquial city nicknames (resolve to the canonical city):
+""столицата""                                 → Sofia
+""малката Виена"" / ""градът под тепетата"" / ""тепетата""  → Plovdiv
+""морската столица""                           → Varna
+""старата столица""                            → Veliko Tarnovo
+""розовата долина"" / ""долината на розите""    → Kazanlak
+""столицата на хумора""                        → Gabrovo
+""крайдунавска столица""                       → Ruse
+""града на липите""                            → Stara Zagora
+""града на стоте войводи""                     → Sliven
+
 Genre enum names (use these exactly):
 Nightlife, Electronic, House, Techno, Pop, Rock, Metal, Jazz, HipHop, Trap, Rnb,
 Folk, Chalga, LiveMusic, Classical, Opera, Ballet, Theater, Comedy, Standup,

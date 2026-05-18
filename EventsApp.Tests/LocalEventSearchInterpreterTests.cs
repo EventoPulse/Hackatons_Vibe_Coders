@@ -101,4 +101,23 @@ public class LocalEventSearchInterpreterTests
         Assert.Null(result.Intent.StartTimeOfDay);
         Assert.Null(result.Intent.EndTimeOfDay);
     }
+
+    [Theory]
+    [InlineData("събития в малката Виена", "Plovdiv")]
+    [InlineData("концерти под тепетата", "Plovdiv")]
+    [InlineData("партита в морската столица", "Varna")]
+    [InlineData("събития в старата столица", "Veliko Tarnovo")]
+    [InlineData("розовата долина този уикенд", "Kazanlak")]
+    public void Parse_BulgarianCityNicknames_ResolveToCanonicalCity(string query, string expectedCity)
+    {
+        // Bulgarian colloquial names for cities must resolve locally
+        // so the search still works when the AI is offline or wrong.
+        var result = LocalEventSearchInterpreter.Parse(query, new DateTime(2026, 5, 10));
+
+        Assert.NotNull(result.Intent);
+        Assert.Equal(expectedCity, result.Intent.City);
+        Assert.Contains(expectedCity, result.Intent.Cities);
+        Assert.NotNull(result.Intent.Latitude);
+        Assert.NotNull(result.Intent.Longitude);
+    }
 }

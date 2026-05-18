@@ -24,16 +24,24 @@ namespace EventsApp.Services.AI
             "за", "на", "в", "около", "близо", "до", "near", "me", "with", "the", "a", "an", "and", "or"
         };
 
+        // Aliases include the canonical Bulgarian + English spellings
+        // plus colloquial nicknames Bulgarians use in everyday speech.
+        // Nicknames are deliberate: a user typing "малката Виена" must
+        // hit Plovdiv without depending on the AI being online or the
+        // OpenAI model knowing the reference.
         private static readonly Dictionary<string, string[]> CityAliases = new(StringComparer.OrdinalIgnoreCase)
         {
-            ["Sofia"] = new[] { "софия", "sofia", "sofiaq" },
-            ["Plovdiv"] = new[] { "пловдив", "plovdiv" },
-            ["Varna"] = new[] { "варна", "varna" },
+            ["Sofia"] = new[] { "софия", "sofia", "sofiaq", "столицата" },
+            ["Plovdiv"] = new[] { "пловдив", "plovdiv",
+                // "Малката Виена" / "градът под тепетата" / "тепетата" —
+                // standard nicknames for Plovdiv.
+                "малката виена", "града под тепетата", "градът под тепетата", "тепетата" },
+            ["Varna"] = new[] { "варна", "varna", "морската столица" },
             ["Burgas"] = new[] { "бургас", "burgas", "bourgas" },
-            ["Ruse"] = new[] { "русе", "ruse", "rousse" },
-            ["Stara Zagora"] = new[] { "стара загора", "stara zagora" },
+            ["Ruse"] = new[] { "русе", "ruse", "rousse", "крайдунавска столица", "малката виена на дунава" },
+            ["Stara Zagora"] = new[] { "стара загора", "stara zagora", "града на липите" },
             ["Pleven"] = new[] { "плевен", "pleven" },
-            ["Sliven"] = new[] { "сливен", "sliven" },
+            ["Sliven"] = new[] { "сливен", "sliven", "града на стоте войводи" },
             ["Dobrich"] = new[] { "добрич", "dobrich" },
             ["Shumen"] = new[] { "шумен", "shumen" },
             ["Pernik"] = new[] { "перник", "pernik" },
@@ -41,12 +49,12 @@ namespace EventsApp.Services.AI
             ["Yambol"] = new[] { "ямбол", "yambol" },
             ["Pazardzhik"] = new[] { "пазарджик", "pazardzhik" },
             ["Blagoevgrad"] = new[] { "благоевград", "blagoevgrad" },
-            ["Veliko Tarnovo"] = new[] { "велико търново", "veliko tarnovo", "tarnovo" },
+            ["Veliko Tarnovo"] = new[] { "велико търново", "veliko tarnovo", "tarnovo", "старата столица" },
             ["Vratsa"] = new[] { "враца", "vratsa" },
-            ["Gabrovo"] = new[] { "габрово", "gabrovo" },
+            ["Gabrovo"] = new[] { "габрово", "gabrovo", "столицата на хумора" },
             ["Asenovgrad"] = new[] { "асеновград", "asenovgrad" },
             ["Vidin"] = new[] { "видин", "vidin" },
-            ["Kazanlak"] = new[] { "казанлък", "kazanlak" },
+            ["Kazanlak"] = new[] { "казанлък", "kazanlak", "розовата долина", "долината на розите" },
             ["Kyustendil"] = new[] { "кюстендил", "kyustendil" },
             ["Montana"] = new[] { "монтана", "montana" },
             ["Targovishte"] = new[] { "търговище", "targovishte" },
