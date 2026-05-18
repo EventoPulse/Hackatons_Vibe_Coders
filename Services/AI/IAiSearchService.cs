@@ -16,6 +16,16 @@ namespace EventsApp.Services.AI
         public string? DateIntent { get; set; }
         public double? Latitude { get; set; }
         public double? Longitude { get; set; }
+        // Radius search in kilometres. Set when the user says "околието",
+        // "наблизо", "около София", "около мен", etc. The intent is paired
+        // with Latitude/Longitude (either a known city or the user's GPS)
+        // so the search can run a bounding-box + Haversine filter.
+        public int? RadiusKm { get; set; }
+        // Time-of-day window in Bulgarian local time (Europe/Sofia).
+        // Populated for queries like "от 13:00 до 18:00" so the search
+        // can keep only events whose start hour falls inside the slot.
+        public TimeSpan? StartTimeOfDay { get; set; }
+        public TimeSpan? EndTimeOfDay { get; set; }
         public string[] Keywords { get; set; } = Array.Empty<string>();
         public string? RawQuery { get; set; }
     }

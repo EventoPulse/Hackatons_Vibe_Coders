@@ -17,36 +17,78 @@ namespace EventsApp.Services.AI
         };
 
         private static readonly string SearchSystemPrompt =
-@"You are a search parser for Evento, an events discovery platform in Bulgaria.
-Extract structured search filters from the user query.
-Return ONLY valid JSON. No markdown. No explanations.
+@"You are a STRUCTURED filter parser for Evento, an events platform in Bulgaria.
+Your only job is to extract filters from the user's natural-language query.
+Return ONLY valid JSON. No markdown, no explanations, no extra text.
+You MUST NOT invent events, venues, artists, prices, or links.
+If you are unsure about any field, set it to null. Do not guess.
 
-Schema:
+JSON schema (every key must appear; use null / empty array if missing):
 {
-  ""city"": string or null,
-  ""cities"": string[],
-  ""genre"": string or null,
-  ""genres"": string[],
-  ""keyword"": string or null,
-  ""dateIntent"": string or null,
-  ""dateFrom"": string or null,
-  ""dateTo"": string or null,
-  ""nearMe"": boolean,
-  ""latitude"": number or null,
-  ""longitude"": number or null,
-  ""keywords"": string[]
+  ""city"":      string|null,
+  ""cities"":    string[],
+  ""genre"":     string|null,
+  ""genres"":    string[],
+  ""keyword"":   string|null,
+  ""keywords"":  string[],
+  ""dateIntent"": string|null,
+  ""dateFrom"":  string|null,           // ISO date YYYY-MM-DD in Europe/Sofia local time
+  ""dateTo"":    string|null,           // ISO date YYYY-MM-DD in Europe/Sofia local time
+  ""startTimeOfDay"": string|null,      // HH:mm 24h, Europe/Sofia local time
+  ""endTimeOfDay"":   string|null,      // HH:mm 24h, Europe/Sofia local time
+  ""nearMe"":    boolean,                // true ONLY if user mentions ""около мен"" / ""near me""
+  ""radiusKm"":  number|null,            // 30 by default when the user uses ""околието"", ""наблизо"", ""около <град>""
+  ""latitude"":  number|null,
+  ""longitude"": number|null
 }
 
-Rules:
-- Detect Bulgarian cities: София/Sofia, Пловдив/Plovdiv, Варна/Varna, Бургас/Burgas, Русе/Ruse, Стара Загора/Stara Zagora, Плевен/Pleven, Велико Търново/Veliko Tarnovo, Благоевград/Blagoevgrad, Шумен/Shumen, Добрич/Dobrich, Сливен/Sliven, Перник/Pernik, Хасково/Haskovo, Ямбол/Yambol. Always return city in canonical English form or null.
-- Map genres to app enum names such as Nightlife, Electronic, House, Techno, Pop, Rock, Jazz, LiveMusic, Theater, Festival, Kids, Classical, Cinema, Sports, FoodAndDrinks, Workshop, Networking, Other.
-- If query says 'около мен' or 'near me', set nearMe=true.
-- Ignore filler words like 'искам', 'търся', 'покажи', 'намери', 'събитие', 'event'.
-- Detect broad regional intent too. If user says sea/beach/coast/морето/плаж/Черноморие, set cities to [""Varna"",""Burgas"",""Dobrich""].
-- Map genres to app enum names. If the query is broad, return multiple genres in genres. Example: ""party on the beach"" -> genres [""Nightlife"",""Electronic"",""House"",""Techno"",""Pop""], cities [""Varna"",""Burgas"",""Dobrich""].
-- dateIntent: short label such as 'tonight','tomorrow','this weekend','this week' or null.
-- dateFrom/dateTo: ISO 8601 date strings or null.
-- Return ONLY the JSON object.";
+Cities (always return canonical English spelling, or null if not present):
+София → Sofia, Пловдив → Plovdiv, Варна → Varna, Бургас → Burgas, Русе → Ruse,
+Стара Загора → Stara Zagora, Плевен → Pleven, Велико Търново → Veliko Tarnovo,
+Благоевград → Blagoevgrad, Шумен → Shumen, Добрич → Dobrich, Сливен → Sliven,
+Перник → Pernik, Хасково → Haskovo, Ямбол → Yambol, Пазарджик → Pazardzhik,
+Враца → Vratsa, Габрово → Gabrovo, Асеновград → Asenovgrad, Видин → Vidin,
+Казанлък → Kazanlak, Кюстендил → Kyustendil, Монтана → Montana, Търговище → Targovishte,
+Разград → Razgrad, Силистра → Silistra.
+
+Genre enum names (use these exactly):
+Nightlife, Electronic, House, Techno, Pop, Rock, Metal, Jazz, HipHop, Trap, Rnb,
+Folk, Chalga, LiveMusic, Classical, Opera, Ballet, Theater, Comedy, Standup,
+Cinema, Kids, Festival, Exhibition, Art, Sports, FoodAndDrinks, Workshop,
+Networking, Gaming, Conference, Other.
+
+Hard rules:
+- ""около мен"" / ""близо до мен"" / ""near me""           → nearMe=true, radiusKm=30
+- ""околието"" / ""околността"" / ""наблизо"" / ""в района"" → radiusKm=30; cities stays the named city
+- ""в София и околието""  → city=""Sofia"", cities=[""Sofia""], radiusKm=30
+- ""в Русе и околието""   → city=""Ruse"",  cities=[""Ruse""],  radiusKm=30
+- Sea/beach/coast/морето/плаж/Черноморие → cities=[""Varna"",""Burgas"",""Dobrich""]
+- ""утре"" → dateFrom=dateTo=tomorrow in Sofia. ""днес"" → today. ""вдругиден"" → +2 days.
+  ""уикенд"" → Saturday..Sunday. ""тази седмица"" → today..end-of-week.
+- Time ranges (""от 13:00 до 18:00"", ""13-18ч"", ""between 1pm and 6pm"") →
+  startTimeOfDay=""13:00"", endTimeOfDay=""18:00"". 24h format.
+- ignore filler words: искам, искам да, търся, ще съм, може ли, препоръчаш,
+  събитие, събития, event, events, please, show, find.
+- keyword: optional short free-text only when the user describes a vibe that
+  no city / genre / date / time captures. Otherwise null.
+- If absolutely nothing structured can be extracted, return all-null/empty fields.
+  Never echo the user query back as keyword.
+
+Examples:
+
+Examples assume today in Europe/Sofia is provided in the user message. Use that
+to resolve relative dates — do not assume any other date.
+
+User query: ""Събития в Русе и околието""
+Output: {""city"":""Ruse"",""cities"":[""Ruse""],""genre"":null,""genres"":[],""keyword"":null,""keywords"":[],""dateIntent"":null,""dateFrom"":null,""dateTo"":null,""startTimeOfDay"":null,""endTimeOfDay"":null,""nearMe"":false,""radiusKm"":30,""latitude"":null,""longitude"":null}
+
+User query (with ""Today (Europe/Sofia): 2026-05-18""): ""Утре ще съм в София от 13:00 до 18:00 може ли да ми препоръчаш събития""
+Output: {""city"":""Sofia"",""cities"":[""Sofia""],""genre"":null,""genres"":[],""keyword"":null,""keywords"":[],""dateIntent"":""tomorrow"",""dateFrom"":""2026-05-19"",""dateTo"":""2026-05-19"",""startTimeOfDay"":""13:00"",""endTimeOfDay"":""18:00"",""nearMe"":false,""radiusKm"":null,""latitude"":null,""longitude"":null}
+
+User query (with ""Today (Europe/Sofia): 2026-05-18, Sunday""): ""джаз концерт тази седмица в Пловдив""
+Output: {""city"":""Plovdiv"",""cities"":[""Plovdiv""],""genre"":""Jazz"",""genres"":[""Jazz"",""LiveMusic""],""keyword"":null,""keywords"":[],""dateIntent"":""this week"",""dateFrom"":""2026-05-18"",""dateTo"":""2026-05-24"",""startTimeOfDay"":null,""endTimeOfDay"":null,""nearMe"":false,""radiusKm"":null,""latitude"":null,""longitude"":null}
+
+Return ONLY the JSON object.";
 
         private static string GetDescriptionSystemPrompt(string? lang) => (lang == "en")
             ? "You are a marketing copywriter for an events platform. Write a single concise event description (60-120 words) in plain English. Tone: energetic, inviting, modern. Do NOT invent artist names, prices, or times. Output ONLY the description text."
@@ -117,10 +159,17 @@ Rules:
 
         private async Task<AiSearchIntent?> InterpretInternalAsync(string query, CancellationToken cancellationToken)
         {
-            var userContent = "User query: " + query.Trim() +
-                              "\nCurrent UTC date: " + DateTime.UtcNow.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+            var sofia = TryGetSofiaTimeZone();
+            var nowSofia = sofia == null
+                ? DateTime.UtcNow
+                : TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, sofia);
+            var todayLine = "Today (Europe/Sofia): " + nowSofia.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)
+                + ", " + nowSofia.ToString("dddd", CultureInfo.InvariantCulture);
+            var userContent = todayLine + "\nUser query: " + query.Trim();
 
-            var raw = await CallChatAsync(SearchSystemPrompt, userContent, 220, 0.1, cancellationToken);
+            // 350 tokens leaves enough room for the wider schema (radiusKm,
+            // startTimeOfDay, endTimeOfDay) without bloating cost.
+            var raw = await CallChatAsync(SearchSystemPrompt, userContent, 350, 0.1, cancellationToken);
             if (raw == null) return null;
 
             var intent = ParseIntentJson(raw);
@@ -363,10 +412,27 @@ Rules:
                 if (TryParseDate(ReadString(r, "dateFrom"), out var df)) intent.DateFrom = df;
                 if (TryParseDate(ReadString(r, "dateTo"), out var dt)) intent.DateTo = dt;
 
+                // New fields — best-effort parse, never throw.
+                var radius = ReadDouble(r, "radiusKm");
+                if (radius.HasValue && radius.Value > 0 && radius.Value <= 500)
+                {
+                    intent.RadiusKm = (int)Math.Round(radius.Value);
+                }
+                if (TryParseTimeOfDay(ReadString(r, "startTimeOfDay"), out var startTod)) intent.StartTimeOfDay = startTod;
+                if (TryParseTimeOfDay(ReadString(r, "endTimeOfDay"), out var endTod)) intent.EndTimeOfDay = endTod;
+                // Reject malformed windows where end is before start.
+                if (intent.StartTimeOfDay.HasValue && intent.EndTimeOfDay.HasValue
+                    && intent.EndTimeOfDay.Value <= intent.StartTimeOfDay.Value)
+                {
+                    intent.StartTimeOfDay = null;
+                    intent.EndTimeOfDay = null;
+                }
+
                 if (intent.City == null && intent.Keyword == null && intent.Genre == null &&
                     intent.Cities.Length == 0 && intent.Genres.Length == 0 &&
                     intent.DateFrom == null && intent.DateTo == null && !intent.NearMe &&
-                    intent.Keywords.Length == 0)
+                    intent.Keywords.Length == 0 && intent.RadiusKm == null &&
+                    intent.StartTimeOfDay == null && intent.EndTimeOfDay == null)
                     return null;
 
                 return intent;
@@ -375,6 +441,33 @@ Rules:
             {
                 return null;
             }
+        }
+
+        private static bool TryParseTimeOfDay(string? value, out TimeSpan time)
+        {
+            time = default;
+            if (string.IsNullOrWhiteSpace(value)) return false;
+            // Accept "HH:mm", "H:mm", "HH:mm:ss", or bare "HH".
+            if (TimeSpan.TryParseExact(value, new[] { @"h\:mm", @"hh\:mm", @"h\:mm\:ss", @"hh\:mm\:ss" }, CultureInfo.InvariantCulture, out time))
+                return time.TotalHours >= 0 && time.TotalHours <= 24;
+            if (int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var hours)
+                && hours >= 0 && hours <= 24)
+            {
+                time = TimeSpan.FromHours(hours);
+                return true;
+            }
+            return false;
+        }
+
+        private static TimeZoneInfo? TryGetSofiaTimeZone()
+        {
+            foreach (var id in new[] { "Europe/Sofia", "FLE Standard Time" })
+            {
+                try { return TimeZoneInfo.FindSystemTimeZoneById(id); }
+                catch (TimeZoneNotFoundException) { }
+                catch (InvalidTimeZoneException) { }
+            }
+            return null;
         }
 
         private static string? ReadString(JsonElement el, string prop)

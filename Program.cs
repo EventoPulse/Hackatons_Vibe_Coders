@@ -117,6 +117,7 @@ builder.Services.Configure<GoogleMapsOptions>(builder.Configuration.GetSection(G
 builder.Services.AddHttpClient<IAiSearchService, OpenAiService>();
 builder.Services.AddHttpClient<ILayoutAiService, OpenAiLayoutService>();
 builder.Services.AddSingleton<IEventSemanticSearchService, EventSemanticSearchService>();
+builder.Services.AddScoped<IEventSearchFilterService, EventSearchFilterService>();
 builder.Services.AddHttpClient<IGeocodingService, NominatimGeocodingService>();
 builder.Services.AddHttpClient("link-preview", client =>
 {

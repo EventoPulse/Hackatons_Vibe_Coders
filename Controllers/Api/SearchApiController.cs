@@ -20,12 +20,14 @@ namespace EventsApp.Controllers.Api
 
         private readonly IAiSearchService _ai;
         private readonly IEventSemanticSearchService _semanticSearch;
+        private readonly IEventSearchFilterService _filterSearch;
         private readonly ILogger<SearchApiController> _logger;
 
-        public SearchApiController(IAiSearchService ai, IEventSemanticSearchService semanticSearch, ILogger<SearchApiController> logger)
+        public SearchApiController(IAiSearchService ai, IEventSemanticSearchService semanticSearch, IEventSearchFilterService filterSearch, ILogger<SearchApiController> logger)
         {
             _ai = ai;
             _semanticSearch = semanticSearch;
+            _filterSearch = filterSearch;
             _logger = logger;
         }
 
@@ -57,50 +59,96 @@ namespace EventsApp.Controllers.Api
                 query = query[..MaxSmartQueryLength];
             }
 
+            // 1) Always start with the local heuristic parser — fast,
+            //    deterministic, and free. It handles common Bulgarian
+            //    patterns (городове, "утре", "уикенд", time ranges,
+            //    "околието") without spending a single AI token.
             var local = LocalEventSearchInterpreter.Parse(query, DateTime.UtcNow);
             AiSearchIntent? intent = local.Intent;
             var usedAi = false;
 
-            if (!_ai.IsEnabled || local.HasStrongIntent || !local.ShouldAskAi)
+            // 2) If the local parse missed structure and the query is
+            //    long / fuzzy enough to benefit from AI parsing, call
+            //    the LLM as a *parser only* — it returns structured
+            //    JSON filters, never event content. AI failures are
+            //    swallowed; we fall back to the local intent.
+            if (_ai.IsEnabled && !local.HasStrongIntent && local.ShouldAskAi)
             {
-                ApplyIntent(result, intent);
-                ApplyKeywordFallback(result, query);
-                result.AiUsed = false;
-                result.AiStatus = _ai.IsEnabled ? "Local" : "Disabled";
-                result.AiStatusDetail = _ai.IsEnabled
-                    ? "Parsed locally without spending AI tokens."
-                    : "AI search is not configured. Local smart search was used.";
-                return Ok(result);
-            }
-
-            try
-            {
-                var aiIntent = await _ai.InterpretAsync(query, ct);
-                if (aiIntent != null)
+                try
                 {
-                    intent = LocalEventSearchInterpreter.Merge(intent, aiIntent);
-                    usedAi = true;
+                    var aiIntent = await _ai.InterpretAsync(query, ct);
+                    if (aiIntent != null)
+                    {
+                        intent = LocalEventSearchInterpreter.Merge(intent, aiIntent);
+                        usedAi = true;
+                    }
                 }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Smart search AI call threw");
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Smart search AI call threw");
+                }
             }
 
             ApplyIntent(result, intent);
-            result.AiUsed = usedAi;
-
-            result.AiStatus = _ai.LastStatus.ToString();
-            result.AiStatusDetail = usedAi
-                ? _ai.LastStatusDetail
-                : (_ai.LastStatusDetail ?? "AI did not improve the local parse; local smart search was used.");
-
             ApplyCityFallback(result, query);
             ApplyKeywordFallback(result, query);
 
-            await ApplySemanticRankingAsync(result, query, ct);
+            // 3) Run the parsed filters against the database. The DB
+            //    query is the *only* source of event IDs — the AI never
+            //    invents events.
+            if (intent != null)
+            {
+                try
+                {
+                    var matched = await _filterSearch.SearchAsync(intent, SemanticTopK, ct);
+                    result.EventIds = matched.ToArray();
+                }
+                catch (OperationCanceledException) { throw; }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Structured filter search failed; using semantic fallback");
+                }
+            }
+
+            // 4) Safety net: if structured filters returned nothing
+            //    (e.g. parse failure, sparse data), still give the user
+            //    *something* by ranking the whole approved corpus with
+            //    the BM25 retriever against the raw query.
+            if (result.EventIds.Length == 0)
+            {
+                await ApplySemanticRankingAsync(result, query, ct);
+            }
+
+            result.AiUsed = usedAi;
+            result.AiStatus = _ai.IsEnabled ? _ai.LastStatus.ToString() : "Disabled";
+            result.AiStatusDetail = usedAi
+                ? _ai.LastStatusDetail
+                : (_ai.IsEnabled
+                    ? (_ai.LastStatusDetail ?? "AI did not improve the local parse; local smart search was used.")
+                    : "AI search is not configured. Local smart search was used.");
+
+            result.FilterSummary = BuildSummary(result);
 
             return Ok(result);
+        }
+
+        private static string? BuildSummary(AiSearchResult r)
+        {
+            var parts = new List<string>(6);
+            if (!string.IsNullOrWhiteSpace(r.City)) parts.Add(r.City!);
+            else if (r.Cities.Length > 0) parts.Add(string.Join(", ", r.Cities));
+            if (r.RadiusKm.HasValue) parts.Add($"в радиус {r.RadiusKm.Value} км");
+            if (!string.IsNullOrWhiteSpace(r.Genre)) parts.Add(r.Genre!);
+            if (!string.IsNullOrWhiteSpace(r.DateIntent)) parts.Add(r.DateIntent!);
+            else if (r.DateFrom.HasValue && r.DateTo.HasValue)
+            {
+                parts.Add(r.DateFrom.Value.Date == r.DateTo.Value.Date
+                    ? r.DateFrom.Value.ToString("dd.MM.yyyy")
+                    : $"{r.DateFrom.Value:dd.MM} — {r.DateTo.Value:dd.MM.yyyy}");
+            }
+            if (!string.IsNullOrEmpty(r.StartTimeOfDay) && !string.IsNullOrEmpty(r.EndTimeOfDay))
+                parts.Add($"{r.StartTimeOfDay}–{r.EndTimeOfDay}");
+            return parts.Count == 0 ? null : string.Join(" · ", parts);
         }
 
         // POST /api/search/semantic — pure BM25 retrieval, no AI parsing.
@@ -200,9 +248,14 @@ namespace EventsApp.Controllers.Api
                 : (intent.Genre.HasValue ? new[] { intent.Genre.Value.ToString() } : Array.Empty<string>());
             result.Keyword = intent.Keyword ?? result.Keyword;
             result.DateIntent = intent.DateIntent;
+            result.DateFrom = intent.DateFrom;
+            result.DateTo = intent.DateTo;
             result.NearMe = intent.NearMe;
             result.Latitude = intent.Latitude;
             result.Longitude = intent.Longitude;
+            result.RadiusKm = intent.RadiusKm;
+            result.StartTimeOfDay = intent.StartTimeOfDay?.ToString(@"hh\:mm");
+            result.EndTimeOfDay = intent.EndTimeOfDay?.ToString(@"hh\:mm");
             result.Keywords = intent.Keywords ?? Array.Empty<string>();
         }
 

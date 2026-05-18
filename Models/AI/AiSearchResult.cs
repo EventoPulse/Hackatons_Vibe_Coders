@@ -16,10 +16,22 @@ namespace EventsApp.Models.AI
         public bool AiUsed { get; set; }
         public string? AiStatus { get; set; }
         public string? AiStatusDetail { get; set; }
-        // Top event IDs ranked by the in-memory BM25 retriever. Populated
-        // for every smart query so the client can render an answer even
-        // when the AI couldn't pull a structured filter out of a long
-        // natural-language sentence.
+        // Top event IDs after running the parsed filters against the
+        // database. Ranked by relevance + soonest start. The client uses
+        // this list directly — no second client-side filter pass is
+        // required. Empty when the search produced no matches.
         public int[] EventIds { get; set; } = System.Array.Empty<int>();
+        public System.DateTime? DateFrom { get; set; }
+        public System.DateTime? DateTo { get; set; }
+        // Radius around (Latitude, Longitude) in kilometres. Set when
+        // the user wrote "околието", "наблизо", "около мен", etc.
+        public int? RadiusKm { get; set; }
+        // Time-of-day filter in Europe/Sofia local time. "13:00".
+        public string? StartTimeOfDay { get; set; }
+        public string? EndTimeOfDay { get; set; }
+        // Friendly Bulgarian summary of what the system actually
+        // filtered on. Built server-side so the UI doesn't have to
+        // re-construct it from the structured fields.
+        public string? FilterSummary { get; set; }
     }
 }

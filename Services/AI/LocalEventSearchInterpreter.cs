@@ -91,6 +91,19 @@ namespace EventsApp.Services.AI
             "море", "морето", "плаж", "плажа", "черноморие", "черно море", "sea", "beach", "coast", "seaside"
         };
 
+        // Radius keywords. "околието" / "наблизо" / "около мен" / "около София" / "около Русе"
+        // all map to a 30 km bounding box around the city (or the user's GPS).
+        private const int DefaultRadiusKm = 30;
+        private static readonly string[] RadiusTerms =
+        {
+            "околието","околие","околността","околностите","наблизо","в близост","в района","в района на",
+            "nearby","around"
+        };
+        // Detect "от HH:MM до HH:MM" / "between 13 and 18" / "13:00-18:00".
+        private static readonly Regex TimeRangeRegex = new(
+            @"(?:от\s+|between\s+|from\s+)?(?<a>\d{1,2})(?::(?<aMin>\d{2}))?\s*(?:[-–—]|до|to|until)\s*(?<b>\d{1,2})(?::(?<bMin>\d{2}))?(?:\s*ч(?:аса)?|\s*h(?:ours?)?)?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
         public static LocalSearchParse Parse(string? query, DateTime now)
         {
             var raw = (query ?? string.Empty).Trim();
@@ -114,6 +127,11 @@ namespace EventsApp.Services.AI
 
             var genres = DetectGenres(normalized, consumed);
             var (dateFrom, dateTo, dateIntent) = DetectDate(normalized, now, consumed);
+            var (startTime, endTime) = DetectTimeRange(raw, consumed);
+
+            // "около мен" / "near me" — always a radius search anchored on
+            // the user's GPS. We don't set Lat/Lng here (the client does
+            // when it has the coordinates) but flag NearMe + RadiusKm.
             var nearMe = ContainsAny(normalized, new[] { "около мен", "близо до мен", "near me", "nearby", "around me" });
             if (nearMe)
             {
@@ -123,6 +141,17 @@ namespace EventsApp.Services.AI
                 MarkConsumed(consumed, "me");
             }
 
+            // "околието" / "околността" — radius around the named city
+            // (or around the user if no city given).
+            var wantsRadius = ContainsAny(normalized, RadiusTerms);
+            if (wantsRadius)
+            {
+                foreach (var term in RadiusTerms) MarkConsumed(consumed, term);
+            }
+
+            int? radiusKm = null;
+            if (wantsRadius || nearMe) radiusKm = DefaultRadiusKm;
+
             var keywords = tokens
                 .Where(t => t.Length >= 2)
                 .Where(t => !FillerWords.Contains(t, StringComparer.OrdinalIgnoreCase))
@@ -131,7 +160,8 @@ namespace EventsApp.Services.AI
                 .Take(6)
                 .ToArray();
 
-            var hasStructured = cities.Count > 0 || genres.Count > 0 || dateFrom.HasValue || dateTo.HasValue || nearMe;
+            var hasStructured = cities.Count > 0 || genres.Count > 0 || dateFrom.HasValue || dateTo.HasValue
+                || nearMe || wantsRadius || startTime.HasValue || endTime.HasValue;
             var useKeyword = !hasStructured || keywords.Length > 0 && genres.Count == 0;
 
             var intent = new AiSearchIntent
@@ -145,6 +175,9 @@ namespace EventsApp.Services.AI
                 DateTo = dateTo,
                 DateIntent = dateIntent,
                 NearMe = nearMe,
+                RadiusKm = radiusKm,
+                StartTimeOfDay = startTime,
+                EndTimeOfDay = endTime,
                 Keyword = useKeyword ? string.Join(' ', keywords) : null,
                 Keywords = useKeyword ? keywords : Array.Empty<string>(),
             };
@@ -157,7 +190,11 @@ namespace EventsApp.Services.AI
 
             var accountedFor = hasStructured && keywords.Length <= 1;
             var wordCount = tokens.Count;
-            var shouldAskAi = !accountedFor && wordCount >= 4 && raw.Length <= 180;
+            // Always allow the AI follow-up for the new long-query format
+            // ("Утре ще съм в София от 13:00 до 18:00 може ли да ми
+            // препоръчаш събития ..."). The 180-char ceiling lived in the
+            // old controller and is no longer relevant.
+            var shouldAskAi = !accountedFor && wordCount >= 4;
 
             if (!hasStructured && keywords.Length == 0)
             {
@@ -197,6 +234,9 @@ namespace EventsApp.Services.AI
                 NearMe = local.NearMe || ai.NearMe,
                 Latitude = local.Latitude ?? ai.Latitude,
                 Longitude = local.Longitude ?? ai.Longitude,
+                RadiusKm = local.RadiusKm ?? ai.RadiusKm,
+                StartTimeOfDay = local.StartTimeOfDay ?? ai.StartTimeOfDay,
+                EndTimeOfDay = local.EndTimeOfDay ?? ai.EndTimeOfDay,
                 Keyword = !string.IsNullOrWhiteSpace(local.Keyword) ? local.Keyword : ai.Keyword,
                 Keywords = local.Keywords.Length > 0 ? local.Keywords : ai.Keywords,
                 Explanation = ai.Explanation ?? local.Explanation,
@@ -242,9 +282,24 @@ namespace EventsApp.Services.AI
                 return (today, today, "today");
             }
 
+            // Order matters — "вдругиден" / "day after tomorrow" must be
+            // checked before plain "утре" / "tomorrow" so a query like
+            // "вдругиден в София" doesn't get matched as plain tomorrow.
+            if (ContainsAny(normalized, new[] { "вдругиден", "в други ден", "други ден", "day after tomorrow" }))
+            {
+                MarkConsumed(consumed, "вдругиден");
+                MarkConsumed(consumed, "други");
+                MarkConsumed(consumed, "ден");
+                MarkConsumed(consumed, "day");
+                MarkConsumed(consumed, "after");
+                MarkConsumed(consumed, "tomorrow");
+                return (today.AddDays(2), today.AddDays(2), "day after tomorrow");
+            }
+
             if (ContainsAny(normalized, new[] { "утре", "tomorrow" }))
             {
                 MarkConsumed(consumed, "утре");
+                MarkConsumed(consumed, "tomorrow");
                 return (today.AddDays(1), today.AddDays(1), "tomorrow");
             }
 
@@ -266,6 +321,39 @@ namespace EventsApp.Services.AI
             }
 
             return (null, null, null);
+        }
+
+        // Parses time ranges like "от 13:00 до 18:00", "13-18", "13ч до 18",
+        // "between 13 and 18". Returns (start, end) in 24h Bulgarian local
+        // time. The matched substring is *not* added to `consumed` because
+        // it's not a word — the keywords step already filters out short
+        // numeric tokens.
+        private static (TimeSpan? Start, TimeSpan? End) DetectTimeRange(string raw, HashSet<string> consumed)
+        {
+            var match = TimeRangeRegex.Match(raw);
+            if (!match.Success) return (null, null);
+
+            if (!int.TryParse(match.Groups["a"].Value, out var a)) return (null, null);
+            if (!int.TryParse(match.Groups["b"].Value, out var b)) return (null, null);
+            if (a < 0 || a > 24 || b < 0 || b > 24) return (null, null);
+
+            var aMin = 0; var bMin = 0;
+            if (match.Groups["aMin"].Success) int.TryParse(match.Groups["aMin"].Value, out aMin);
+            if (match.Groups["bMin"].Success) int.TryParse(match.Groups["bMin"].Value, out bMin);
+            if (aMin < 0 || aMin > 59 || bMin < 0 || bMin > 59) return (null, null);
+
+            var start = TimeSpan.FromMinutes(a * 60 + aMin);
+            var end = TimeSpan.FromMinutes(b * 60 + bMin);
+            // Sanity: a "13 до 18" with end <= start is suspicious — drop.
+            if (end <= start) return (null, null);
+
+            MarkConsumed(consumed, "от"); MarkConsumed(consumed, "до");
+            MarkConsumed(consumed, "between"); MarkConsumed(consumed, "and");
+            MarkConsumed(consumed, "from"); MarkConsumed(consumed, "to");
+            MarkConsumed(consumed, "until");
+            MarkConsumed(consumed, "часа"); MarkConsumed(consumed, "час");
+            MarkConsumed(consumed, "hours"); MarkConsumed(consumed, "hour");
+            return (start, end);
         }
 
         private static string Normalize(string value)
