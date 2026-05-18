@@ -116,6 +116,7 @@ builder.Services.Configure<SirmaAiOptions>(builder.Configuration.GetSection(Sirm
 builder.Services.Configure<GoogleMapsOptions>(builder.Configuration.GetSection(GoogleMapsOptions.SectionName));
 builder.Services.AddHttpClient<IAiSearchService, OpenAiService>();
 builder.Services.AddHttpClient<ILayoutAiService, OpenAiLayoutService>();
+builder.Services.AddSingleton<IEventSemanticSearchService, EventSemanticSearchService>();
 builder.Services.AddHttpClient<IGeocodingService, NominatimGeocodingService>();
 builder.Services.AddHttpClient("link-preview", client =>
 {

@@ -3,6 +3,7 @@ using EventsApp.Models.AI;
 using EventsApp.Services.AI;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.Extensions.Logging;
 
 namespace EventsApp.Controllers.Api
 {
@@ -10,14 +11,21 @@ namespace EventsApp.Controllers.Api
     [Route("api/search")]
     public class SearchApiController : ControllerBase
     {
-        private const int MaxSmartQueryLength = 180;
+        // Raised from 180 to 1000. The old cap broke long natural-language
+        // queries ("искам да отида на джаз концерт в София този петък в
+        // малка зала"). The semantic retriever handles long queries fine
+        // since it scores by keyword overlap, not by AI parsing.
+        private const int MaxSmartQueryLength = 1000;
+        private const int SemanticTopK = 30;
 
         private readonly IAiSearchService _ai;
+        private readonly IEventSemanticSearchService _semanticSearch;
         private readonly ILogger<SearchApiController> _logger;
 
-        public SearchApiController(IAiSearchService ai, ILogger<SearchApiController> logger)
+        public SearchApiController(IAiSearchService ai, IEventSemanticSearchService semanticSearch, ILogger<SearchApiController> logger)
         {
             _ai = ai;
+            _semanticSearch = semanticSearch;
             _logger = logger;
         }
 
@@ -46,11 +54,7 @@ namespace EventsApp.Controllers.Api
 
             if (query.Length > MaxSmartQueryLength)
             {
-                result.AiUsed = false;
-                result.AiStatus = "Rejected";
-                result.AiStatusDetail = $"Query is too long. Maximum length is {MaxSmartQueryLength} characters.";
-                ApplyKeywordFallback(result, query[..MaxSmartQueryLength]);
-                return Ok(result);
+                query = query[..MaxSmartQueryLength];
             }
 
             var local = LocalEventSearchInterpreter.Parse(query, DateTime.UtcNow);
@@ -94,7 +98,65 @@ namespace EventsApp.Controllers.Api
             ApplyCityFallback(result, query);
             ApplyKeywordFallback(result, query);
 
+            await ApplySemanticRankingAsync(result, query, ct);
+
             return Ok(result);
+        }
+
+        // POST /api/search/semantic — pure BM25 retrieval, no AI parsing.
+        // Useful when the caller just wants ranked event IDs from a long
+        // free-form query without any side effects.
+        [HttpPost("semantic")]
+        [EnableRateLimiting("public-read")]
+        public async Task<IActionResult> Semantic([FromBody] SmartSearchRequest? request, CancellationToken ct)
+        {
+            var query = (request?.Query ?? string.Empty).Trim();
+            if (string.IsNullOrEmpty(query))
+            {
+                return Ok(new { eventIds = Array.Empty<int>() });
+            }
+
+            if (query.Length > MaxSmartQueryLength)
+            {
+                query = query[..MaxSmartQueryLength];
+            }
+
+            try
+            {
+                var ranked = await _semanticSearch.SearchAsync(query, SemanticTopK, ct);
+                return Ok(new
+                {
+                    eventIds = ranked.Select(r => r.EventId).ToArray(),
+                    scores = ranked.Select(r => Math.Round(r.Score, 3)).ToArray(),
+                });
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Semantic search failed for query length {Len}", query.Length);
+                return Ok(new { eventIds = Array.Empty<int>() });
+            }
+        }
+
+        private async Task ApplySemanticRankingAsync(AiSearchResult result, string query, CancellationToken ct)
+        {
+            try
+            {
+                var ranked = await _semanticSearch.SearchAsync(query, SemanticTopK, ct);
+                if (ranked.Count == 0) return;
+                result.EventIds = ranked.Select(r => r.EventId).ToArray();
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "Semantic ranking did not run for smart search");
+            }
         }
 
         private static void ApplyCityFallback(AiSearchResult result, string query)

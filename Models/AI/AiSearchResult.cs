@@ -16,5 +16,10 @@ namespace EventsApp.Models.AI
         public bool AiUsed { get; set; }
         public string? AiStatus { get; set; }
         public string? AiStatusDetail { get; set; }
+        // Top event IDs ranked by the in-memory BM25 retriever. Populated
+        // for every smart query so the client can render an answer even
+        // when the AI couldn't pull a structured filter out of a long
+        // natural-language sentence.
+        public int[] EventIds { get; set; } = System.Array.Empty<int>();
     }
 }

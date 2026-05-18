@@ -28,6 +28,7 @@ namespace EventsApp.Controllers.Api
         private readonly IAiSearchService _ai;
         private readonly ILayoutService _layouts;
         private readonly IHubContext<FeedHub> _feed;
+        private readonly IEventSemanticSearchService _semanticSearch;
 
         public EventsFullApiController(
             ApplicationDbContext db,
@@ -37,7 +38,8 @@ namespace EventsApp.Controllers.Api
             IRecurringEventService recurringEvents,
             IAiSearchService ai,
             ILayoutService layouts,
-            IHubContext<FeedHub> feed)
+            IHubContext<FeedHub> feed,
+            IEventSemanticSearchService semanticSearch)
         {
             _db = db;
             _userManager = userManager;
@@ -47,6 +49,7 @@ namespace EventsApp.Controllers.Api
             _ai = ai;
             _layouts = layouts;
             _feed = feed;
+            _semanticSearch = semanticSearch;
         }
 
         private string? CurrentUserId => User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -529,6 +532,7 @@ namespace EventsApp.Controllers.Api
             await UpsertSeriesAsync(ev, request, userId);
             await EnsureSeatInventoriesForEventAsync(ev);
             await CreateInitialLayoutTicketsAsync(ev, request);
+            _semanticSearch.Invalidate();
 
             return Ok(new { id = ev.Id, title = ev.Title, isApproved = ev.IsApproved });
         }
@@ -634,6 +638,7 @@ namespace EventsApp.Controllers.Api
 
             await _db.SaveChangesAsync();
             await UpsertSeriesAsync(ev, request, userId);
+            _semanticSearch.Invalidate();
             return Ok(new { id = ev.Id, title = ev.Title, isApproved = ev.IsApproved });
         }
 
@@ -732,7 +737,11 @@ namespace EventsApp.Controllers.Api
             if (!IsAdmin && ev.OrganizerId != userId) return Forbid();
 
             var result = await _eventDeletion.DeleteEventAsync(id, preservePaidTickets: true, cancellationToken);
-            if (result.Deleted) return Ok(new { deleted = true });
+            if (result.Deleted)
+            {
+                _semanticSearch.Invalidate();
+                return Ok(new { deleted = true });
+            }
             if (result.SkippedReason == "paid_tickets")
                 return Conflict(new { error = "Събитието има платени билети и не може да бъде изтрито." });
 
