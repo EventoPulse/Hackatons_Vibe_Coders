@@ -364,6 +364,37 @@ namespace EventsApp.Controllers.Api
             var addResult = await _userManager.AddToRoleAsync(user, dto.Role);
             if (!addResult.Succeeded) return BadRequest(new { error = addResult.Errors.FirstOrDefault()?.Description });
 
+            if (dto.Role == GlobalConstants.Roles.Organizer)
+            {
+                var org = await _db.OrganizerData.FirstOrDefaultAsync(o => o.OrganizerId == user.Id);
+                if (org == null)
+                {
+                    org = new OrganizerData
+                    {
+                        OrganizerId = user.Id,
+                        OrganizationName = BuildOrganizerFallbackName(user),
+                        Country = "BG",
+                        Approved = true,
+                    };
+                    _db.OrganizerData.Add(org);
+                }
+                else
+                {
+                    org.Approved = true;
+                    if (string.IsNullOrWhiteSpace(org.OrganizationName))
+                        org.OrganizationName = BuildOrganizerFallbackName(user);
+                }
+
+                if (!org.FirstApprovalBoostGranted)
+                {
+                    org.VipBoostCreditsAvailable = Math.Max(1, org.VipBoostCreditsAvailable);
+                    org.FirstApprovalBoostGranted = true;
+                    org.FirstApprovalBoostNoticeSeen = false;
+                }
+
+                await _db.SaveChangesAsync();
+            }
+
             await _userManager.UpdateSecurityStampAsync(user);
 
             return Ok(new { role = dto.Role });
@@ -425,6 +456,15 @@ namespace EventsApp.Controllers.Api
             if (root.TryGetProperty("Genre", out var genre) && Enum.TryParse<EventGenre>(genre.ToString(), true, out var parsedGenre)) ev.Genre = parsedGenre;
             if (root.TryGetProperty("TicketingMode", out var ticketingMode) && Enum.TryParse<EventTicketingMode>(ticketingMode.ToString(), true, out var parsedMode)) ev.TicketingMode = parsedMode;
             if (root.TryGetProperty("VenueLayoutId", out var layoutId)) ev.VenueLayoutId = layoutId.ValueKind == JsonValueKind.Null ? null : layoutId.GetInt32();
+        }
+
+        private static string BuildOrganizerFallbackName(ApplicationUser user)
+        {
+            var displayName = string.Join(" ", new[] { user.FirstName, user.LastName }
+                .Where(value => !string.IsNullOrWhiteSpace(value)));
+            if (!string.IsNullOrWhiteSpace(displayName)) return displayName;
+            if (!string.IsNullOrWhiteSpace(user.UserName)) return user.UserName;
+            return user.Email ?? "Организатор";
         }
     }
 }
