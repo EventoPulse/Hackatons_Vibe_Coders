@@ -49,11 +49,13 @@ Cities (always return canonical English spelling, or null if not present):
 Перник → Pernik, Хасково → Haskovo, Ямбол → Yambol, Пазарджик → Pazardzhik,
 Враца → Vratsa, Габрово → Gabrovo, Асеновград → Asenovgrad, Видин → Vidin,
 Казанлък → Kazanlak, Кюстендил → Kyustendil, Монтана → Montana, Търговище → Targovishte,
-Разград → Razgrad, Силистра → Silistra.
+Разград → Razgrad, Силистра → Silistra, Ботевград → Botevgrad.
 
 Bulgarian colloquial city nicknames (resolve to the canonical city):
 ""столицата""                                 → Sofia
-""малката Виена"" / ""градът под тепетата"" / ""тепетата""  → Plovdiv
+""малката Виена""                              → Ruse           (CANONICAL — 19th-century Habsburg-era architecture along the Danube. NOT Plovdiv.)
+""градът под тепетата"" / ""тепетата"" /
+""градът на седемте хълма""                   → Plovdiv
 ""морската столица""                           → Varna
 ""старата столица""                            → Veliko Tarnovo
 ""розовата долина"" / ""долината на розите""    → Kazanlak
@@ -61,6 +63,11 @@ Bulgarian colloquial city nicknames (resolve to the canonical city):
 ""крайдунавска столица""                       → Ruse
 ""града на липите""                            → Stara Zagora
 ""града на стоте войводи""                     → Sliven
+
+Trivia / indirect references (resolve to the city where the landmark sits):
+""градът с най-високата / най-голямата
+ телевизионна кула"" / ""ТВ кулата на
+ Мургаш"" / ""Мургаш""                          → Botevgrad      (Tallest TV tower in Bulgaria, 211 m on Mount Murgash. NOT Sofia.)
 
 Genre enum names (use these exactly):
 Nightlife, Electronic, House, Techno, Pop, Rock, Metal, Jazz, HipHop, Trap, Rnb,

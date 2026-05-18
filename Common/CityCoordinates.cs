@@ -57,6 +57,11 @@
                 ["Разград"] = (43.5333, 26.5167),
                 ["Silistra"] = (44.1167, 27.2667),
                 ["Силистра"] = (44.1167, 27.2667),
+                // Botevgrad — small town NE of Sofia. Hosts the tallest
+                // TV tower in Bulgaria (211 m, atop Mount Murgash), so
+                // queries about that landmark need to resolve here.
+                ["Botevgrad"] = (42.9100, 23.7900),
+                ["Ботевград"] = (42.9100, 23.7900),
             };
 
         public static bool TryGetCoordinates(string city, out double lat, out double lng)

@@ -33,12 +33,33 @@ namespace EventsApp.Services.AI
         {
             ["Sofia"] = new[] { "софия", "sofia", "sofiaq", "столицата" },
             ["Plovdiv"] = new[] { "пловдив", "plovdiv",
-                // "Малката Виена" / "градът под тепетата" / "тепетата" —
-                // standard nicknames for Plovdiv.
-                "малката виена", "града под тепетата", "градът под тепетата", "тепетата" },
+                // "Града под тепетата" / "тепетата" / "града на седемте
+                // хълма" — standard Plovdiv nicknames. NOTE: "малката
+                // Виена" historically refers to Ruse (Austro-Hungarian
+                // architecture along the Danube), not Plovdiv — see the
+                // Ruse aliases below.
+                "града под тепетата", "градът под тепетата", "тепетата",
+                "града на седемте хълма", "градът на седемте хълма" },
             ["Varna"] = new[] { "варна", "varna", "морската столица" },
             ["Burgas"] = new[] { "бургас", "burgas", "bourgas" },
-            ["Ruse"] = new[] { "русе", "ruse", "rousse", "крайдунавска столица", "малката виена на дунава" },
+            ["Ruse"] = new[] { "русе", "ruse", "rousse",
+                // Ruse is the canonical "Малката Виена" — the 19th-century
+                // Habsburg-era architecture along the Danube earned it
+                // that nickname long before any other Bulgarian city.
+                "малката виена", "крайдунавска столица" },
+            ["Botevgrad"] = new[] { "ботевград", "botevgrad",
+                // Mount Murgash near Botevgrad hosts the tallest TV
+                // tower in Bulgaria (211 m), so a query about that
+                // landmark must resolve here, not Sofia. We anchor on
+                // the *distinctive* phrase ("най-голямата/-високата
+                // телевизионна кула") rather than the full sentence,
+                // so phrasings like "града където се намира …" also
+                // match.
+                "най-голямата телевизионна кула",
+                "най-високата телевизионна кула",
+                "тв кулата на мургаш",
+                "телевизионната кула на мургаш",
+                "мургаш" },
             ["Stara Zagora"] = new[] { "стара загора", "stara zagora", "града на липите" },
             ["Pleven"] = new[] { "плевен", "pleven" },
             ["Sliven"] = new[] { "сливен", "sliven", "града на стоте войводи" },

@@ -103,11 +103,18 @@ public class LocalEventSearchInterpreterTests
     }
 
     [Theory]
-    [InlineData("събития в малката Виена", "Plovdiv")]
+    // "Малката Виена" is the canonical 19th-century nickname for Ruse
+    // (Habsburg architecture along the Danube), NOT Plovdiv.
+    [InlineData("събития в малката Виена", "Ruse")]
     [InlineData("концерти под тепетата", "Plovdiv")]
     [InlineData("партита в морската столица", "Varna")]
     [InlineData("събития в старата столица", "Veliko Tarnovo")]
     [InlineData("розовата долина този уикенд", "Kazanlak")]
+    // The tallest TV tower in Bulgaria (211 m, on Mount Murgash near
+    // Botevgrad) is NOT the Vitosha tower in Sofia. The parser must
+    // resolve this trivia reference to Botevgrad.
+    [InlineData("събития в града където се намира най-голямата телевизионна кула в България", "Botevgrad")]
+    [InlineData("събития в града с най-високата телевизионна кула", "Botevgrad")]
     public void Parse_BulgarianCityNicknames_ResolveToCanonicalCity(string query, string expectedCity)
     {
         // Bulgarian colloquial names for cities must resolve locally
