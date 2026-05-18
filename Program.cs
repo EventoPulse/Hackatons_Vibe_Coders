@@ -121,6 +121,40 @@ builder.Services.AddHttpClient("link-preview", client =>
 {
     client.Timeout = TimeSpan.FromSeconds(4);
     client.DefaultRequestHeaders.UserAgent.ParseAdd("EventoBot/1.0 (+https://evento.business)");
+})
+.ConfigurePrimaryHttpMessageHandler(() =>
+{
+    // SSRF hardening: do not follow redirects (the destination is
+    // re-resolved by the OS and may point inside the network), and
+    // re-validate the connect-time IP against the private/loopback
+    // block list. Pairs with the same checks the action runs on the
+    // hostname up front.
+    return new SocketsHttpHandler
+    {
+        AllowAutoRedirect = false,
+        ConnectCallback = static async (context, cancellationToken) =>
+        {
+            var addresses = await System.Net.Dns.GetHostAddressesAsync(context.DnsEndPoint.Host, cancellationToken);
+            foreach (var address in addresses)
+            {
+                if (EventsApp.Common.IpAddressGuard.IsPrivateOrLoopback(address))
+                {
+                    throw new System.Net.Http.HttpRequestException("Refusing to connect to a non-public address.");
+                }
+            }
+            var socket = new System.Net.Sockets.Socket(System.Net.Sockets.SocketType.Stream, System.Net.Sockets.ProtocolType.Tcp) { NoDelay = true };
+            try
+            {
+                await socket.ConnectAsync(addresses, context.DnsEndPoint.Port, cancellationToken);
+                return new System.Net.Sockets.NetworkStream(socket, ownsSocket: true);
+            }
+            catch
+            {
+                socket.Dispose();
+                throw;
+            }
+        },
+    };
 });
 // Image generation removed — no additional HttpClient or image service registered.
 

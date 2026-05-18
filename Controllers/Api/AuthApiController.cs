@@ -110,6 +110,10 @@ namespace EventsApp.Controllers.Api
             if (!ModelState.IsValid)
                 return BadRequest(new { error = "Невалидни данни." });
 
+            var wantsOrganizer = request.RegisterAsOrganizer;
+            if (wantsOrganizer && string.IsNullOrWhiteSpace(request.OrganizationName))
+                return BadRequest(new { error = "Въведи името на организацията." });
+
             var user = new ApplicationUser
             {
                 UserName = request.Email,
@@ -129,17 +133,39 @@ namespace EventsApp.Controllers.Api
 
             await _userManager.AddToRoleAsync(user, "User");
 
+            if (wantsOrganizer)
+            {
+                // Persist the organizer application alongside the user so the
+                // signup can complete even before the user confirms email.
+                _db.OrganizerData.Add(new OrganizerData
+                {
+                    OrganizerId = user.Id,
+                    OrganizationName = request.OrganizationName!.Trim(),
+                    PhoneNumber = request.PhoneNumber?.Trim(),
+                    Country = string.IsNullOrWhiteSpace(request.Country) ? "BG" : request.Country.Trim(),
+                    City = request.City?.Trim(),
+                    Website = request.Website?.Trim(),
+                    CompanyNumber = request.CompanyNumber?.Trim(),
+                    ReferralSource = request.ReferralSource?.Trim(),
+                    Description = request.Description?.Trim(),
+                    Approved = false,
+                });
+                await _db.SaveChangesAsync();
+            }
+
             if (!user.EmailConfirmed)
             {
                 // Send confirmation email (non-blocking — don't fail registration if email fails)
-                _ = _confirmationSender.SendAsync(user, HttpContext.Request, returnUrl: null, organizerSignup: false);
-                return Ok(new { message = "Регистрацията е успешна! Изпратихме ти имейл за потвърждение." });
+                _ = _confirmationSender.SendAsync(user, HttpContext.Request, returnUrl: null, organizerSignup: wantsOrganizer);
+                return Ok(new { message = wantsOrganizer
+                    ? "Регистрацията е успешна! Изпратихме ти имейл за потвърждение. Заявката за организатор е изпратена за одобрение."
+                    : "Регистрацията е успешна! Изпратихме ти имейл за потвърждение." });
             }
 
             var token = await GenerateJwtTokenAsync(user);
             var userDto = await BuildUserDtoAsync(user);
 
-            return Ok(new { token, user = userDto });
+            return Ok(new { token, user = userDto, organizerApplicationSubmitted = wantsOrganizer });
         }
 
         // GET /api/auth/me
@@ -493,6 +519,17 @@ namespace EventsApp.Controllers.Api
             public string Password { get; set; } = "";
             public string? FirstName { get; set; }
             public string? LastName { get; set; }
+            // Optional organizer application payload. When RegisterAsOrganizer
+            // is true the OrganizationName is required.
+            public bool RegisterAsOrganizer { get; set; }
+            public string? OrganizationName { get; set; }
+            public string? PhoneNumber { get; set; }
+            public string? Country { get; set; }
+            public string? City { get; set; }
+            public string? Website { get; set; }
+            public string? CompanyNumber { get; set; }
+            public string? ReferralSource { get; set; }
+            public string? Description { get; set; }
         }
 
         public class UpdateMeRequest

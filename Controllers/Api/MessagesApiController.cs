@@ -8,7 +8,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using System.Net;
-using System.Net.Sockets;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
@@ -619,20 +618,25 @@ namespace EventsApp.Controllers.Api
         {
             if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) ||
                 (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps) ||
-                await IsPrivateOrLoopbackAsync(uri))
+                await EventsApp.Common.IpAddressGuard.IsPrivateOrLoopbackHostAsync(uri.Host, cancellationToken))
             {
                 return BadRequest(new { error = "Невалиден линк." });
             }
 
             try
             {
+                // The named "link-preview" HttpClient is configured with
+                // AllowAutoRedirect=false and an SSRF-aware ConnectCallback,
+                // so a 3xx response or a private IP at connect-time will
+                // surface here and short-circuit the read.
                 using var response = await _httpClientFactory.CreateClient("link-preview").GetAsync(uri, cancellationToken);
                 if (!response.IsSuccessStatusCode) return NoContent();
 
                 var mediaType = response.Content.Headers.ContentType?.MediaType;
                 if (mediaType == null || !mediaType.Contains("html", StringComparison.OrdinalIgnoreCase)) return NoContent();
 
-                var html = await response.Content.ReadAsStringAsync(cancellationToken);
+                var html = await ReadBoundedStringAsync(response.Content, MaxLinkPreviewBytes, cancellationToken);
+                if (html == null) return NoContent();
                 var title = ReadMeta(html, "og:title") ?? ReadTitle(html) ?? uri.Host;
                 var description = ReadMeta(html, "og:description") ?? ReadMeta(html, "description");
                 var imageUrl = NormalizePreviewUrl(uri, ReadMeta(html, "og:image"));
@@ -651,6 +655,25 @@ namespace EventsApp.Controllers.Api
                 _logger.LogDebug(ex, "Could not load preview for {Url}", uri);
                 return NoContent();
             }
+        }
+
+        private const int MaxLinkPreviewBytes = 256 * 1024;
+
+        private static async Task<string?> ReadBoundedStringAsync(HttpContent content, int maxBytes, CancellationToken cancellationToken)
+        {
+            await using var stream = await content.ReadAsStreamAsync(cancellationToken);
+            var buffer = new byte[Math.Min(8192, maxBytes)];
+            using var ms = new MemoryStream(capacity: Math.Min(maxBytes, 32 * 1024));
+            var total = 0;
+            int read;
+            while ((read = await stream.ReadAsync(buffer.AsMemory(0, Math.Min(buffer.Length, maxBytes - total)), cancellationToken)) > 0)
+            {
+                ms.Write(buffer, 0, read);
+                total += read;
+                if (total >= maxBytes) break;
+            }
+            if (total == 0) return null;
+            return System.Text.Encoding.UTF8.GetString(ms.GetBuffer(), 0, (int)ms.Length);
         }
 
         private async Task<IActionResult> SetStatus(Guid token, ConversationStatus status)
@@ -895,37 +918,6 @@ namespace EventsApp.Controllers.Api
             return Uri.TryCreate(pageUri, raw, out var absolute) ? absolute.ToString() : null;
         }
 
-        private static async Task<bool> IsPrivateOrLoopbackAsync(Uri uri)
-        {
-            if (uri.IsLoopback) return true;
-
-            try
-            {
-                var addresses = await Dns.GetHostAddressesAsync(uri.Host);
-                return addresses.Any(IsPrivateOrLoopback);
-            }
-            catch
-            {
-                return true;
-            }
-        }
-
-        private static bool IsPrivateOrLoopback(IPAddress address)
-        {
-            if (IPAddress.IsLoopback(address)) return true;
-            if (address.AddressFamily == AddressFamily.InterNetwork)
-            {
-                var bytes = address.GetAddressBytes();
-                return bytes[0] == 10
-                       || bytes[0] == 127
-                       || (bytes[0] == 172 && bytes[1] >= 16 && bytes[1] <= 31)
-                       || (bytes[0] == 192 && bytes[1] == 168)
-                       || (bytes[0] == 169 && bytes[1] == 254);
-            }
-
-            return address.AddressFamily == AddressFamily.InterNetworkV6 &&
-                   (address.IsIPv6LinkLocal || address.IsIPv6SiteLocal || address.IsIPv6Multicast);
-        }
     }
 
     public record StartConversationDto(string? UserId);

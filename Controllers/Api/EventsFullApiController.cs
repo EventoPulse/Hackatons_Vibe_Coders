@@ -565,6 +565,58 @@ namespace EventsApp.Controllers.Api
                     return BadRequest(new { error = "Не може да се смени типът билети, докато има продадени билети." });
             }
 
+            var newLayoutId = requestedMode == EventTicketingMode.GeneralAdmission ? null : request.VenueLayoutId;
+            var newBusinessWorkspaceId = request.BusinessWorkspaceId ?? profile.BusinessWorkspaceId;
+
+            // For approved events, non-admin edits queue a change request
+            // instead of mutating the live record. The admin reviews the
+            // diff and applies it via /api/admin/event-changes/{id}/approve.
+            if (!IsAdmin && ev.IsApproved)
+            {
+                var changeJson = System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    Title = request.Title.Trim(),
+                    Description = request.Description?.Trim(),
+                    City = request.City.Trim(),
+                    Address = request.Address.Trim(),
+                    ImageUrl = request.ImageUrl?.Trim(),
+                    OrganizerProfileId = request.OrganizerProfileId,
+                    BusinessWorkspaceId = newBusinessWorkspaceId,
+                    Latitude = request.Latitude,
+                    Longitude = request.Longitude,
+                    StartTime = request.StartTime,
+                    EndTime = request.EndTime,
+                    Genre = request.Genre,
+                    TicketingMode = requestedMode.ToString(),
+                    VenueLayoutId = newLayoutId,
+                });
+
+                // Replace any earlier pending request from the same organizer
+                // so the admin queue doesn't pile up duplicates.
+                var existing = await _db.EventChangeRequests
+                    .Where(r => r.EventId == ev.Id && r.OrganizerId == userId && r.Status == EventChangeRequestStatus.Pending)
+                    .ToListAsync();
+                if (existing.Count > 0) _db.EventChangeRequests.RemoveRange(existing);
+
+                _db.EventChangeRequests.Add(new EventChangeRequest
+                {
+                    EventId = ev.Id,
+                    OrganizerId = userId,
+                    ChangeJson = changeJson,
+                    Status = EventChangeRequestStatus.Pending,
+                    SubmittedAt = DateTime.UtcNow,
+                });
+                await _db.SaveChangesAsync();
+
+                return Ok(new
+                {
+                    id = ev.Id,
+                    title = ev.Title,
+                    isApproved = ev.IsApproved,
+                    hasPendingChanges = true,
+                });
+            }
+
             ev.Title = request.Title.Trim();
             ev.Description = request.Description?.Trim();
             ev.StartTime = request.StartTime;
@@ -574,16 +626,11 @@ namespace EventsApp.Controllers.Api
             ev.City = request.City.Trim();
             ev.ImageUrl = request.ImageUrl?.Trim();
             ev.OrganizerProfileId = request.OrganizerProfileId;
-            ev.BusinessWorkspaceId = request.BusinessWorkspaceId ?? profile.BusinessWorkspaceId;
+            ev.BusinessWorkspaceId = newBusinessWorkspaceId;
             ev.Latitude = request.Latitude;
             ev.Longitude = request.Longitude;
             ev.TicketingMode = requestedMode;
-            ev.VenueLayoutId = ev.TicketingMode == EventTicketingMode.GeneralAdmission ? null : request.VenueLayoutId;
-
-            if (!IsAdmin)
-            {
-                ev.IsApproved = false;
-            }
+            ev.VenueLayoutId = newLayoutId;
 
             await _db.SaveChangesAsync();
             await UpsertSeriesAsync(ev, request, userId);
