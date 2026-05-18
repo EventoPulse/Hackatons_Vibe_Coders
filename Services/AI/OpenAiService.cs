@@ -116,16 +116,18 @@ Return ONLY the JSON object.";
         private readonly AiOptions _opts;
         private readonly ILogger<OpenAiService> _logger;
         private readonly IMemoryCache _cache;
+        private readonly IPersistentSearchIntentCache _persistentCache;
 
         public AiStatus LastStatus { get; private set; } = AiStatus.Disabled;
         public string? LastStatusDetail { get; private set; }
 
-        public OpenAiService(HttpClient http, IOptions<AiOptions> opts, ILogger<OpenAiService> logger, IMemoryCache cache)
+        public OpenAiService(HttpClient http, IOptions<AiOptions> opts, ILogger<OpenAiService> logger, IMemoryCache cache, IPersistentSearchIntentCache persistentCache)
         {
             _http = http;
             _opts = opts.Value;
             _logger = logger;
             _cache = cache;
+            _persistentCache = persistentCache;
 
             if (_opts.IsConfigured)
             {
@@ -153,11 +155,13 @@ Return ONLY the JSON object.";
                 trimmed = trimmed[.._opts.MaxSearchQueryLength];
             }
 
+            // L1 cache: in-process memory. Fastest, but bounded by the
+            // app's lifetime and per-instance — survives nothing.
             var cacheKey = "ai-search:" + Sha256(trimmed.ToLowerInvariant());
             if (_cache.TryGetValue(cacheKey, out AiSearchIntent? cached))
             {
                 LastStatus = AiStatus.Ok;
-                LastStatusDetail = "Cached";
+                LastStatusDetail = "Cached (memory)";
                 return Task.FromResult(cached);
             }
 
@@ -166,10 +170,29 @@ Return ONLY the JSON object.";
 
         private async Task<AiSearchIntent?> InterpretCachedAsync(string query, string cacheKey, CancellationToken cancellationToken)
         {
+            // L2 cache: persistent table. Survives restarts AND is
+            // shared across instances. Once any user has asked
+            // "малката Виена" / "градът с най-голямата ТВ кула" /
+            // similar trivia, the resolved intent stays in this table
+            // forever — no more OpenAI billing for that query.
+            var persisted = await _persistentCache.TryGetAsync(query, cancellationToken);
+            if (persisted != null)
+            {
+                _cache.Set(cacheKey, persisted, TimeSpan.FromMinutes(Math.Clamp(_opts.SearchCacheMinutes, 5, 24 * 60)));
+                LastStatus = AiStatus.Ok;
+                LastStatusDetail = "Cached (persistent)";
+                return persisted;
+            }
+
+            // L3 (the actual cost path): call OpenAI.
             var intent = await InterpretInternalAsync(query, cancellationToken);
             if (intent != null)
             {
                 _cache.Set(cacheKey, intent, TimeSpan.FromMinutes(Math.Clamp(_opts.SearchCacheMinutes, 5, 24 * 60)));
+                // Write-through to the durable cache so the next
+                // identical query (after restart, on another instance,
+                // tomorrow) doesn't go back to OpenAI.
+                _ = _persistentCache.StoreAsync(query, intent, CancellationToken.None);
             }
 
             return intent;

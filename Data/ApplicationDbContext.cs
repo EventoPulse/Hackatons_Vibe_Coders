@@ -1,4 +1,5 @@
 using EventsApp.Models;
+using EventsApp.Models.AI;
 using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
@@ -101,9 +102,18 @@ namespace EventsApp.Data
 
         public DbSet<RevokedJwtToken> RevokedJwtTokens { get; set; } = null!;
 
+        public DbSet<SearchIntentCacheEntry> SearchIntentCacheEntries { get; set; } = null!;
+
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
+
+            builder.Entity<SearchIntentCacheEntry>(entity =>
+            {
+                // Unique index on the hash — every lookup is O(1) and
+                // we never want two rows for the same normalized query.
+                entity.HasIndex(e => e.QueryHash).IsUnique();
+            });
 
             builder.Entity<IdentityUserLogin<string>>(entity =>
             {

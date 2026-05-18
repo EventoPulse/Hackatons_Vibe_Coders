@@ -118,6 +118,7 @@ builder.Services.AddHttpClient<IAiSearchService, OpenAiService>();
 builder.Services.AddHttpClient<ILayoutAiService, OpenAiLayoutService>();
 builder.Services.AddSingleton<IEventSemanticSearchService, EventSemanticSearchService>();
 builder.Services.AddScoped<IEventSearchFilterService, EventSearchFilterService>();
+builder.Services.AddSingleton<IPersistentSearchIntentCache, PersistentSearchIntentCache>();
 builder.Services.AddHttpClient<IGeocodingService, NominatimGeocodingService>();
 builder.Services.AddHttpClient("link-preview", client =>
 {

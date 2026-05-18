@@ -385,7 +385,7 @@ namespace EventsApp.Services.AI
             return (start, end);
         }
 
-        private static string Normalize(string value)
+        public static string Normalize(string value)
         {
             var lower = value.Trim().ToLowerInvariant().Normalize(NormalizationForm.FormD);
             var sb = new StringBuilder(lower.Length);
