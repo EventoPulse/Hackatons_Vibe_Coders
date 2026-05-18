@@ -87,10 +87,33 @@ Hard rules:
   startTimeOfDay=""13:00"", endTimeOfDay=""18:00"". 24h format.
 - ignore filler words: искам, искам да, търся, ще съм, може ли, препоръчаш,
   събитие, събития, event, events, please, show, find.
-- keyword: optional short free-text only when the user describes a vibe that
-  no city / genre / date / time captures. Otherwise null.
-- If absolutely nothing structured can be extracted, return all-null/empty fields.
-  Never echo the user query back as keyword.
+
+Vibe / mood / activity inference (CRITICAL):
+The user often describes the *feeling* they want instead of naming a genre.
+You must infer the relevant genres yourself and return them in ""genres"".
+Always prefer multiple genres over a single one when the vibe is broad —
+the DB filter is OR-ed, so 4-6 well-picked genres widen the catch without
+losing relevance. Examples of the kind of inference you should do:
+
+  ""да се раздам на кючеци""              → genres includes Chalga, Folk, Nightlife, Pop
+  ""шумно място с DJ""                    → genres includes Electronic, House, Techno, Nightlife
+  ""голяма вечер"" / ""тежка вечер""      → genres includes Nightlife, Chalga, Folk, Pop, Electronic, House
+  ""спокойна вечер"" / ""уютно""          → genres includes Jazz, Classical, Theater, FoodAndDrinks
+  ""да заведа гадже на първа среща""      → genres includes Jazz, Theater, FoodAndDrinks, Cinema, Classical
+  ""културно нещо""                       → genres includes Theater, Cinema, Exhibition, Art, Classical
+  ""да изляза с децата""                  → genres = [Kids]
+  ""до сутринта""                         → genres includes Nightlife, Electronic, House, Techno, Chalga
+  ""адреналин"" / ""екстри""              → genres includes Sports, Festival
+  ""жива музика""                         → genres includes LiveMusic, Rock, Pop, Jazz, Folk
+
+These are illustrative, not exhaustive — judge each query on its own.
+Anything you can't map (""нещо интересно"", ""каквото""...) → leave genres empty.
+
+- keyword: leave null unless the user names a *specific* artist, venue,
+  or tag that is not captured by genres/city/date/time. Never echo a
+  full vibe phrase as keyword — turn it into genres instead.
+- If absolutely nothing structured can be extracted, return all-null/
+  empty fields. Never echo the user query back as keyword.
 
 Examples:
 
@@ -105,6 +128,12 @@ Output: {""city"":""Sofia"",""cities"":[""Sofia""],""genre"":null,""genres"":[],
 
 User query (with ""Today (Europe/Sofia): 2026-05-18, Sunday""): ""джаз концерт тази седмица в Пловдив""
 Output: {""city"":""Plovdiv"",""cities"":[""Plovdiv""],""genre"":""Jazz"",""genres"":[""Jazz"",""LiveMusic""],""keyword"":null,""keywords"":[],""dateIntent"":""this week"",""dateFrom"":""2026-05-18"",""dateTo"":""2026-05-24"",""startTimeOfDay"":null,""endTimeOfDay"":null,""nearMe"":false,""radiusKm"":null,""latitude"":null,""longitude"":null}
+
+User query (vibe inference): ""събития където мога да се раздам на кючеци""
+Output: {""city"":null,""cities"":[],""genre"":""Chalga"",""genres"":[""Chalga"",""Folk"",""Nightlife"",""Pop""],""keyword"":null,""keywords"":[],""dateIntent"":null,""dateFrom"":null,""dateTo"":null,""startTimeOfDay"":null,""endTimeOfDay"":null,""nearMe"":false,""radiusKm"":null,""latitude"":null,""longitude"":null}
+
+User query (vibe inference): ""шумно място с DJ в София тази събота""
+Output: {""city"":""Sofia"",""cities"":[""Sofia""],""genre"":""Electronic"",""genres"":[""Electronic"",""House"",""Techno"",""Nightlife""],""keyword"":null,""keywords"":[],""dateIntent"":""this weekend"",""dateFrom"":""$$NEXT_SATURDAY$$"",""dateTo"":""$$NEXT_SATURDAY$$"",""startTimeOfDay"":null,""endTimeOfDay"":null,""nearMe"":false,""radiusKm"":null,""latitude"":null,""longitude"":null}
 
 Return ONLY the JSON object.";
 

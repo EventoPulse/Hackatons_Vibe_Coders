@@ -103,6 +103,32 @@ public class LocalEventSearchInterpreterTests
     }
 
     [Theory]
+    // Vibe / mood queries should NOT be answered by the local parser
+    // statically — they are the AI's job to interpret. The local
+    // parser must extract no genre / city / date but flag the query
+    // for the AI by setting ShouldAskAi=true. The AI is then prompted
+    // (via the system prompt's vibe-inference rules) to return the
+    // right genre set, which the filter service runs against the DB.
+    [InlineData("събития където мога да се раздам на кючеци")]
+    [InlineData("шумно място с дидже")]
+    [InlineData("спокойна вечер за първа среща")]
+    public void Parse_VibeOnlyQuery_DelegatesToAi(string query)
+    {
+        var result = LocalEventSearchInterpreter.Parse(query, new DateTime(2026, 5, 10));
+
+        // The vibe doesn't name a city / genre / date that the parser
+        // can statically recognise — those decisions belong to the AI.
+        Assert.NotNull(result.Intent);
+        Assert.Null(result.Intent.City);
+        Assert.Empty(result.Intent.Cities);
+        Assert.Empty(result.Intent.Genres);
+        Assert.Null(result.Intent.DateFrom);
+        Assert.False(result.HasStrongIntent);
+        // The query must be flagged for the AI follow-up.
+        Assert.True(result.ShouldAskAi);
+    }
+
+    [Theory]
     // "Малката Виена" is the canonical 19th-century nickname for Ruse
     // (Habsburg architecture along the Danube), NOT Plovdiv.
     [InlineData("събития в малката Виена", "Ruse")]
