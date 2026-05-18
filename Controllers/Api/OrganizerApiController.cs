@@ -317,6 +317,9 @@ namespace EventsApp.Controllers.Api
                 return BadRequest(new { error = "Името на страницата е задължително." });
 
             var userId = UserId;
+            var organizerApproved = await _db.OrganizerData
+                .AsNoTracking()
+                .AnyAsync(o => o.OrganizerId == userId && o.Approved);
             var hasDefault = await _db.OrganizerProfiles.AnyAsync(p => p.OwnerId == userId && p.IsDefault && p.IsActive);
             var profile = new OrganizerProfile
             {
@@ -336,7 +339,7 @@ namespace EventsApp.Controllers.Api
                 BrandColor = request.BrandColor?.Trim(),
                 BusinessWorkspaceId = request.BusinessWorkspaceId,
                 IsDefault = request.IsDefault || !hasDefault,
-                IsApproved = User.IsInRole(GlobalConstants.Roles.Admin),
+                IsApproved = User.IsInRole(GlobalConstants.Roles.Admin) || organizerApproved,
             };
 
             if (profile.IsDefault)
@@ -376,7 +379,13 @@ namespace EventsApp.Controllers.Api
             profile.BrandColor = request.BrandColor?.Trim();
             profile.BusinessWorkspaceId = request.BusinessWorkspaceId;
             profile.IsDefault = request.IsDefault;
-            profile.IsApproved = User.IsInRole(GlobalConstants.Roles.Admin) ? profile.IsApproved : false;
+            if (!profile.IsApproved)
+            {
+                var organizerApproved = await _db.OrganizerData
+                    .AsNoTracking()
+                    .AnyAsync(o => o.OrganizerId == UserId && o.Approved);
+                profile.IsApproved = User.IsInRole(GlobalConstants.Roles.Admin) || organizerApproved;
+            }
 
             if (profile.IsDefault)
             {
