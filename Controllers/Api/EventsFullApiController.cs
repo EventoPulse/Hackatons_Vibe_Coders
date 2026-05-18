@@ -80,16 +80,22 @@ namespace EventsApp.Controllers.Api
                 .AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(keyword))
+            {
+                var pattern = "%" + EscapeLikePattern(keyword) + "%";
                 q = q.Where(e =>
-                    e.Title.Contains(keyword) ||
-                    (e.Description != null && e.Description.Contains(keyword)) ||
-                    e.City.Contains(keyword) ||
-                    e.Address.Contains(keyword) ||
-                    (e.OrganizerProfile != null && e.OrganizerProfile.DisplayName.Contains(keyword)) ||
-                    e.Tickets.Any(t => t.Name.Contains(keyword) || (t.Description != null && t.Description.Contains(keyword))));
+                    EF.Functions.ILike(e.Title, pattern) ||
+                    (e.Description != null && EF.Functions.ILike(e.Description, pattern)) ||
+                    EF.Functions.ILike(e.City, pattern) ||
+                    EF.Functions.ILike(e.Address, pattern) ||
+                    (e.OrganizerProfile != null && EF.Functions.ILike(e.OrganizerProfile.DisplayName, pattern)) ||
+                    e.Tickets.Any(t => EF.Functions.ILike(t.Name, pattern) || (t.Description != null && EF.Functions.ILike(t.Description, pattern))));
+            }
 
             if (!string.IsNullOrWhiteSpace(city))
-                q = q.Where(e => e.City.ToLower().Contains(city.ToLower()));
+            {
+                var cityPattern = "%" + EscapeLikePattern(city) + "%";
+                q = q.Where(e => EF.Functions.ILike(e.City, cityPattern));
+            }
 
             if (!string.IsNullOrWhiteSpace(genre) && Enum.TryParse<EventGenre>(genre, true, out var genreEnum))
                 q = q.Where(e => e.Genre == genreEnum);
@@ -282,6 +288,9 @@ namespace EventsApp.Controllers.Api
                 .ToListAsync();
 
             var canEdit = IsAdmin || ev.OrganizerId == userId;
+            var hasPendingChanges = await _db.EventChangeRequests
+                .AsNoTracking()
+                .AnyAsync(r => r.EventId == id && r.Status == EventChangeRequestStatus.Pending);
 
             return Ok(new
             {
@@ -339,7 +348,7 @@ namespace EventsApp.Controllers.Api
                 comments = comments.Select(c => MapComment(c, userId)).ToArray(),
                 similarEvents = similar.Select(e => MapToCard(e, userId)).ToArray(),
                 isApproved = ev.IsApproved,
-                hasPendingChanges = ev.ChangeRequests.Any(r => r.Status == EventChangeRequestStatus.Pending),
+                hasPendingChanges,
             });
         }
 
@@ -547,6 +556,15 @@ namespace EventsApp.Controllers.Api
             if (request.StartTime >= request.EndTime)
                 return BadRequest(new { error = "Началото трябва да е преди края." });
 
+            var requestedMode = ParseTicketingMode(request.TicketingMode);
+            if (requestedMode != ev.TicketingMode)
+            {
+                var hasSoldTickets = await _db.UserTickets
+                    .AnyAsync(ut => ut.Ticket.EventId == ev.Id);
+                if (hasSoldTickets)
+                    return BadRequest(new { error = "Не може да се смени типът билети, докато има продадени билети." });
+            }
+
             ev.Title = request.Title.Trim();
             ev.Description = request.Description?.Trim();
             ev.StartTime = request.StartTime;
@@ -559,7 +577,7 @@ namespace EventsApp.Controllers.Api
             ev.BusinessWorkspaceId = request.BusinessWorkspaceId ?? profile.BusinessWorkspaceId;
             ev.Latitude = request.Latitude;
             ev.Longitude = request.Longitude;
-            ev.TicketingMode = ParseTicketingMode(request.TicketingMode);
+            ev.TicketingMode = requestedMode;
             ev.VenueLayoutId = ev.TicketingMode == EventTicketingMode.GeneralAdmission ? null : request.VenueLayoutId;
 
             if (!IsAdmin)
@@ -635,6 +653,7 @@ namespace EventsApp.Controllers.Api
 
         [HttpPost("generate-description")]
         [Authorize(Policy = "ApiAuth")]
+        [EnableRateLimiting("ai-light")]
         public async Task<IActionResult> GenerateDescription([FromBody] GenerateDescriptionRequest request, CancellationToken cancellationToken)
         {
             if (string.IsNullOrWhiteSpace(request.Title))
@@ -707,12 +726,26 @@ namespace EventsApp.Controllers.Api
 
             if (!await _db.Events.AnyAsync(e => e.Id == id)) return NotFound();
 
+            int? parentCommentId = null;
+            if (request.ParentCommentId.HasValue)
+            {
+                var parent = await _db.EventComments
+                    .AsNoTracking()
+                    .Where(c => c.Id == request.ParentCommentId.Value && c.EventId == id)
+                    .Select(c => new { c.Id, c.ParentCommentId })
+                    .FirstOrDefaultAsync();
+                if (parent == null)
+                    return BadRequest(new { error = "Невалиден родителски коментар." });
+                // Flatten nested replies onto the root comment so the tree stays one level deep.
+                parentCommentId = parent.ParentCommentId ?? parent.Id;
+            }
+
             var comment = new EventComment
             {
                 EventId = id,
                 UserId = userId,
                 Content = request.Content.Trim(),
-                ParentCommentId = request.ParentCommentId,
+                ParentCommentId = parentCommentId,
                 CreatedAt = DateTime.UtcNow,
             };
             _db.EventComments.Add(comment);
@@ -757,15 +790,17 @@ namespace EventsApp.Controllers.Api
         public async Task<IActionResult> LikeComment(int id, int commentId)
         {
             var userId = CurrentUserId!;
-            var comment = await _db.EventComments.Include(c => c.Likes).FirstOrDefaultAsync(c => c.Id == commentId && c.EventId == id);
+            var comment = await _db.EventComments.FirstOrDefaultAsync(c => c.Id == commentId && c.EventId == id);
             if (comment == null) return NotFound();
 
-            if (!comment.Likes.Any(l => l.UserId == userId))
+            var exists = await _db.EventCommentLikes.AnyAsync(l => l.EventCommentId == commentId && l.UserId == userId);
+            if (!exists)
             {
                 _db.EventCommentLikes.Add(new EventCommentLike { EventCommentId = commentId, UserId = userId, CreatedAt = DateTime.UtcNow });
                 await _db.SaveChangesAsync();
             }
-            return Ok(new { likesCount = comment.Likes.Count + 1, currentUserLiked = true });
+            var count = await _db.EventCommentLikes.CountAsync(l => l.EventCommentId == commentId);
+            return Ok(new { likesCount = count, currentUserLiked = true });
         }
 
         // ── DELETE /api/events/{id}/comments/{commentId}/like ────────────────────
@@ -845,6 +880,15 @@ namespace EventsApp.Controllers.Api
             return Enum.TryParse<EventTicketingMode>(value, true, out var mode)
                 ? mode
                 : EventTicketingMode.GeneralAdmission;
+        }
+
+        // Escapes the LIKE wildcards so a user typing "50% off" doesn't get a wildcard match.
+        private static string EscapeLikePattern(string value)
+        {
+            return value
+                .Replace("\\", "\\\\", StringComparison.Ordinal)
+                .Replace("%", "\\%", StringComparison.Ordinal)
+                .Replace("_", "\\_", StringComparison.Ordinal);
         }
 
         private static string NormalizeColorHex(string? value, string fallback)

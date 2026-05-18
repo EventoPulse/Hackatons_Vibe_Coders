@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -16,7 +17,7 @@ namespace EventsApp.Controllers.Api
 {
     [ApiController]
     [Route("api/layouts")]
-    [Authorize(Roles = GlobalConstants.Roles.Admin + "," + GlobalConstants.Roles.Organizer)]
+    [Authorize(Policy = "ApiAuth", Roles = GlobalConstants.Roles.Admin + "," + GlobalConstants.Roles.Organizer)]
     public class LayoutsApiController : ControllerBase
     {
         private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
@@ -193,6 +194,7 @@ namespace EventsApp.Controllers.Api
 
         [HttpPost("ai-generate")]
         [RequestSizeLimit(MaxAiImageBytes + 64 * 1024)]
+        [EnableRateLimiting("ai-heavy")]
         public async Task<IActionResult> AiGenerate([FromForm] string? description, [FromForm] IFormFile? image, CancellationToken cancellationToken)
         {
             if (!string.IsNullOrWhiteSpace(description) && description.Length > MaxAiDescriptionLength)

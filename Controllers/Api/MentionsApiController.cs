@@ -8,7 +8,7 @@ namespace EventsApp.Controllers.Api
 {
     [ApiController]
     [Route("api/mentions")]
-    [Authorize]
+    [Authorize(Policy = "ApiAuth")]
     [EnableRateLimiting("public-read")]
     public class MentionsApiController : ControllerBase
     {

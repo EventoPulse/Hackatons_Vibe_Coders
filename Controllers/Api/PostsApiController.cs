@@ -179,13 +179,14 @@ namespace EventsApp.Controllers.Api
             var profile = await _db.OrganizerProfiles.AsNoTracking().FirstOrDefaultAsync(p => p.Id == dto.OrganizerProfileId.Value && p.OwnerId == userId && p.IsActive);
             if (profile == null) return BadRequest(new { error = "Невалидна public page." });
 
+            var content = (dto.Content ?? string.Empty).Trim();
             var post = new Post
             {
                 OrganizerId = userId,
                 OrganizerProfileId = profile.Id,
                 BusinessWorkspaceId = dto.BusinessWorkspaceId ?? profile.BusinessWorkspaceId,
                 EventId = dto.EventId,
-                Content = dto.Content.Trim(),
+                Content = content,
             };
             _db.Posts.Add(post);
             await _db.SaveChangesAsync();
@@ -371,12 +372,25 @@ namespace EventsApp.Controllers.Api
                 return BadRequest(new { error = "Коментарът не може да е празен." });
             if (!await _db.Posts.AnyAsync(p => p.Id == id)) return NotFound();
 
+            int? parentCommentId = null;
+            if (dto.ParentCommentId.HasValue)
+            {
+                var parent = await _db.PostComments
+                    .AsNoTracking()
+                    .Where(c => c.Id == dto.ParentCommentId.Value && c.PostId == id)
+                    .Select(c => new { c.Id, c.ParentCommentId })
+                    .FirstOrDefaultAsync();
+                if (parent == null)
+                    return BadRequest(new { error = "Невалиден родителски коментар." });
+                parentCommentId = parent.ParentCommentId ?? parent.Id;
+            }
+
             var comment = new PostComment
             {
                 PostId = id,
                 UserId = userId,
                 Content = dto.Content.Trim(),
-                ParentCommentId = dto.ParentCommentId,
+                ParentCommentId = parentCommentId,
             };
             _db.PostComments.Add(comment);
             await _db.SaveChangesAsync();

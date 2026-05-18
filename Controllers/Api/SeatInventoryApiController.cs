@@ -61,7 +61,7 @@ namespace EventsApp.Controllers.Api
         }
 
         [HttpPost("reserve")]
-        [Authorize]
+        [Authorize(Policy = "ApiAuth")]
         public async Task<IActionResult> Reserve(SeatReservationRequest request)
         {
             var userId = _userManager.GetUserId(User)!;
@@ -78,7 +78,7 @@ namespace EventsApp.Controllers.Api
         }
 
         [HttpPost("release")]
-        [Authorize]
+        [Authorize(Policy = "ApiAuth")]
         public async Task<IActionResult> Release(SeatReleaseRequest request)
         {
             var ok = await _seatReservations.ReleaseReservationAsync(
@@ -90,7 +90,7 @@ namespace EventsApp.Controllers.Api
         }
 
         [HttpPost("status")]
-        [Authorize(Roles = GlobalConstants.Roles.Admin + "," + GlobalConstants.Roles.Organizer)]
+        [Authorize(Policy = "ApiAuth", Roles = GlobalConstants.Roles.Admin + "," + GlobalConstants.Roles.Organizer)]
         public async Task<IActionResult> SetStatus(SeatStatusRequest request)
         {
             if (request.Status != EventSeatInventoryStatus.Available &&

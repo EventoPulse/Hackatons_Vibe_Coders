@@ -205,16 +205,28 @@ namespace EventsApp.Controllers.Api
             var userId = _userManager.GetUserId(User)!;
             var quantity = Math.Clamp(request.Quantity, 1, 10);
             var ticket = await _db.Tickets
+                .AsNoTracking()
                 .Include(t => t.Event)
                 .FirstOrDefaultAsync(t => t.Id == id && t.IsActive);
 
             if (ticket == null) return NotFound();
-            if (ticket.QuantityRemaining < quantity)
-                return BadRequest(new { error = "Няма достатъчно налични билети." });
+            if (ticket.Event.EndTime < DateTime.UtcNow)
+                return BadRequest(new { error = "Събитието вече е приключило." });
 
             await using var tx = await _db.Database.BeginTransactionAsync();
 
-            ticket.QuantityRemaining -= quantity;
+            // Atomic decrement: only succeeds when DB row still has enough capacity.
+            // Prevents oversell under concurrent buys without needing row locks.
+            var rowsAffected = await _db.Tickets
+                .Where(t => t.Id == id && t.IsActive && t.QuantityRemaining >= quantity)
+                .ExecuteUpdateAsync(s => s.SetProperty(t => t.QuantityRemaining, t => t.QuantityRemaining - quantity));
+
+            if (rowsAffected == 0)
+            {
+                await tx.RollbackAsync();
+                return BadRequest(new { error = "Няма достатъчно налични билети." });
+            }
+
             var transaction = new Transaction
             {
                 UserId = userId,
@@ -360,10 +372,36 @@ namespace EventsApp.Controllers.Api
                 });
             }
 
+            var validatedAt = DateTime.UtcNow;
+            // Atomic flip: only one scanner wins when two organizers swipe
+            // the same QR simultaneously. If the update affected 0 rows the
+            // ticket was already validated between the read and the write.
+            var affected = await _db.UserTickets
+                .Where(t => t.Id == ut.Id && !t.IsUsed)
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(t => t.IsUsed, true)
+                    .SetProperty(t => t.UsedAt, (DateTime?)validatedAt)
+                    .SetProperty(t => t.UsedByOrganizerId, userId));
+
+            if (affected == 0)
+            {
+                var refreshed = await TicketDetailsQuery()
+                    .Include(x => x.UsedByOrganizer)
+                    .FirstOrDefaultAsync(x => x.Id == ut.Id);
+                return Ok(new
+                {
+                    valid = false,
+                    alreadyUsed = true,
+                    message = refreshed?.UsedAt is { } usedAt
+                        ? $"Билетът вече е използван на {usedAt:dd.MM.yyyy HH:mm}."
+                        : "Билетът вече е валидиран.",
+                    ticket = ToDetails(refreshed ?? ut),
+                });
+            }
+
             ut.IsUsed = true;
-            ut.UsedAt = DateTime.UtcNow;
+            ut.UsedAt = validatedAt;
             ut.UsedByOrganizerId = userId;
-            await _db.SaveChangesAsync();
 
             return Ok(new
             {

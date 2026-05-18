@@ -49,7 +49,7 @@ namespace EventsApp.Controllers.Api
         }
 
         [HttpPost("occurrences/{occurrenceId:int}/cancel")]
-        [Authorize(Roles = GlobalConstants.Roles.Admin + "," + GlobalConstants.Roles.Organizer)]
+        [Authorize(Policy = "ApiAuth", Roles = GlobalConstants.Roles.Admin + "," + GlobalConstants.Roles.Organizer)]
         public async Task<IActionResult> Cancel(int occurrenceId)
         {
             var userId = _userManager.GetUserId(User)!;

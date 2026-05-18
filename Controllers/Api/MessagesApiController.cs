@@ -278,11 +278,21 @@ namespace EventsApp.Controllers.Api
                 .Select(m => (int?)m.Id)
                 .FirstOrDefault();
 
+            // Mark every unread incoming message as seen at the DB level so
+            // unread counts stay accurate even when the conversation has more
+            // than the 80 messages loaded above.
+            var seenAt = DateTime.UtcNow;
+            await _db.Messages
+                .Where(m => m.ConversationId == convo.Id
+                            && m.SenderId != userId
+                            && m.SeenAt == null
+                            && !m.IsDeleted)
+                .ExecuteUpdateAsync(s => s.SetProperty(m => m.SeenAt, seenAt));
+            // Patch the in-memory copies the response is about to serialise.
             foreach (var message in convo.Messages.Where(m => m.SenderId != userId && m.SeenAt == null))
             {
-                message.SeenAt = DateTime.UtcNow;
+                message.SeenAt = seenAt;
             }
-            await _db.SaveChangesAsync();
 
             var summary = MapConversation(
                 convo,
@@ -379,7 +389,7 @@ namespace EventsApp.Controllers.Api
                 ReplyToMessageId = dto.ReplyToMessageId,
                 SharedEventId = dto.SharedEventId,
                 SharedPostId = dto.SharedPostId,
-                Content = dto.Content.Trim(),
+                Content = (dto.Content ?? string.Empty).Trim(),
                 AttachmentUrl = NormalizeNullable(dto.AttachmentUrl),
                 AttachmentName = NormalizeNullable(dto.AttachmentName),
                 AttachmentMediaType = NormalizeNullable(dto.AttachmentMediaType),
