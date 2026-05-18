@@ -207,7 +207,14 @@ var jwtSecret = builder.Configuration["Jwt:Secret"]
     ?? throw new InvalidOperationException("Jwt:Secret is required in configuration.");
 var jwtKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret));
 
-builder.Services.AddAuthentication()
+builder.Services.AddAuthentication(options =>
+    {
+        // API controllers frequently return Forbid() after a JWT-authenticated
+        // request reaches a role/ownership check. Use the bearer handler as the
+        // default forbid scheme so those paths become proper 403 responses
+        // instead of falling through to a missing-scheme runtime error.
+        options.DefaultForbidScheme = JwtBearerDefaults.AuthenticationScheme;
+    })
     .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
     {
         options.TokenValidationParameters = new TokenValidationParameters
